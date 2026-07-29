@@ -16,10 +16,17 @@ Bir PDF'teki veya görüntüdeki **tüm metni** çıkarıp seçtiğiniz dile **g
 ```bash
 npm install
 cp .env.example .env
-# .env dosyasına Anthropic API anahtarınızı girin:
-# ANTHROPIC_API_KEY=sk-ant-...
 npm run dev
 ```
+
+`.env` dosyasına iki anahtardan **birini** girin:
+
+| Sağlayıcı | Anahtar | Ücret |
+|---|---|---|
+| **Google Gemini** (önerilen) | `GEMINI_API_KEY` — [aistudio.google.com/apikey](https://aistudio.google.com/apikey) adresinden **ücretsiz**, kredi kartı gerekmez | Ücretsiz katman |
+| Claude | `ANTHROPIC_API_KEY` — [platform.claude.com](https://platform.claude.com) | Kullandıkça öde |
+
+`GEMINI_API_KEY` tanımlıysa Gemini kullanılır; boşsa `ANTHROPIC_API_KEY` ile Claude'a düşer.
 
 Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın.
 
@@ -32,7 +39,8 @@ Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın.
 ## Teknik Detaylar
 
 - **Next.js 15** (App Router) + **React 19** + **TypeScript**
-- **Claude Opus 5** (`claude-opus-5`) — PDF'ler `document` bloğu, görüntüler `image` bloğu olarak doğrudan modele gönderilir; ayrı bir OCR adımı gerekmez
+- İki model desteği: **Gemini 2.5 Flash** (ücretsiz katman, `GEMINI_MODEL` ile değiştirilebilir) veya **Claude Opus 5**
+- PDF'ler ve görüntüler doğrudan modele gönderilir (Gemini: `inlineData`, Claude: `document`/`image` bloğu); ayrı bir OCR adımı gerekmez
 - Çeviri, `/api/translate` route handler'ından tarayıcıya **stream** edilir
 - API anahtarı yalnızca sunucu tarafında kullanılır, tarayıcıya asla gönderilmez
 
