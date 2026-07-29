@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth, googleAuthEnabled } from "@/auth";
+import ConfigWarning from "@/components/ConfigWarning";
 import RegisterForm from "./RegisterForm";
 
 export const metadata = { title: "Kayıt ol — Kriptosinyal" };
@@ -23,6 +24,7 @@ export default async function RegisterPage() {
         <p className="sub">
           Takip listeniz ve analiz tercihleriniz hesabınıza kaydedilir.
         </p>
+        <ConfigWarning />
         <RegisterForm googleEnabled={googleAuthEnabled} />
         <p className="muted" style={{ fontSize: 13, marginTop: 20, textAlign: "center" }}>
           Zaten üye misiniz?{" "}

@@ -42,10 +42,16 @@ sayfasından hesap oluşturun.
 
 | Değişken | Zorunlu | Açıklama |
 |---|---|---|
-| `AUTH_SECRET` | ✅ | Oturum çerezlerini imzalar. `openssl rand -base64 32` |
+| `AUTH_SECRET` | ✅ | Oturum çerezlerini imzalar. `openssl rand -base64 32`. **Üretimde tanımlanmazsa giriş çalışmaz** (yedek anahtar yalnızca geliştirmede devreye girer) |
+| `DATABASE_URL` | üretimde ✅ | Postgres bağlantı dizesi. Tanımlıysa kullanıcılar veritabanında saklanır; tanımsızsa dosya deposuna düşülür (yalnızca yerel geliştirme). `POSTGRES_URL` de kabul edilir |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Google ile giriş. Boşsa yalnızca e-posta + parola görünür |
-| `USERS_FILE` | — | Kullanıcı deposu yolu (varsayılan `data/users.json`) |
+| `USERS_FILE` | — | Dosya deposu yolu (varsayılan `data/users.json`, git'e girmez) |
+| `PGPOOL_MAX` | — | Postgres havuzundaki en fazla bağlantı (varsayılan 3) |
 | `DEMO_DATA` | — | `1` ise Binance'e erişilemediğinde sentetik demo veri üretilir (geliştirme için) |
+
+Eksik yapılandırma sessiz kalmaz: `AUTH_SECRET` yoksa ya da üretimde kalıcı bir
+veritabanı tanımlı değilse giriş/kayıt sayfalarında ne yapılması gerektiğini
+söyleyen bir uyarı görünür.
 
 Binance için **API anahtarı gerekmez**; yalnızca herkese açık uç noktalar okunur, emir
 gönderilmez, hesabınıza erişilmez.
@@ -56,8 +62,15 @@ gönderilmez, hesabınıza erişilmez.
 npm run dev        # geliştirme sunucusu
 npm run build      # üretim derlemesi
 npm start          # üretim sunucusu
-npm test           # gösterge ve sinyal motoru testleri (25 test)
+npm test           # gösterge, sinyal motoru ve kullanıcı deposu testleri (50 test)
 npm run typecheck  # tsc --noEmit
+```
+
+Depo testleri varsayılan olarak dosya arka ucunda çalışır. Aynı testleri gerçek bir
+Postgres'e karşı da çalıştırmak için:
+
+```bash
+TEST_DATABASE_URL=postgres://postgres@127.0.0.1:5432/postgres npm test
 ```
 
 ## Dosya yapısı
@@ -83,12 +96,18 @@ lib/
   indicators.ts                saf gösterge fonksiyonları
   analysis.ts                  skor motoru, formasyonlar, seviyeler, işlem planı
   commentary.ts                Türkçe yorum üretici
-  users.ts                     dosya tabanlı kullanıcı deposu (scrypt)
+  users.ts                     kullanıcı deposu genel arayüzü (arka uç seçimi)
+  users-shared.ts              tipler, varsayılanlar, scrypt parola işlemleri
+  users-postgres.ts            Postgres arka ucu (üretim)
+  users-file.ts                dosya arka ucu (yerel geliştirme)
+  db.ts                        Postgres havuzu, işlemler ve şema oluşturma
+  rate-limit.ts                bellek içi istek sınırlayıcı
   format.ts, api-types.ts      biçimlendirme ve paylaşılan API tipleri
 components/
   CandleChart.tsx              canvas mum grafiği
   IndicatorChart.tsx           RSI / MACD panelleri
   ui.tsx                       skor göstergesi, rozetler, coin ikonları
+  ConfigWarning.tsx            eksik AUTH_SECRET / veritabanı uyarısı
 tests/                         node:test birim testleri
 ```
 
@@ -105,12 +124,30 @@ tests/                         node:test birim testleri
    belirlenir; ilk hedef mümkünse en yakın anlamlı direnç/destek, sonraki hedefler 1,618 ve
    2,618 R seviyeleridir.
 
+## Vercel'e kurulum
+
+1. **Postgres bağlayın:** Vercel panelinde proje → **Storage** → **Postgres (Neon)** →
+   *Connect*. Bu işlem `DATABASE_URL` değişkenini projeye otomatik ekler. Ayrı bir göç
+   (migration) adımı yoktur: `users` tablosu ilk istekte oluşturulur.
+2. **`AUTH_SECRET` ekleyin:** Settings → Environment Variables → `AUTH_SECRET` =
+   `openssl rand -base64 32` çıktısı. Bu değişken olmadan oturum açma çalışmaz.
+3. İsterseniz `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` ekleyip Google girişini açın
+   (yönlendirme adresi: `https://SITENIZ/api/auth/callback/google`).
+4. Yeniden dağıtın. `DEMO_DATA` **tanımlanmasın** — üretimde gerçek Binance verisi kullanılır.
+
+Kalıcı diski olan bir platformda (VPS, Railway, Fly.io) çalıştırıyorsanız Postgres zorunlu
+değildir; `DATABASE_URL` boş bırakıldığında dosya deposu kullanılır.
+
 ## Üretime alırken
 
-- **Kullanıcı deposu:** varsayılan olarak `data/users.json` dosyası kullanılır. Vercel gibi
-  sunucusuz ortamlarda disk kalıcı olmadığı için `lib/users.ts` içindeki okuma/yazma
-  fonksiyonlarını bir veritabanına (Postgres, SQLite, Redis…) taşıyın — dosyanın geri kalanı
-  ve tüm çağrı noktaları aynı kalır.
+- **Kullanıcı deposu:** iki arka uç aynı sözleşmeyi (`UserStore`) uygular —
+  `lib/users-postgres.ts` (üretim) ve `lib/users-file.ts` (yerel geliştirme).
+  `lib/users.ts` `DATABASE_URL` değişkenine göre aralarında seçim yapar, çağrı noktaları
+  hiç değişmez. Başka bir veritabanı kullanmak isterseniz üçüncü bir arka uç yazıp
+  aynı sözleşmeyi uygulamanız yeterli.
+- **Eşzamanlılık:** Postgres arka ucunda takip listesi/ayar güncellemeleri
+  `select … for update` ile aynı işlem (transaction) içinde yapılır; aynı anda gelen
+  istekler birbirinin yazdığını ezmez (testlerle doğrulanır).
 - **İstek limiti:** Binance IP başına ağırlık limiti uygular. Tarama sayısını yükseltirken
   (`ayarlar` → coin sayısı) dikkatli olun; yanıtlar bellek içinde önbelleğe alınır ve tarama
   en fazla 6 eşzamanlı istek yapar.

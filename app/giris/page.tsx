@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth, googleAuthEnabled } from "@/auth";
+import ConfigWarning from "@/components/ConfigWarning";
 import LoginForm from "./LoginForm";
 
 export const metadata = { title: "Giriş yap — Kriptosinyal" };
@@ -21,6 +22,7 @@ export default async function LoginPage() {
         </Link>
         <h1>Tekrar hoş geldiniz</h1>
         <p className="sub">Analiz paneline erişmek için giriş yapın.</p>
+        <ConfigWarning />
         <LoginForm googleEnabled={googleAuthEnabled} />
         <p className="muted" style={{ fontSize: 13, marginTop: 20, textAlign: "center" }}>
           Hesabınız yok mu?{" "}

@@ -42,7 +42,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
   session: { strategy: "jwt" },
   pages: { signIn: "/giris" },
-  secret: process.env.AUTH_SECRET ?? "kripto-sinyal-dev-secret-change-me",
+  // Üretimde sabit bir yedek gizli anahtar kullanmak oturum çerezlerini
+  // taklit edilebilir hale getirir; bu yüzden yedek yalnızca geliştirmede
+  // devreye girer. Üretimde AUTH_SECRET tanımlanmalıdır.
+  secret:
+    process.env.AUTH_SECRET ??
+    (process.env.NODE_ENV === "production" ? undefined : "kripto-sinyal-dev-secret"),
   trustHost: true,
   callbacks: {
     async signIn({ account, user }) {
