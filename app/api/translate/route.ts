@@ -6,7 +6,7 @@ export const maxDuration = 300;
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
 type ImageMediaType = (typeof IMAGE_TYPES)[number];
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 
 function buildPrompt(sourceLang: string, targetLang: string): string {
   const sourceNote =
@@ -25,9 +25,17 @@ function buildPrompt(sourceLang: string, targetLang: string): string {
     `- Translate every piece of visible text, including captions, labels, footnotes, and text inside images or diagrams.`,
     `- Keep proper nouns, numbers, dates, codes, and email/web addresses unchanged unless the target language requires an adapted form.`,
     `- If part of the document is illegible, mark it as [illegible] instead of guessing.`,
+    `- Output plain text only: no Markdown syntax (no **, #, backticks, or similar markers).`,
     ``,
     `Respond with ONLY the translated text — no preamble, no commentary, no explanation of what you did.`,
   ].join("\n");
+}
+
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/(^|\s)\*([^*\n]+)\*(?=\s|$|[.,;:!?])/g, "$1$2")
+    .replace(/^#{1,6}\s+/gm, "");
 }
 
 /* ── Gemini (free tier) ──────────────────────────────────────────── */
@@ -103,7 +111,7 @@ function streamGemini(
               const text = candidate?.content?.parts
                 ?.map((p: { text?: string }) => p.text ?? "")
                 .join("");
-              if (text) controller.enqueue(encoder.encode(text));
+              if (text) controller.enqueue(encoder.encode(stripMarkdown(text)));
               if (candidate?.finishReason) finishReason = candidate.finishReason;
             } catch {
               /* ignore malformed keep-alive lines */
@@ -183,7 +191,7 @@ function streamClaude(
   const readable = new ReadableStream<Uint8Array>({
     start(controller) {
       stream.on("text", (delta) => {
-        controller.enqueue(encoder.encode(delta));
+        controller.enqueue(encoder.encode(stripMarkdown(delta)));
       });
 
       stream
