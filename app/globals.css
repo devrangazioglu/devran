@@ -1,0 +1,385 @@
+:root {
+  --bg: #f2f1ee;
+  --card: #ffffff;
+  --card-border: #e7e5e0;
+  --ink: #111111;
+  --ink-soft: #6b6b6b;
+  --ink-faint: #9a9a96;
+  --accent: #b6f04a;
+  --pill: #101010;
+  --radius-lg: 26px;
+  --radius-md: 18px;
+  --radius-sm: 14px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-inter), -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.phone {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding: 28px 22px 120px;
+  position: relative;
+}
+
+/* ── Header ─────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.topbar .title {
+  font-size: 28px;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: -0.02em;
+}
+
+.iconbtn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--ink);
+  transition: background 0.15s ease;
+}
+
+.iconbtn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ── Cards ──────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.card-head .badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #f4f3f0;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.card-head .label {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ── Language row ───────────────────────── */
+.lang-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.lang-field {
+  flex: 1;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 8px 14px 10px;
+  position: relative;
+  min-width: 0;
+}
+
+.lang-field .tag {
+  font-size: 12px;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.lang-field select {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.lang-arrow {
+  align-self: center;
+  color: var(--ink-soft);
+  flex: none;
+}
+
+/* ── Big pill button ────────────────────── */
+.pillbtn {
+  width: 100%;
+  margin: 18px 0 8px;
+  border: none;
+  background: var(--pill);
+  color: #fff;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: transform 0.1s ease, opacity 0.15s ease;
+}
+
+.pillbtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.pillbtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Section labels ─────────────────────── */
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 22px 4px 12px;
+}
+
+/* ── Document (black) card ──────────────── */
+.doc-card {
+  background: var(--pill);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.doc-card .doc-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.doc-card .doc-meta {
+  flex: 1;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.doc-card .doc-name {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-card .doc-sub {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 3px;
+}
+
+.doc-card .doc-x {
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+  margin: 4px 0 0 0;
+  align-self: center;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.doc-card .doc-x:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ── Dropzone ───────────────────────────── */
+.dropzone {
+  border: 1.5px dashed #d4d2cc;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.55);
+  padding: 30px 18px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+  border-color: var(--ink);
+  background: #fff;
+}
+
+.dropzone .dz-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.dropzone .dz-sub {
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin-top: 4px;
+}
+
+/* ── Activity ───────────────────────────── */
+.hint {
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-faint);
+  margin: 4px 0 14px;
+}
+
+.result-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.result-card .who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.result-card .who .avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #f4f3f0;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.result-card .who span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.result-card .text {
+  font-size: 16px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.result-card .text.streaming::after {
+  content: "▍";
+  color: var(--accent);
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.error-card {
+  border-radius: var(--radius-lg);
+  background: #fdecec;
+  border: 1px solid #f5c9c9;
+  color: #8c2f2f;
+  padding: 16px 18px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+/* ── Floating action button ─────────────── */
+.fab {
+  position: fixed;
+  right: max(22px, calc(50vw - 240px + 22px));
+  bottom: 26px;
+  width: 66px;
+  height: 66px;
+  border: none;
+  border-radius: 50%;
+  background: var(--pill);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+  transition: transform 0.12s ease;
+}
+
+.fab:hover {
+  transform: scale(1.05);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
