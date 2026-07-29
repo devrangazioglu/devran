@@ -383,3 +383,213 @@ body {
   overflow: hidden;
   clip: rect(0 0 0 0);
 }
+
+/* ── Segmented control ──────────────────── */
+.segmented {
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+  background: #f4f3f0;
+  border-radius: var(--radius-md);
+  padding: 4px;
+}
+
+.seg {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 10px;
+  border-radius: calc(var(--radius-md) - 4px);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.seg.active {
+  background: var(--pill);
+  color: #fff;
+}
+
+/* ── Progress bar ───────────────────────── */
+.progress-wrap {
+  margin-top: 12px;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: 99px;
+  background: #e4e2dd;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.progress-text {
+  font-size: 13px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* ── Download button ────────────────────── */
+.downloadbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  background: var(--accent);
+  color: var(--pill);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 10px 16px;
+  border-radius: 99px;
+  flex: none;
+}
+
+.preview-img {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  display: block;
+}
+
+/* ── Login screen ───────────────────────── */
+.login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding-bottom: 40px;
+}
+
+.login-card {
+  width: 100%;
+  text-align: center;
+  padding: 28px 22px;
+}
+
+.login-card h2 {
+  font-size: 21px;
+  margin-bottom: 8px;
+}
+
+.login-card p {
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.ghostbtn {
+  width: 100%;
+  border: 1.5px solid var(--card-border);
+  background: transparent;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.ghostbtn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.fineprint {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 14px;
+}
+
+/* ── Settings: account & history ────────── */
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.account-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.account-mail {
+  font-size: 13px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smallbtn {
+  border: none;
+  background: var(--pill);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 99px;
+  cursor: pointer;
+  flex: none;
+}
+
+.history-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-icon.dark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #f4f3f0;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.history-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-sub {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
