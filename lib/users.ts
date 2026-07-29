@@ -77,10 +77,36 @@ async function readAll(): Promise<User[]> {
   }
 }
 
+/** Kullanıcı deposuna yazılamadığında fırlatılır (salt okunur disk, kota vb.). */
+export class UserStoreError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UserStoreError";
+  }
+}
+
+// EROFS/EACCES/EPERM: salt okunur ya da izinsiz disk. ENOSPC: yer yok.
+// ENOENT: klasör oluşturulamadı — salt okunur bir dosya sisteminde
+// `mkdir -p` bu kodu döndürür, sunucusuz ortamlardaki tipik durum budur.
+const UNWRITABLE_CODES = new Set(["EROFS", "EACCES", "EPERM", "ENOSPC", "ENOENT"]);
+
 async function writeAll(users: User[]): Promise<void> {
   const path = storePath();
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(users, null, 2), "utf8");
+  try {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, JSON.stringify(users, null, 2), "utf8");
+  } catch (error) {
+    // Sunucusuz ortamlarda (Vercel vb.) disk salt okunurdur; bunu ham 500
+    // yerine anlaşılır bir mesaja çeviriyoruz.
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code && UNWRITABLE_CODES.has(code)) {
+      throw new UserStoreError(
+        `Kullanıcı deposuna yazılamıyor (${path}, ${code}): bu ortamın dosya sistemi ` +
+          "kalıcı değil. Kalıcı bir veritabanı yapılandırın (README → “Üretime alırken”).",
+      );
+    }
+    throw error;
+  }
 }
 
 /* ────────────────────── Parola ────────────────────── */

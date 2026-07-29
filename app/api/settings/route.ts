@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { isInterval } from "@/lib/binance";
-import { DEFAULT_SETTINGS, findUserByEmail, saveSettings } from "@/lib/users";
+import { DEFAULT_SETTINGS, findUserByEmail, saveSettings, UserStoreError } from "@/lib/users";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,8 +36,14 @@ export async function POST(request: Request) {
     patch.onlyStrongSignals = body.onlyStrongSignals;
   }
 
-  const user = await saveSettings(email, patch);
-  if (!user) return NextResponse.json({ error: "Kullanıcı bulunamadı." }, { status: 404 });
-
-  return NextResponse.json({ settings: user.settings });
+  try {
+    const user = await saveSettings(email, patch);
+    if (!user) return NextResponse.json({ error: "Kullanıcı bulunamadı." }, { status: 404 });
+    return NextResponse.json({ settings: user.settings });
+  } catch (error) {
+    if (error instanceof UserStoreError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
+    throw error;
+  }
 }

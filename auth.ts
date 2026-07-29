@@ -48,7 +48,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ account, user }) {
       // Google ile gelen kullanıcıyı yerel depoya da yaz (takip listesi için).
       if (account?.provider === "google" && user.email) {
-        await upsertOAuthUser(user.email, user.name);
+        try {
+          await upsertOAuthUser(user.email, user.name);
+        } catch (error) {
+          // Depo yazılamıyorsa (salt okunur disk) girişi engellemeyelim; kullanıcı
+          // varsayılan ayarlarla devam eder, ayarları kaydetmeyi denediğinde
+          // ilgili uç nokta açıklayıcı bir hata döndürür.
+          console.error("Kullanıcı deposuna yazılamadı:", error);
+        }
       }
       return true;
     },

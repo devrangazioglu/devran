@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { createUser } from "@/lib/users";
+import { createUser, UserStoreError } from "@/lib/users";
 
 export const runtime = "nodejs";
 
@@ -32,15 +32,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "E-posta ve parola zorunludur." }, { status: 400 });
   }
 
-  const result = await createUser({
-    email,
-    password,
-    name: typeof name === "string" ? name : undefined,
-  });
+  try {
+    const result = await createUser({
+      email,
+      password,
+      name: typeof name === "string" ? name : undefined,
+    });
 
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 409 });
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 409 });
+    }
+
+    return NextResponse.json({ user: result.user }, { status: 201 });
+  } catch (error) {
+    if (error instanceof UserStoreError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
+    throw error;
   }
-
-  return NextResponse.json({ user: result.user }, { status: 201 });
 }
