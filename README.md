@@ -1,71 +1,123 @@
-# Transivo
+# Kriptosinyal
 
-Bir PDF'teki veya görüntüdeki **tüm metni** çıkarıp seçtiğiniz dile **gramere uygun** şekilde çeviren web uygulaması. Arayüz, mobil çeviri uygulaması temasıyla tasarlanmıştır: açık gri zemin, beyaz yuvarlak kartlar, siyah hap butonlar ve fıstık yeşili vurgu rengi.
+Binance'in **herkese açık** piyasa verisini çekip coinlere teknik analiz yapan, sonucu
+ağırlıklı bir skora çevirerek **AL / SAT / BEKLE** sinyali üreten ve bu sinyali **Türkçe
+olarak yorumlayan** üyelik girişli web uygulaması.
+
+> ⚠️ **Yasal uyarı:** Bu uygulama bir teknik analiz aracıdır, yatırım danışmanlığı hizmeti
+> değildir. Üretilen sinyaller geçmiş fiyat verisine dayanan otomatik hesaplamalardır ve
+> alım-satım tavsiyesi niteliği taşımaz. Kripto varlıklar yüksek volatiliteye sahiptir.
 
 ## Özellikler
 
-- 📄 **PDF ve görüntü desteği** — PDF, PNG, JPEG, WebP, GIF (en fazla 20 MB)
-- 🗂️ **Dosya olarak çeviri** — belge sayfa sayfa işlenir (ilerleme çubuğuyla) ve düzeni korunmuş, yalnızca metni çevrilmiş bir **PDF/PNG çıktısı** indirilir
-- ⚡ **Metin olarak çeviri** — istenirse çeviri canlı akışla düz metin olarak da alınabilir
-- 🌐 **Otomatik dil algılama** veya kaynak dili elle seçme; 16 hedef dil
-- ✍️ **Gramere uygun çeviri** — kelime kelime değil, hedef dilde doğal ve akıcı metin
-- 🕘 **Geçmiş** — çevrilen dosyalar cihazda (IndexedDB) saklanır, Ayarlar'dan tekrar indirilebilir
-- 🌍 **Uygulama dili** — arayüz Türkçe/İngilizce
-- 👤 **Google ile giriş** (isteğe bağlı) + misafir modu
-- 🖱️ Sürükle-bırak ile dosya yükleme
+- 🔐 **Üyelik sistemi** — e-posta + parola (scrypt ile hash'lenir) ve isteğe bağlı Google ile giriş
+- 📈 **Binance Spot API** — mum verisi (klines) ve 24 saatlik özet; **API anahtarı gerekmez**
+- 📊 **16 teknik gösterge** — RSI, MACD, EMA 9/21/50/200, Bollinger, Stokastik, ATR, ADX+DI,
+  Supertrend, OBV, MFI, CCI, Williams %R, ROC, VWAP, hacim oranı
+- 🧮 **Ağırlıklı skor motoru** — her gösterge −1…+1 yön üretir, ağırlıklandırılır ve −100…+100
+  arası tek skora indirgenir; skor sinyale çevrilir
+- 🗣️ **Türkçe yorum** — trend, momentum, hacim, volatilite, seviyeler ve riskler paragraf paragraf
+- 🕯️ **Formasyon tespiti** — yutan mumlar, çekiç, kayan yıldız, doji, sabah/akşam yıldızı,
+  golden/death cross, MACD kesişimi, RSI uyumsuzluğu, Bollinger sıkışması
+- 🎯 **İşlem planı** — ATR ve swing noktalarına göre giriş, zarar durdur, 3 hedef, risk/ödül
+- 🧭 **Destek / direnç** — pivot kümeleme ile seviyeler ve dokunuş sayısına göre güç
+- 🔎 **Sinyal tarayıcı** — en yüksek hacimli 60 pariteye kadar tarama, filtreleme ve sıralama
+- ⭐ **Takip listesi** — hesaba kayıtlı pariteler, tek ekranda analiz
+- 📉 **Bağımlılıksız grafikler** — canvas ile mum grafiği (EMA + Bollinger + hacim), RSI ve MACD panelleri
+- ⏱️ **8 zaman dilimi** — 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w + üst periyot uyumu
 
 ## Kurulum
 
 ```bash
 npm install
-cp .env.example .env
+cp .env.example .env.local
+# .env.local içine AUTH_SECRET yazın:  openssl rand -base64 32
 npm run dev
 ```
 
-`.env` dosyasına anahtarlardan **birini** girin:
+Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın, `/kayit`
+sayfasından hesap oluşturun.
 
-| Sağlayıcı | Anahtar | Ücret | Uzun PDF'ler |
-|---|---|---|---|
-| **OpenAI** | `OPENAI_API_KEY` — [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Kullandıkça öde | Yüksek istek limiti |
-| **Google Gemini** | `GEMINI_API_KEY` — [aistudio.google.com/apikey](https://aistudio.google.com/apikey), kredi kartı gerekmez | Ücretsiz katman | Günlük istek sınırı düşük |
-| Claude | `ANTHROPIC_API_KEY` — [platform.claude.com](https://platform.claude.com) | Kullandıkça öde | Yalnızca metin modu |
+### Ortam değişkenleri
 
-Sıra: `OPENAI_API_KEY` → `GEMINI_API_KEY` → `ANTHROPIC_API_KEY`. İkisi birden tanımlıysa OpenAI kullanılır, bir sorun çıkarsa otomatik olarak Gemini'ye düşülür.
+| Değişken | Zorunlu | Açıklama |
+|---|---|---|
+| `AUTH_SECRET` | ✅ | Oturum çerezlerini imzalar. `openssl rand -base64 32` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Google ile giriş. Boşsa yalnızca e-posta + parola görünür |
+| `USERS_FILE` | — | Kullanıcı deposu yolu (varsayılan `data/users.json`) |
+| `DEMO_DATA` | — | `1` ise Binance'e erişilemediğinde sentetik demo veri üretilir (geliştirme için) |
 
-Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın.
+Binance için **API anahtarı gerekmez**; yalnızca herkese açık uç noktalar okunur, emir
+gönderilmez, hesabınıza erişilmez.
 
-## Kullanım
+## Komutlar
 
-1. **From / To** alanlarından kaynak ve hedef dili seçin (kaynak için "Auto Detect" kullanılabilir).
-2. PDF veya görüntüyü sürükleyip bırakın ya da tıklayarak seçin.
-3. **Translate** butonuna basın — çeviri "Activity" bölümünde canlı olarak akar.
+```bash
+npm run dev        # geliştirme sunucusu
+npm run build      # üretim derlemesi
+npm start          # üretim sunucusu
+npm test           # gösterge ve sinyal motoru testleri (25 test)
+npm run typecheck  # tsc --noEmit
+```
 
-## Teknik Detaylar
+## Dosya yapısı
 
-- **Next.js 15** (App Router) + **React 19** + **TypeScript**
-- Üç sağlayıcı desteği: **OpenAI** (`OPENAI_MODEL`, varsayılan `gpt-4.1-mini`), **Gemini** (`GEMINI_MODEL`) veya **Claude**. Her sağlayıcının model yedekleme zinciri vardır: bir model kotası dolduğunda ya da erişilemediğinde sıradaki denenir.
-- PDF'ler ve görüntüler doğrudan modele gönderilir (OpenAI: `image_url`, Gemini: `inlineData`, Claude: `document`/`image` bloğu); ayrı bir OCR adımı gerekmez
-- Çeviri, `/api/translate` route handler'ından tarayıcıya **stream** edilir
-- API anahtarı yalnızca sunucu tarafında kullanılır, tarayıcıya asla gönderilmez
+```
+app/
+  page.tsx                     tanıtım (landing) sayfası
+  giris/, kayit/               giriş ve kayıt sayfaları
+  (uye)/                       oturum gerektiren alan
+    layout.tsx                 oturum kontrolü + üst menü
+    panel/                     piyasa özeti, güçlü sinyaller, piyasa tablosu
+    coin/[symbol]/             detay: grafik, göstergeler, yorum, plan, seviyeler
+    tarayici/                  sinyal tarayıcı (filtre + sıralama)
+    takip/                     takip listesi
+    ayarlar/                   tercihler ve hesap bilgisi
+  api/
+    analyze/                   tek parite için tam analiz + yorum + grafik serileri
+    scan/                      çoklu parite taraması
+    markets/                   24 saatlik piyasa özeti
+    register/, watchlist/, settings/, auth/
+lib/
+  binance.ts                   Binance istemcisi (çok uç noktalı, önbellekli, demo yedekli)
+  indicators.ts                saf gösterge fonksiyonları
+  analysis.ts                  skor motoru, formasyonlar, seviyeler, işlem planı
+  commentary.ts                Türkçe yorum üretici
+  users.ts                     dosya tabanlı kullanıcı deposu (scrypt)
+  format.ts, api-types.ts      biçimlendirme ve paylaşılan API tipleri
+components/
+  CandleChart.tsx              canvas mum grafiği
+  IndicatorChart.tsx           RSI / MACD panelleri
+  ui.tsx                       skor göstergesi, rozetler, coin ikonları
+tests/                         node:test birim testleri
+```
 
-## Dosya Olarak Çeviri Nasıl Çalışır?
+## Skor motoru nasıl çalışır?
 
-1. PDF, tarayıcıda **pdf.js** ile sayfa sayfa görüntüye çevrilir (görseller doğrudan kullanılır).
-2. Sayfalar `/api/translate-page` üzerinden birkaçı bir arada modele gönderilir; model her metin **satırını** konum kutusu (bounding box), orijinal metni, çevirisi, rengi ve kalınlığıyla birlikte döndürür. Yarım kalan ya da boş dönen sayfalar tek tek yeniden istenir.
-3. Tarayıcıda yalnızca metin satırları kapatılır: her satırın soluyla sağı arasındaki zemin satır satır örneklenip aradaki alan bu renklerle doldurulur, böylece düz zeminler kadar degrade ve renkli bloklar da korunur. Çeviri aynı konuma, kutuya sığacak boyutta ve gerekiyorsa kalın olarak yazılır. Çevirisi orijinaliyle aynı olan satırlara (sayılar, özel adlar, adresler) hiç dokunulmaz.
-4. Sayfalar **pdf-lib** ile tek bir PDF'te birleştirilir ve indirme kartı görünür. Görsel girdilerde çıktı PNG olur.
+1. Seçilen parite ve periyot için Binance'ten son **300 mum** çekilir (`/api/v3/klines`).
+2. 16 gösterge hesaplanır. Her biri kendi kuralına göre bir **yön** (−1 … +1) ve bir
+   **ağırlık** (0,6 … 1,5) üretir. Örnek: RSI ≤ 30 → +0,85 (aşırı satım, alış lehine);
+   EMA 50 < EMA 200 → negatif yön (ana trend aşağı).
+3. Skor = Σ(yön × ağırlık) ÷ Σ(ağırlık) × 100 → **−100 … +100**.
+4. Eşikler: `≥ +45` GÜÇLÜ AL, `≥ +18` AL, `−18 … +18` BEKLE, `≤ −18` SAT, `≤ −45` GÜÇLÜ SAT.
+5. **Güven** (%) skorun büyüklüğü, göstergelerin uyum oranı ve ADX'in trend gücünden üretilir.
+6. Zarar durdur, son 12 mumun swing noktası ile 1,5 × ATR'den **daha uzak** olanına göre
+   belirlenir; ilk hedef mümkünse en yakın anlamlı direnç/destek, sonraki hedefler 1,618 ve
+   2,618 R seviyeleridir.
 
-## Google ile Giriş (isteğe bağlı)
+## Üretime alırken
 
-1. [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials) adresinden bir **OAuth Client ID** (Web application) oluşturun.
-2. Authorized redirect URI olarak `https://SITENIZ/api/auth/callback/google` (yerelde `http://localhost:3000/api/auth/callback/google`) ekleyin.
-3. `.env` dosyasına `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` ve `AUTH_SECRET` (`openssl rand -base64 32`) girin.
+- **Kullanıcı deposu:** varsayılan olarak `data/users.json` dosyası kullanılır. Vercel gibi
+  sunucusuz ortamlarda disk kalıcı olmadığı için `lib/users.ts` içindeki okuma/yazma
+  fonksiyonlarını bir veritabanına (Postgres, SQLite, Redis…) taşıyın — dosyanın geri kalanı
+  ve tüm çağrı noktaları aynı kalır.
+- **İstek limiti:** Binance IP başına ağırlık limiti uygular. Tarama sayısını yükseltirken
+  (`ayarlar` → coin sayısı) dikkatli olun; yanıtlar bellek içinde önbelleğe alınır ve tarama
+  en fazla 6 eşzamanlı istek yapar.
+- **Coğrafi kısıtlar:** bazı ağlarda `api.binance.com` engellidir. İstemci sırayla
+  `api-gcp`, `api1`, `api2` ve `data-api.binance.vision` uç noktalarını dener.
 
-Bu değişkenler tanımlı değilse uygulama giriş ekranını atlar ve doğrudan misafir modunda açılır. Apple ile giriş (Apple Developer hesabı gerektirir) ve e-posta/şifre üyeliği (veritabanı gerektirir) için altyapı hazırdır, henüz etkin değildir.
+## Teknoloji
 
-## Sınırlar
-
-- Dosya boyutu: 20 MB (istemci tarafında denetlenir)
-- **Ücretsiz katman kotası:** Gemini'nin ücretsiz katmanı model başına günde sınırlı sayıda istek verir. Bu yüzden sayfalar tek tek değil, istek başına birkaç sayfa halinde gruplanarak gönderilir ve kota dolduğunda sıradaki modele geçilir. Yine de çok sayıda uzun belgeyi aynı gün çevirmek kotayı tüketebilir; kota ertesi gün sıfırlanır.
-- Dosya modu, karmaşık/desenli zeminlerde metin kapatma yamalarında iz bırakabilir; düz zeminli belgelerde en iyi sonucu verir
-- Metin modunda çok uzun belgelerde çıktı 64K token ile sınırlıdır
+Next.js 15 (App Router) · React 19 · TypeScript · Auth.js (next-auth v5) · harici çalışma
+zamanı bağımlılığı olmayan kendi gösterge/grafik kodu.

@@ -1,25 +1,19 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import Providers from "./providers";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-inter",
-});
-
 export const metadata: Metadata = {
-  title: "Transivo — Translate PDFs & Images",
+  title: "Kriptosinyal — Binance teknik analiz ve al/sat sinyalleri",
   description:
-    "Extract and translate all text from a PDF or image with grammatically correct results.",
+    "Binance verileriyle 16 teknik göstergeyi hesaplayıp coinlere AL / SAT / BEKLE sinyali üreten, sonucu Türkçe yorumlayan analiz platformu.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={inter.variable}>
+    <html lang="tr">
+      <body>
         <Providers>{children}</Providers>
       </body>
     </html>
