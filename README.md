@@ -22,14 +22,15 @@ cp .env.example .env
 npm run dev
 ```
 
-`.env` dosyasına iki anahtardan **birini** girin:
+`.env` dosyasına anahtarlardan **birini** girin:
 
-| Sağlayıcı | Anahtar | Ücret |
-|---|---|---|
-| **Google Gemini** (önerilen) | `GEMINI_API_KEY` — [aistudio.google.com/apikey](https://aistudio.google.com/apikey) adresinden **ücretsiz**, kredi kartı gerekmez | Ücretsiz katman |
-| Claude | `ANTHROPIC_API_KEY` — [platform.claude.com](https://platform.claude.com) | Kullandıkça öde |
+| Sağlayıcı | Anahtar | Ücret | Uzun PDF'ler |
+|---|---|---|---|
+| **OpenAI** | `OPENAI_API_KEY` — [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Kullandıkça öde | Yüksek istek limiti |
+| **Google Gemini** | `GEMINI_API_KEY` — [aistudio.google.com/apikey](https://aistudio.google.com/apikey), kredi kartı gerekmez | Ücretsiz katman | Günlük istek sınırı düşük |
+| Claude | `ANTHROPIC_API_KEY` — [platform.claude.com](https://platform.claude.com) | Kullandıkça öde | Yalnızca metin modu |
 
-`GEMINI_API_KEY` tanımlıysa Gemini kullanılır; boşsa `ANTHROPIC_API_KEY` ile Claude'a düşer.
+Sıra: `OPENAI_API_KEY` → `GEMINI_API_KEY` → `ANTHROPIC_API_KEY`. İkisi birden tanımlıysa OpenAI kullanılır, bir sorun çıkarsa otomatik olarak Gemini'ye düşülür.
 
 Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın.
 
@@ -42,15 +43,15 @@ Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın.
 ## Teknik Detaylar
 
 - **Next.js 15** (App Router) + **React 19** + **TypeScript**
-- İki model desteği: **Gemini 2.5 Flash** (ücretsiz katman, `GEMINI_MODEL` ile değiştirilebilir) veya **Claude Opus 5**
-- PDF'ler ve görüntüler doğrudan modele gönderilir (Gemini: `inlineData`, Claude: `document`/`image` bloğu); ayrı bir OCR adımı gerekmez
+- Üç sağlayıcı desteği: **OpenAI** (`OPENAI_MODEL`, varsayılan `gpt-4.1-mini`), **Gemini** (`GEMINI_MODEL`) veya **Claude**. Her sağlayıcının model yedekleme zinciri vardır: bir model kotası dolduğunda ya da erişilemediğinde sıradaki denenir.
+- PDF'ler ve görüntüler doğrudan modele gönderilir (OpenAI: `image_url`, Gemini: `inlineData`, Claude: `document`/`image` bloğu); ayrı bir OCR adımı gerekmez
 - Çeviri, `/api/translate` route handler'ından tarayıcıya **stream** edilir
 - API anahtarı yalnızca sunucu tarafında kullanılır, tarayıcıya asla gönderilmez
 
 ## Dosya Olarak Çeviri Nasıl Çalışır?
 
 1. PDF, tarayıcıda **pdf.js** ile sayfa sayfa görüntüye çevrilir (görseller doğrudan kullanılır).
-2. Her sayfa `/api/translate-page` üzerinden Gemini'ye gönderilir; model her metin **satırını** konum kutusu (bounding box), çevirisi ve rengiyle birlikte döndürür.
+2. Sayfalar `/api/translate-page` üzerinden birkaçı bir arada modele gönderilir; model her metin **satırını** konum kutusu (bounding box), orijinal metni, çevirisi, rengi ve kalınlığıyla birlikte döndürür. Yarım kalan ya da boş dönen sayfalar tek tek yeniden istenir.
 3. Tarayıcıda yalnızca metin satırları kapatılır: her satırın soluyla sağı arasındaki zemin satır satır örneklenip aradaki alan bu renklerle doldurulur, böylece düz zeminler kadar degrade ve renkli bloklar da korunur. Çeviri aynı konuma, kutuya sığacak boyutta ve gerekiyorsa kalın olarak yazılır. Çevirisi orijinaliyle aynı olan satırlara (sayılar, özel adlar, adresler) hiç dokunulmaz.
 4. Sayfalar **pdf-lib** ile tek bir PDF'te birleştirilir ve indirme kartı görünür. Görsel girdilerde çıktı PNG olur.
 

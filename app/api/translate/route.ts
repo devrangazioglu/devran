@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { callGemini } from "@/lib/gemini";
+import { callOpenAI, imagePart } from "@/lib/openai";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -131,6 +132,85 @@ async function streamGemini(
   return new Response(readable, { headers: textHeaders });
 }
 
+/* ── OpenAI ──────────────────────────────────────────────────────── */
+
+async function streamOpenAI(
+  apiKey: string,
+  fileBase64: string,
+  mediaType: string,
+  prompt: string,
+): Promise<Response> {
+  const result = await callOpenAI(apiKey, {
+    stream: true,
+    messages: [
+      {
+        role: "user",
+        content: [
+          imagePart(mediaType, fileBase64),
+          { type: "text", text: prompt },
+        ],
+      },
+    ],
+  });
+
+  if ("failure" in result) {
+    console.error("translate (openai) failed:", result.failure);
+    return new Response(`__TRANSIVO_ERROR__:${result.failure.reason}`, {
+      status: result.failure.reason === "auth" ? 500 : 503,
+      headers: textHeaders,
+    });
+  }
+
+  const upstream = result.res;
+  const encoder = new TextEncoder();
+
+  const readable = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        const reader = upstream.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let finish: string | undefined;
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const payload = line.slice(6).trim();
+            if (!payload || payload === "[DONE]") continue;
+            try {
+              const json = JSON.parse(payload);
+              const choice = json.choices?.[0];
+              const text = choice?.delta?.content;
+              if (text) controller.enqueue(encoder.encode(stripMarkdown(text)));
+              if (choice?.finish_reason) finish = choice.finish_reason;
+            } catch {
+              /* ignore keep-alive fragments */
+            }
+          }
+        }
+
+        if (finish === "length") {
+          controller.enqueue(encoder.encode("\n\n__TRANSIVO_NOTE__:truncated"));
+        } else if (finish === "content_filter") {
+          controller.enqueue(encoder.encode("\n\n__TRANSIVO_NOTE__:refused"));
+        }
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+  });
+
+  return new Response(readable, { headers: textHeaders });
+}
+
 /* ── Claude ──────────────────────────────────────────────────────── */
 
 function streamClaude(
@@ -238,6 +318,12 @@ export async function POST(req: Request) {
   }
 
   const prompt = buildPrompt(sourceLang, targetLang);
+
+  // OpenAI's chat endpoint takes images directly; PDFs go to a provider that
+  // accepts the document itself.
+  if (process.env.OPENAI_API_KEY && isImage) {
+    return streamOpenAI(process.env.OPENAI_API_KEY, fileBase64, mediaType, prompt);
+  }
 
   if (process.env.GEMINI_API_KEY) {
     return streamGemini(process.env.GEMINI_API_KEY, fileBase64, mediaType, prompt);
