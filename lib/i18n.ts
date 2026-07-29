@@ -42,6 +42,17 @@ const dict = {
     errFileType: "Only PDF, PNG, JPEG, WebP and GIF files are supported.",
     errFileSize: (mb: number) => `File is too large. Maximum size is ${mb} MB.`,
     errGeneric: "Translation failed. Please try again.",
+    errBusy:
+      "The translation service is busy right now. This is temporary — tap Retry in a few seconds.",
+    errQuota:
+      "The free daily limit for this API key has been reached. Try again later, or use a different key.",
+    errAuth:
+      "The API key is missing or invalid. Check the GEMINI_API_KEY setting on the server.",
+    retry: "Retry",
+    noteTruncated:
+      "The document is long, so the output was cut short. Try splitting it into smaller parts.",
+    noteRefused:
+      "The request was declined by safety filters. Please try a different document.",
   },
   tr: {
     languages: "Diller",
@@ -84,6 +95,17 @@ const dict = {
     errFileType: "Yalnızca PDF, PNG, JPEG, WebP ve GIF dosyaları desteklenir.",
     errFileSize: (mb: number) => `Dosya çok büyük. En fazla ${mb} MB olabilir.`,
     errGeneric: "Çeviri başarısız oldu. Lütfen tekrar deneyin.",
+    errBusy:
+      "Çeviri servisi şu an yoğun. Bu geçici bir durum — birkaç saniye sonra Tekrar Dene'ye dokunun.",
+    errQuota:
+      "Bu API anahtarının günlük ücretsiz kullanım sınırına ulaşıldı. Daha sonra tekrar deneyin veya başka bir anahtar kullanın.",
+    errAuth:
+      "API anahtarı eksik ya da geçersiz. Sunucudaki GEMINI_API_KEY ayarını kontrol edin.",
+    retry: "Tekrar Dene",
+    noteTruncated:
+      "Belge uzun olduğu için çıktı kısaldı. Belgeyi daha küçük parçalara bölmeyi deneyin.",
+    noteRefused:
+      "İstek güvenlik filtreleri tarafından reddedildi. Lütfen farklı bir belge deneyin.",
   },
 } as const;
 

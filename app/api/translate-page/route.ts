@@ -1,7 +1,7 @@
+import { callGemini } from "@/lib/gemini";
+
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 
 export type PageItem = {
   box: [number, number, number, number]; // ymin, xmin, ymax, xmax (0-1000)
@@ -44,67 +44,44 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: "Invalid request body." }, { status: 400 });
+    return Response.json({ reason: "unknown" }, { status: 400 });
   }
 
   const { imageBase64, mimeType, sourceLang = "Auto Detect", targetLang } = body;
   if (!imageBase64 || !mimeType || !targetLang) {
-    return Response.json(
-      { error: "Missing image, mime type, or target language." },
-      { status: 400 },
-    );
+    return Response.json({ reason: "unknown" }, { status: 400 });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return Response.json(
+    return Response.json({ reason: "auth" }, { status: 500 });
+  }
+
+  const result = await callGemini(apiKey, "generateContent", {
+    contents: [
       {
-        error:
-          "Server is not configured. Set GEMINI_API_KEY (free — https://aistudio.google.com/apikey).",
+        role: "user",
+        parts: [
+          { inlineData: { mimeType, data: imageBase64 } },
+          { text: buildPrompt(sourceLang, targetLang) },
+        ],
       },
-      { status: 500 },
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.1,
+    },
+  });
+
+  if ("failure" in result) {
+    console.error("translate-page failed:", result.failure);
+    return Response.json(
+      { reason: result.failure.reason },
+      { status: result.failure.reason === "auth" ? 500 : 503 },
     );
   }
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { inlineData: { mimeType, data: imageBase64 } },
-              { text: buildPrompt(sourceLang, targetLang) },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.1,
-        },
-      }),
-    },
-  );
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    let message = `Gemini request failed (${res.status}).`;
-    try {
-      const parsed = JSON.parse(detail);
-      if (parsed?.error?.message) message = `Gemini: ${parsed.error.message}`;
-    } catch {
-      /* keep generic message */
-    }
-    return Response.json({ error: message }, { status: 502 });
-  }
-
-  const data = await res.json();
+  const data = await result.res.json();
   const raw: string =
     data?.candidates?.[0]?.content?.parts
       ?.map((p: { text?: string }) => p.text ?? "")
@@ -133,10 +110,7 @@ export async function POST(req: Request) {
         .filter((x): x is PageItem => x !== null);
     }
   } catch {
-    return Response.json(
-      { error: "Could not parse the model response. Please try again." },
-      { status: 502 },
-    );
+    return Response.json({ reason: "unknown" }, { status: 502 });
   }
 
   return Response.json({ items });

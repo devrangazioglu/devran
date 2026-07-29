@@ -1,12 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { callGemini } from "@/lib/gemini";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
 type ImageMediaType = (typeof IMAGE_TYPES)[number];
-
-const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 
 function buildPrompt(sourceLang: string, targetLang: string): string {
   const sourceNote =
@@ -38,57 +37,52 @@ function stripMarkdown(text: string): string {
     .replace(/^#{1,6}\s+/gm, "");
 }
 
+const textHeaders = {
+  "Content-Type": "text/plain; charset=utf-8",
+  "Cache-Control": "no-cache",
+};
+
 /* ── Gemini (free tier) ──────────────────────────────────────────── */
 
-function streamGemini(
+async function streamGemini(
   apiKey: string,
   fileBase64: string,
   mediaType: string,
   prompt: string,
-): Response {
+): Promise<Response> {
+  const result = await callGemini(
+    apiKey,
+    "streamGenerateContent",
+    {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { inlineData: { mimeType: mediaType, data: fileBase64 } },
+            { text: prompt },
+          ],
+        },
+      ],
+      generationConfig: { temperature: 0.2 },
+    },
+    { query: "?alt=sse" },
+  );
+
+  if ("failure" in result) {
+    console.error("translate failed:", result.failure);
+    return new Response(`__TRANSIVO_ERROR__:${result.failure.reason}`, {
+      status: result.failure.reason === "auth" ? 500 : 503,
+      headers: textHeaders,
+    });
+  }
+
+  const upstream = result.res;
   const encoder = new TextEncoder();
 
   const readable = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-goog-api-key": apiKey,
-            },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-                  parts: [
-                    { inlineData: { mimeType: mediaType, data: fileBase64 } },
-                    { text: prompt },
-                  ],
-                },
-              ],
-              generationConfig: { temperature: 0.2 },
-            }),
-          },
-        );
-
-        if (!res.ok || !res.body) {
-          const detail = await res.text().catch(() => "");
-          let message = `Gemini request failed (${res.status}).`;
-          try {
-            const parsed = JSON.parse(detail);
-            if (parsed?.error?.message) message = `Gemini: ${parsed.error.message}`;
-          } catch {
-            /* keep generic message */
-          }
-          controller.enqueue(encoder.encode(`[Transivo] ${message}`));
-          controller.close();
-          return;
-        }
-
-        const reader = res.body.getReader();
+        const reader = upstream.body!.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         let finishReason: string | undefined;
@@ -120,17 +114,12 @@ function streamGemini(
         }
 
         if (finishReason === "MAX_TOKENS") {
-          controller.enqueue(
-            encoder.encode(
-              "\n\n[Transivo] The document is too long — output was truncated. Try splitting it into smaller parts.",
-            ),
-          );
-        } else if (finishReason === "SAFETY" || finishReason === "PROHIBITED_CONTENT") {
-          controller.enqueue(
-            encoder.encode(
-              "\n\n[Transivo] The request was declined by safety filters. Please try a different document.",
-            ),
-          );
+          controller.enqueue(encoder.encode("\n\n__TRANSIVO_NOTE__:truncated"));
+        } else if (
+          finishReason === "SAFETY" ||
+          finishReason === "PROHIBITED_CONTENT"
+        ) {
+          controller.enqueue(encoder.encode("\n\n__TRANSIVO_NOTE__:refused"));
         }
         controller.close();
       } catch (err) {
@@ -139,12 +128,7 @@ function streamGemini(
     },
   });
 
-  return new Response(readable, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
-    },
-  });
+  return new Response(readable, { headers: textHeaders });
 }
 
 /* ── Claude ──────────────────────────────────────────────────────── */
@@ -198,17 +182,9 @@ function streamClaude(
         .finalMessage()
         .then((message) => {
           if (message.stop_reason === "refusal") {
-            controller.enqueue(
-              encoder.encode(
-                "\n\n[Transivo] The request was declined by safety filters. Please try a different document.",
-              ),
-            );
+            controller.enqueue(encoder.encode("\n\n__TRANSIVO_NOTE__:refused"));
           } else if (message.stop_reason === "max_tokens") {
-            controller.enqueue(
-              encoder.encode(
-                "\n\n[Transivo] The document is too long — output was truncated. Try splitting it into smaller parts.",
-              ),
-            );
+            controller.enqueue(encoder.encode("\n\n__TRANSIVO_NOTE__:truncated"));
           }
           controller.close();
         })
@@ -221,12 +197,7 @@ function streamClaude(
     },
   });
 
-  return new Response(readable, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
-    },
-  });
+  return new Response(readable, { headers: textHeaders });
 }
 
 /* ── Route handler ───────────────────────────────────────────────── */
@@ -242,21 +213,28 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return new Response("Invalid request body.", { status: 400 });
+    return new Response("__TRANSIVO_ERROR__:unknown", {
+      status: 400,
+      headers: textHeaders,
+    });
   }
 
   const { fileBase64, mediaType, sourceLang = "Auto Detect", targetLang } = body;
 
   if (!fileBase64 || !mediaType || !targetLang) {
-    return new Response("Missing file, media type, or target language.", {
+    return new Response("__TRANSIVO_ERROR__:unknown", {
       status: 400,
+      headers: textHeaders,
     });
   }
 
   const isPdf = mediaType === "application/pdf";
   const isImage = (IMAGE_TYPES as readonly string[]).includes(mediaType);
   if (!isPdf && !isImage) {
-    return new Response("Unsupported file type.", { status: 415 });
+    return new Response("__TRANSIVO_ERROR__:unknown", {
+      status: 415,
+      headers: textHeaders,
+    });
   }
 
   const prompt = buildPrompt(sourceLang, targetLang);
@@ -269,8 +247,8 @@ export async function POST(req: Request) {
     return streamClaude(fileBase64, mediaType, isPdf, prompt);
   }
 
-  return new Response(
-    "Server is not configured. Set GEMINI_API_KEY (free — get one at https://aistudio.google.com/apikey) or ANTHROPIC_API_KEY in your .env file.",
-    { status: 500 },
-  );
+  return new Response("__TRANSIVO_ERROR__:auth", {
+    status: 500,
+    headers: textHeaders,
+  });
 }

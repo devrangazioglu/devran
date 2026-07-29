@@ -74,6 +74,13 @@ const LANG_CODES: Record<string, string> = {
   "Chinese (Simplified)": "zh",
 };
 
+function errorMessage(reason: string, t: ReturnType<typeof getDict>): string {
+  if (reason === "busy") return t.errBusy;
+  if (reason === "quota") return t.errQuota;
+  if (reason === "auth") return t.errAuth;
+  return t.errGeneric;
+}
+
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -215,8 +222,8 @@ export default function Home() {
           targetLang,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || t.errGeneric);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(errorMessage(data?.reason ?? "unknown", t));
       translated.push(
         renderTranslatedPage(canvases[i], (data.items ?? []) as PageItem[]),
       );
@@ -273,15 +280,24 @@ export default function Home() {
 
     if (!res.ok || !res.body) {
       const detail = await res.text().catch(() => "");
-      throw new Error(detail || t.errGeneric);
+      const reason = detail.startsWith("__TRANSIVO_ERROR__:")
+        ? detail.slice("__TRANSIVO_ERROR__:".length).trim()
+        : "unknown";
+      throw new Error(errorMessage(reason, t));
     }
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
+    let acc = "";
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      setOutput((prev) => prev + decoder.decode(value, { stream: true }));
+      acc += decoder.decode(value, { stream: true });
+      const [text, note] = acc.split("__TRANSIVO_NOTE__:");
+      setOutput(text);
+      if (note) {
+        setError(note.trim() === "truncated" ? t.noteTruncated : t.noteRefused);
+      }
     }
   };
 
@@ -630,7 +646,16 @@ export default function Home() {
         <p className="hint">{file ? t.hintReady : t.hintUpload}</p>
       )}
 
-      {error && <div className="error-card">{error}</div>}
+      {error && (
+        <div className="error-card">
+          <span>{error}</span>
+          {file && !translating && (
+            <button className="retrybtn" onClick={translate}>
+              <RetryIcon /> {t.retry}
+            </button>
+          )}
+        </div>
+      )}
 
       {result && (
         <div className="doc-card">
@@ -780,6 +805,15 @@ function PlusIcon() {
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 5v14" />
       <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function RetryIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5" />
     </svg>
   );
 }

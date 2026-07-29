@@ -593,3 +593,29 @@ body {
   color: var(--ink-faint);
   margin-top: 2px;
 }
+
+.error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.retrybtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  background: #8c2f2f;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 99px;
+  cursor: pointer;
+}
+
+.retrybtn:hover {
+  opacity: 0.9;
+}
