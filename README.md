@@ -51,7 +51,7 @@ Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın.
 
 1. PDF, tarayıcıda **pdf.js** ile sayfa sayfa görüntüye çevrilir (görseller doğrudan kullanılır).
 2. Her sayfa `/api/translate-page` üzerinden Gemini'ye gönderilir; model her metin **satırını** konum kutusu (bounding box), çevirisi ve rengiyle birlikte döndürür.
-3. Tarayıcıda orijinal sayfanın üzerinde yalnızca metin bölgeleri, çevresinden örneklenen zemin rengiyle kapatılır ve çeviri aynı konuma, kutuya sığacak boyutta yazılır.
+3. Tarayıcıda yalnızca metin satırları kapatılır: her satırın soluyla sağı arasındaki zemin satır satır örneklenip aradaki alan bu renklerle doldurulur, böylece düz zeminler kadar degrade ve renkli bloklar da korunur. Çeviri aynı konuma, kutuya sığacak boyutta ve gerekiyorsa kalın olarak yazılır. Çevirisi orijinaliyle aynı olan satırlara (sayılar, özel adlar, adresler) hiç dokunulmaz.
 4. Sayfalar **pdf-lib** ile tek bir PDF'te birleştirilir ve indirme kartı görünür. Görsel girdilerde çıktı PNG olur.
 
 ## Google ile Giriş (isteğe bağlı)
@@ -65,5 +65,6 @@ Bu değişkenler tanımlı değilse uygulama giriş ekranını atlar ve doğruda
 ## Sınırlar
 
 - Dosya boyutu: 20 MB (istemci tarafında denetlenir)
+- **Ücretsiz katman kotası:** Gemini'nin ücretsiz katmanı model başına günde sınırlı sayıda istek verir. Bu yüzden sayfalar tek tek değil, istek başına birkaç sayfa halinde gruplanarak gönderilir ve kota dolduğunda sıradaki modele geçilir. Yine de çok sayıda uzun belgeyi aynı gün çevirmek kotayı tüketebilir; kota ertesi gün sıfırlanır.
 - Dosya modu, karmaşık/desenli zeminlerde metin kapatma yamalarında iz bırakabilir; düz zeminli belgelerde en iyi sonucu verir
 - Metin modunda çok uzun belgelerde çıktı 64K token ile sınırlıdır

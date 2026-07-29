@@ -11,7 +11,16 @@ import {
   type HistoryEntry,
 } from "@/lib/history";
 import { renderTranslatedPage, canvasToBase64Png, type PageItem } from "@/lib/render";
-import { canvasesToPdf, imageFileToCanvas, pdfToCanvases } from "@/lib/pdf";
+import {
+  canvasToJpeg,
+  downscaleForDetection,
+  imageFileToCanvas,
+  openPdf,
+  pageImagesToPdf,
+  releaseCanvas,
+  runPool,
+  type PageImage,
+} from "@/lib/pdf";
 
 const LANGUAGES = [
   "English",
@@ -33,6 +42,13 @@ const LANGUAGES = [
 ];
 
 const MAX_FILE_MB = 20;
+
+/** Pages sent per API request. The free tier caps requests per day, so
+ *  batching is what makes a long document viable at all. */
+const PAGES_PER_REQUEST = 5;
+
+/** Batches in flight at once. */
+const BATCH_CONCURRENCY = 2;
 
 const ACCEPTED = [
   "application/pdf",
@@ -196,6 +212,63 @@ export default function Home() {
     }
   };
 
+  /* Translates a group of pages in a single request. Batching matters: the
+     free API tier caps requests per day, so one request per page makes a
+     long document impossible. */
+  const requestPages = async (
+    canvases: HTMLCanvasElement[],
+    signal: AbortSignal,
+  ): Promise<(PageItem[] | null)[]> => {
+    const pages = canvases.map((c) => ({
+      imageBase64: canvasToBase64Png(downscaleForDetection(c)),
+      mimeType: "image/png",
+    }));
+    let lastReason = "unknown";
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await fetch("/api/translate-page", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal,
+        body: JSON.stringify({ pages, sourceLang, targetLang }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) return (data.results ?? []) as (PageItem[] | null)[];
+
+      lastReason = data?.reason ?? "unknown";
+      if (lastReason === "auth" || lastReason === "quota") break;
+      await new Promise((r) => setTimeout(r, 1200 * 2 ** attempt));
+    }
+    throw new Error(errorMessage(lastReason, t));
+  };
+
+  /* Batching is efficient but not always reliable: a response can be cut
+     short by the output cap, and the smaller fallback models return nothing
+     at all when handed several images at once. Either way, re-ask for the
+     affected pages one at a time, which every model handles. */
+  const detectPages = async (
+    canvases: HTMLCanvasElement[],
+    signal: AbortSignal,
+  ): Promise<(PageItem[] | null)[]> => {
+    const out = await requestPages(canvases, signal);
+
+    // A whole batch coming back empty means the model didn't read the images,
+    // not that every page is blank.
+    const allEmpty =
+      canvases.length > 1 && out.every((page) => page !== null && page.length === 0);
+
+    const missing = out
+      .map((page, i) => (page === null || allEmpty ? i : -1))
+      .filter((i) => i !== -1);
+
+    for (const index of missing) {
+      if (signal.aborted) break;
+      const [retry] = await requestPages([canvases[index]], signal);
+      if (retry) out[index] = retry;
+    }
+    return out;
+  };
+
   /* ── File mode: translate the document itself ── */
   const translateFile = async () => {
     if (!file) return;
@@ -204,60 +277,110 @@ export default function Home() {
     setProgress({ phase: "preparing", page: 0, total: 0 });
 
     const isPdf = file.type === "application/pdf";
-    const canvases = isPdf
-      ? await pdfToCanvases(await file.arrayBuffer())
-      : [await imageFileToCanvas(file)];
-
-    const translated: HTMLCanvasElement[] = [];
-    for (let i = 0; i < canvases.length; i++) {
-      setProgress({ phase: "translating", page: i + 1, total: canvases.length });
-      const res = await fetch("/api/translate-page", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          imageBase64: canvasToBase64Png(canvases[i]),
-          mimeType: "image/png",
-          sourceLang,
-          targetLang,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(errorMessage(data?.reason ?? "unknown", t));
-      translated.push(
-        renderTranslatedPage(canvases[i], (data.items ?? []) as PageItem[]),
-      );
-    }
-
-    setProgress({
-      phase: "assembling",
-      page: canvases.length,
-      total: canvases.length,
-    });
-
     const base = file.name.replace(/\.[^.]+$/, "");
-    let blob: Blob;
-    let name: string;
-    let mime: string;
+    const code = LANG_CODES[targetLang] ?? "xx";
 
-    if (isPdf) {
-      blob = await canvasesToPdf(translated);
-      name = `${base}.${(LANG_CODES[targetLang] ?? "xx")}.pdf`;
-      mime = "application/pdf";
-    } else {
-      blob = await new Promise<Blob>((resolve, reject) =>
-        translated[0].toBlob(
+    /* ── Single image ── */
+    if (!isPdf) {
+      const canvas = await imageFileToCanvas(file);
+      setProgress({ phase: "translating", page: 1, total: 1 });
+      const [items] = await detectPages([canvas], controller.signal);
+      const out = renderTranslatedPage(canvas, items ?? []);
+      releaseCanvas(canvas);
+
+      setProgress({ phase: "assembling", page: 1, total: 1 });
+      const blob = await new Promise<Blob>((resolve, reject) =>
+        out.toBlob(
           (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
           "image/png",
         ),
       );
-      name = `${base}.${(LANG_CODES[targetLang] ?? "xx")}.png`;
-      mime = "image/png";
+      const name = `${base}.${code}.png`;
+      await saveToHistory(blob, name, "image/png");
+      setResult({
+        url: URL.createObjectURL(blob),
+        name,
+        mime: "image/png",
+        size: blob.size,
+      });
+      setProgress(null);
+      return;
     }
 
-    await saveToHistory(blob, name, mime);
-    setResult({ url: URL.createObjectURL(blob), name, mime, size: blob.size });
+    /* ── PDF: render, translate and encode in batches ── */
+    const pdf = await openPdf(await file.arrayBuffer());
+    const total = pdf.numPages;
+    const pages: PageImage[] = new Array(total);
+    let completed = 0;
+    let failed = 0;
+
+    // Page indices grouped into request-sized batches.
+    const batches: number[][] = [];
+    for (let start = 0; start < total; start += PAGES_PER_REQUEST) {
+      batches.push(
+        Array.from(
+          { length: Math.min(PAGES_PER_REQUEST, total - start) },
+          (_, k) => start + k,
+        ),
+      );
+    }
+
+    setProgress({ phase: "translating", page: 0, total });
+
+    try {
+      await runPool(batches.length, BATCH_CONCURRENCY, async (batchIndex) => {
+        if (controller.signal.aborted) return;
+        const indices = batches[batchIndex];
+        const canvases = await Promise.all(
+          indices.map((i) => pdf.renderPage(i + 1)),
+        );
+
+        let perPage: (PageItem[] | null)[] = [];
+        try {
+          perPage = await detectPages(canvases, controller.signal);
+        } catch (err) {
+          if ((err as Error).name === "AbortError") {
+            canvases.forEach(releaseCanvas);
+            throw err;
+          }
+          // Fall through: pages are kept in their original language.
+        }
+
+        for (let k = 0; k < indices.length; k++) {
+          const canvas = canvases[k];
+          const items = perPage[k];
+          if (items && items.length > 0) {
+            const out = renderTranslatedPage(canvas, items);
+            pages[indices[k]] = await canvasToJpeg(out);
+            releaseCanvas(out);
+          } else {
+            pages[indices[k]] = await canvasToJpeg(canvas);
+            failed++;
+          }
+          releaseCanvas(canvas);
+          completed++;
+          setProgress({ phase: "translating", page: completed, total });
+        }
+      });
+    } finally {
+      await pdf.close();
+    }
+
+    if (controller.signal.aborted) throw new DOMException("", "AbortError");
+
+    setProgress({ phase: "assembling", page: total, total });
+    const blob = await pageImagesToPdf(pages);
+    const name = `${base}.${code}.pdf`;
+
+    await saveToHistory(blob, name, "application/pdf");
+    setResult({
+      url: URL.createObjectURL(blob),
+      name,
+      mime: "application/pdf",
+      size: blob.size,
+    });
     setProgress(null);
+    if (failed > 0) setError(t.notePartial(failed, total));
   };
 
   /* ── Text mode: stream translated text ── */
@@ -625,6 +748,14 @@ export default function Home() {
                 ? t.assembling
                 : t.pageProgress(progress.page, progress.total)}
           </div>
+          {translating && (
+            <button
+              className="ghostbtn cancelbtn"
+              onClick={() => abortRef.current?.abort()}
+            >
+              {t.cancel}
+            </button>
+          )}
         </div>
       )}
 

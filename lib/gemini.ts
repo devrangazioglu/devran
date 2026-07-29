@@ -1,10 +1,13 @@
 // Shared Gemini calling logic: retries transient overload/rate-limit errors
 // with exponential backoff, then falls back to alternative models.
 
+/** Ordered by capability: the full-size models read multi-image batches
+ *  reliably, the lite models are the last-resort fallback. */
 const DEFAULT_MODELS = [
   "gemini-flash-latest",
   "gemini-2.0-flash",
   "gemini-flash-lite-latest",
+  "gemini-3.1-flash-lite",
 ];
 
 /** Preferred model first, then fallbacks tried when one is overloaded. */
@@ -102,11 +105,11 @@ export async function callGemini(
       // Auth problems and malformed requests will not fix themselves.
       if (!isTransient(res.status)) break;
 
-      // Quota exhaustion is per-model per-minute; a short wait rarely helps
-      // as much as switching models, so only back off for genuine overload.
-      if (attempt < attempts - 1) {
-        await sleep((res.status === 429 ? 1500 : 700) * 2 ** attempt);
-      }
+      // The free tier caps requests per *day* per model, so waiting cannot
+      // clear a 429 — switch models immediately instead of burning time.
+      if (res.status === 429) break;
+
+      if (attempt < attempts - 1) await sleep(700 * 2 ** attempt);
     }
   }
 

@@ -17,7 +17,10 @@ const dict = {
     hintUpload: "Upload a document to translate its text",
     hintReady: "Tap Translate to start",
     translationLabel: "Translation",
-    pageProgress: (p: number, t: number) => `Translating page ${p} of ${t}…`,
+    pageProgress: (p: number, t: number) => `Translating pages… ${p} / ${t}`,
+    notePartial: (f: number, t: number) =>
+      `${f} of ${t} pages could not be translated and were kept in the original language.`,
+    cancel: "Cancel",
     preparing: "Preparing document…",
     assembling: "Building the translated file…",
     download: "Download",
@@ -70,7 +73,10 @@ const dict = {
     hintUpload: "Metnini çevirmek için bir belge yükleyin",
     hintReady: "Başlamak için Çevir'e dokunun",
     translationLabel: "Çeviri",
-    pageProgress: (p: number, t: number) => `Sayfa ${p}/${t} çevriliyor…`,
+    pageProgress: (p: number, t: number) => `Sayfalar çevriliyor… ${p} / ${t}`,
+    notePartial: (f: number, t: number) =>
+      `${t} sayfanın ${f} tanesi çevrilemedi ve özgün dilinde bırakıldı.`,
+    cancel: "İptal",
     preparing: "Belge hazırlanıyor…",
     assembling: "Çevrilmiş dosya oluşturuluyor…",
     download: "İndir",

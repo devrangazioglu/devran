@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { callGemini } from "@/lib/gemini";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
 type ImageMediaType = (typeof IMAGE_TYPES)[number];
