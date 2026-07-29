@@ -32,6 +32,10 @@ export async function POST(request: Request) {
     if (error instanceof UserStoreError) {
       return NextResponse.json({ error: error.message }, { status: 503 });
     }
-    throw error;
+    console.error("Takip listesi hatası:", error);
+    return NextResponse.json(
+      { error: `Sunucu hatası: ${error instanceof Error ? error.message : "bilinmeyen hata"}` },
+      { status: 500 },
+    );
   }
 }

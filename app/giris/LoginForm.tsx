@@ -20,7 +20,13 @@ export default function LoginForm({ googleEnabled }: { googleEnabled: boolean })
 
     setLoading(false);
     if (result?.error) {
-      setError("E-posta veya parola hatalı.");
+      // "CredentialsSignin" yanlış bilgi demektir; diğer hatalar (ör. veritabanına
+      // ulaşılamaması) sunucu sorunudur — kullanıcıyı yanlış yönlendirmeyelim.
+      setError(
+        result.error === "CredentialsSignin"
+          ? "E-posta veya parola hatalı."
+          : `Giriş yapılamadı: sunucu tarafında bir sorun oluştu (${result.error}). Sunucu günlüklerini kontrol edin.`,
+      );
       return;
     }
     router.push("/panel");

@@ -22,15 +22,35 @@ export default function RegisterForm({ googleEnabled }: { googleEnabled: boolean
     }
 
     setLoading(true);
-    const response = await fetch("/api/register", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+    } catch {
+      setError("Sunucuya ulaşılamadı; bağlantınızı kontrol edip tekrar deneyin.");
+      setLoading(false);
+      return;
+    }
 
     if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Kayıt tamamlanamadı.");
+      // Yanıt JSON değilse (ör. platformun ham hata sayfası) durum kodunu ve
+      // gövdenin başını göster — gerçek sebep kaybolmasın.
+      const text = await response.text().catch(() => "");
+      let message: string | null = null;
+      try {
+        message = (JSON.parse(text) as { error?: string }).error ?? null;
+      } catch {
+        // JSON değil.
+      }
+      setError(
+        message ??
+          `Kayıt tamamlanamadı (HTTP ${response.status}). Sunucu yanıtı: ${
+            text.slice(0, 160) || "boş"
+          }`,
+      );
       setLoading(false);
       return;
     }
