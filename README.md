@@ -71,6 +71,7 @@ sayfasından hesap oluşturun.
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Google ile giriş. Boşsa yalnızca e-posta + parola görünür |
 | `USERS_FILE` | — | Dosya deposu yolu (varsayılan `data/users.json`, git'e girmez) |
 | `PGPOOL_MAX` | — | Postgres havuzundaki en fazla bağlantı (varsayılan 3) |
+| `TWELVEDATA_API_KEY` | hisse/emtia için ✅ | ABD borsası, Türkiye borsası ve emtia verisi bu anahtarla gelir. [twelvedata.com](https://twelvedata.com/pricing) ücretsiz katman. Tanımsızsa bu üç piyasa boş kalır; kripto ve dövizler etkilenmez |
 | `DEMO_DATA` | — | `1` ise piyasa verisine erişilemediğinde sentetik demo veri üretilir (geliştirme için) |
 
 Eksik yapılandırma sessiz kalmaz: `AUTH_SECRET` yoksa ya da üretimde kalıcı bir
@@ -120,7 +121,9 @@ app/
 lib/
   markets/
     types.ts                   ortak Candle/Instrument tipleri, piyasa kayıtları, mum toplama
-    stooq.ts                   hisse/emtia/döviz için birincil kaynak (CSV, anahtarsız)
+    twelvedata.ts              hisse/endeks/emtia/BIST için birincil kaynak (anahtarlı)
+    frankfurter.ts             dövizler için anahtarsız kaynak (ECB)
+    stooq.ts                   yedek kaynak (CSV, anahtarsız)
     instruments.ts             hisse, endeks, emtia ve döviz listeleri + arama eş anlamlıları
     provider.ts                tek giriş noktası: sembol çözümleme, fiyat, mum, arama
     yahoo.ts                   hisse/emtia/döviz veri istemcisi
@@ -169,14 +172,24 @@ piyasalarda "seans kapalı olabilir" riski eklenir.
 
 - **Kripto:** borsanın herkese açık spot uç noktaları (mum verisi ve 24 saatlik özet).
   Coğrafi kısıt olan ağlar için birden çok alan adı sırayla denenir.
-- **Hisse, endeks, emtia, döviz:** önce **Stooq** (CSV, anahtarsız), o veremezse
-  **Yahoo Finance**. Sıralama bilinçlidir: Yahoo, veri merkezi IP aralıklarından gelen
-  istekleri sınırlıyor, bu yüzden Vercel gibi ortamlarda kripto dışı piyasalar tamamen
-  boş kalıyordu. Stooq bulut IP'lerini engellemiyor ancak **yalnızca günlük ve haftalık**
-  veri sunuyor; kripto dışı piyasalarda arayüzde bu iki periyot gösterilmesinin sebebi budur.
-  Her iki kaynak da **belgelenmiş bir API değildir**; kalıcı bir kurulum için sözleşmeli bir
-  sağlayıcıya geçmeyi düşünün — `lib/markets/provider.ts` tek giriş noktası olduğu için
-  değişiklik yalnızca o dosyayı ilgilendirir.
+- **Dövizler (USD/TRY, EUR/USD…):** **Frankfurter** — Avrupa Merkez Bankası günlük
+  referans kurları, anahtar gerektirmez. Yalnızca kapanış değeri yayımlandığı için mumlar
+  kapanıştan türetilir; gün içi aralığa dayanan göstergeler (ATR, Stokastik, Williams %R)
+  burada dar kalır, kapanışa dayananlar (RSI, MACD, EMA, Bollinger) tam çalışır.
+
+- **Hisse, endeks, emtia, BIST:** **Twelve Data** (`TWELVEDATA_API_KEY`). Anahtar
+  gerektirmesi bilinçli bir tercih değil, ölçülmüş bir zorunluluk: anahtarsız sağlayıcılar
+  çağıranı IP'sine göre değerlendiriyor ve veri merkezi aralıklarını engelliyor. Uygulamanın
+  çalıştığı sunucudan yapılan ölçümde Yahoo tüm isteklere **429**, Stooq ise CSV yerine
+  **HTML engel sayfası** döndürdü. Anahtarlı sağlayıcı çağıranı anahtarına göre tanıdığı için
+  aynı sunucudan sorunsuz yanıt veriyor. Bu ölçümü `/tani` sayfasından kendiniz de
+  tekrarlayabilirsiniz.
+
+- **Yedekler:** Twelve Data yanıt vermezse sırayla Stooq ve Yahoo denenir. İkisi de
+  engelliyse hata mesajı hangi kaynağın neden düştüğünü söyler.
+
+  Ücretsiz katmanın günlük kredisi sınırlı olduğundan günlük mumlar bir saat, kur verisi
+  15 dakika önbelleklenir ve toplu sorgu kullanılır (tek istekte sekiz sembol).
 - **Demo veri:** `DEMO_DATA=1` iken sağlayıcıya erişilemezse tohumlanmış (deterministik)
   sentetik seriler üretilir ve arayüzde açıkça "demo veri" olarak işaretlenir.
 

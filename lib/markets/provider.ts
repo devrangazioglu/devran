@@ -30,7 +30,9 @@ import {
   type MarketId,
   type Quote,
 } from "./types";
+import { fetchFxCandles, parseFxPair } from "./frankfurter";
 import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol, toStooqSymbols } from "./stooq";
+import { fetchTwelveCandles, twelveDataEnabled } from "./twelvedata";
 import { fetchChart, fetchQuotes, fetchSparkQuotes, searchSymbols } from "./yahoo";
 
 /* ────────────────────────── Önbellek ────────────────────────── */
@@ -335,8 +337,36 @@ export async function getCandles(
   const cached = readCache<CandleSet>(key);
   if (cached) return cached;
 
-  // Günlük/haftalık veride önce Stooq denenir: Yahoo bulut IP'lerini
-  // sınırladığı için tek kaynağa bağlı kalmak piyasayı tamamen kapatıyordu.
+  // Kaynak sırası ölçüme dayanır (bkz. /tani): anahtar isteyen sağlayıcı bulut
+  // sunucusundan çalışıyor, anahtarsız olanlar IP'yi engelliyor. Dövizde
+  // anahtarsız ve çalışan bir kaynak olduğu için önce o denenir.
+  const gunlukVeHaftalik = interval === "1d" || interval === "1w";
+
+  if (gunlukVeHaftalik && market === "emtia" && parseFxPair(symbol)) {
+    try {
+      const candles = await fetchFxCandles(symbol, interval, limit);
+      const result: CandleSet = { instrument, candles, source: "canli" };
+      writeCache(key, result, 900_000);
+      return result;
+    } catch {
+      // Kur kaynağı düşerse aşağıdaki sağlayıcılar denenir.
+    }
+  }
+
+  if (twelveDataEnabled()) {
+    try {
+      const candles = await fetchTwelveCandles(market, symbol, interval, limit);
+      const result: CandleSet = { instrument, candles, source: "canli" };
+      // Günlük mum gün içinde değişmez; ücretsiz katmanın kredisini korumak
+      // için uzun süre saklanır.
+      writeCache(key, result, gunlukVeHaftalik ? 3_600_000 : 300_000);
+      return result;
+    } catch (error) {
+      // Anahtar yanlışsa ya da kredi bittiyse aşağıdaki kaynaklar denenir.
+      if (error instanceof MarketDataError && error.status === 429) throw error;
+    }
+  }
+
   const stooqSymbols = toStooqSymbols(market, symbol);
   let stooqHatasi: string | null = null;
   if (stooqSymbols.length > 0 && (interval === "1d" || interval === "1w")) {

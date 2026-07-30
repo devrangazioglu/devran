@@ -16,8 +16,10 @@ import {
   staticInstruments,
   US_INSTRUMENTS,
 } from "../lib/markets/instruments";
+import { parseFxPair, toCandles as fxToCandles } from "../lib/markets/frankfurter";
 import { normalizeSymbol } from "../lib/markets/provider";
 import { fetchStooqCandles, parseCandleCsv, parseQuoteCsv, toStooqSymbol, toStooqSymbols } from "../lib/markets/stooq";
+import { parseSeries, toTwelveSymbol } from "../lib/markets/twelvedata";
 import { fetchChart, parseSpark, rateLimitedUntil, resetRateLimitState } from "../lib/markets/yahoo";
 import {
   aggregateCandles,
@@ -359,4 +361,97 @@ test("hiçbir yazım tutmazsa anlamlı hata verir", async () => {
 
 test("bu kaynak gün içi periyot için kullanılmaz", async () => {
   await assert.rejects(() => fetchStooqCandles(["aapl.us"], "4h", 300), /gün içi/);
+});
+
+/* ────────────────────── Kur kaynağı (anahtarsız) ────────────────────── */
+
+test("döviz çifti çözümlenir, desteklenmeyen çift reddedilir", () => {
+  assert.deepEqual(parseFxPair("USDTRY=X"), { from: "USD", to: "TRY" });
+  assert.deepEqual(parseFxPair("EURUSD=X"), { from: "EUR", to: "USD" });
+  assert.deepEqual(parseFxPair("GBPUSD"), { from: "GBP", to: "USD" });
+
+  assert.equal(parseFxPair("USDUSD=X"), null, "aynı para birimi çift olamaz");
+  assert.equal(parseFxPair("GC=F"), null, "emtia bu kaynakta yok");
+  assert.equal(parseFxPair("AAPL"), null);
+  assert.equal(parseFxPair("XAUUSD=X"), null, "altın ECB kuru değil");
+});
+
+test("kur serisi analize uygun mum üretir", () => {
+  const candles = fxToCandles(
+    { "2026-07-27": 40, "2026-07-28": 42, "2026-07-29": 41 },
+    "1d",
+    300,
+  );
+
+  assert.equal(candles.length, 3);
+  // İlk mumda önceki kapanış yok; açılış kapanışa eşitlenir.
+  assert.equal(candles[0].open, 40);
+  assert.equal(candles[0].close, 40);
+  // Sonraki mumların açılışı bir önceki kapanıştır.
+  assert.equal(candles[1].open, 40);
+  assert.equal(candles[1].close, 42);
+  assert.equal(candles[2].open, 42);
+  assert.equal(candles[2].close, 41);
+
+  for (const candle of candles) {
+    assert.ok(candle.high >= candle.low);
+    assert.ok(candle.high >= candle.open && candle.high >= candle.close);
+    assert.ok(candle.low <= candle.open && candle.low <= candle.close);
+    // Bu kaynakta hacim yok; uydurulmamalı.
+    assert.equal(candle.volume, 0);
+  }
+
+  // Tarihler sıralı olmalı, analiz motoru buna dayanır.
+  for (let i = 1; i < candles.length; i++) {
+    assert.ok(candles[i].openTime > candles[i - 1].openTime);
+  }
+});
+
+/* ────────────────────── Anahtarlı sağlayıcı ────────────────────── */
+
+test("anahtarlı sağlayıcının sembol eşlemesi piyasaya göre çalışır", () => {
+  assert.equal(toTwelveSymbol("abd", "AAPL"), "AAPL");
+  assert.equal(toTwelveSymbol("abd", "^GSPC"), "SPX");
+  assert.equal(toTwelveSymbol("bist", "THYAO.IS"), "THYAO");
+  assert.equal(toTwelveSymbol("emtia", "GC=F"), "XAU/USD");
+  assert.equal(toTwelveSymbol("emtia", "USDTRY=X"), "USD/TRY");
+  assert.equal(toTwelveSymbol("kripto", "BTCUSDT"), null);
+});
+
+test("anahtarlı sağlayıcının serisi eskiden yeniye sıralanır", () => {
+  // Sağlayıcı en yeniden eskiye döndürür; motor tersini bekler.
+  const candles = parseSeries(
+    {
+      status: "ok",
+      values: [
+        { datetime: "2026-07-29", open: "206", high: "210", low: "205", close: "209", volume: "900" },
+        { datetime: "2026-07-28", open: "204", high: "208", low: "203", close: "206", volume: "1200" },
+        { datetime: "2026-07-27", open: "200", high: "205", low: "199", close: "204", volume: "1000" },
+        { datetime: "2026-07-26", open: "bozuk", high: "", low: "", close: "", volume: "" },
+      ],
+    },
+    "1d",
+  );
+
+  assert.equal(candles.length, 3, "bozuk satır atlanmalı");
+  assert.equal(candles[0].close, 204, "en eski mum başta olmalı");
+  assert.equal(candles[2].close, 209, "en yeni mum sonda olmalı");
+  for (let i = 1; i < candles.length; i++) {
+    assert.ok(candles[i].openTime > candles[i - 1].openTime);
+  }
+  assert.equal(candles[0].quoteVolume, 1000 * 204);
+});
+
+test("anahtarlı sağlayıcının hata yanıtı sessizce yutulmaz", () => {
+  assert.throws(
+    () => parseSeries({ status: "error", message: "symbol not found", code: 404 }, "1d"),
+    /symbol not found/,
+  );
+  // Kredi bitti hatası hız sınırı olarak işaretlenmeli.
+  try {
+    parseSeries({ status: "error", message: "limit", code: 429 }, "1d");
+    assert.fail("hata bekleniyordu");
+  } catch (error) {
+    assert.equal((error as { status: number }).status, 429);
+  }
 });

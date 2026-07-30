@@ -1,4 +1,5 @@
 import { postgresEnabled } from "@/lib/db";
+import { twelveDataEnabled } from "@/lib/markets/twelvedata";
 
 /**
  * Yapılandırma eksiklerini kullanıcıya (ve kuran kişiye) görünür kılar.
@@ -9,8 +10,9 @@ export default function ConfigWarning() {
   const production = process.env.NODE_ENV === "production";
   const missingSecret = !process.env.AUTH_SECRET;
   const ephemeralStore = production && !postgresEnabled();
+  const missingMarketKey = !twelveDataEnabled();
 
-  if (!missingSecret && !ephemeralStore) return null;
+  if (!missingSecret && !ephemeralStore && !missingMarketKey) return null;
 
   return (
     <>
@@ -28,6 +30,16 @@ export default function ConfigWarning() {
           sistemine yazılmaya çalışılacak; sunucusuz ortamlarda (Vercel vb.) bu kalıcı
           değildir ve kayıt işlemi başarısız olur. Vercel panelinde Storage → Postgres
           bağlayın; <code>DATABASE_URL</code> eklendiğinde tablo ilk istekte oluşturulur.
+        </div>
+      )}
+      {missingMarketKey && (
+        <div className="notice notice-warn" style={{ marginBottom: 14 }}>
+          <strong>Hisse ve emtia verisi için anahtar tanımlı değil.</strong> Kripto ve
+          dövizler anahtarsız çalışır; ABD borsası, Türkiye borsası ve emtia için ücretsiz
+          bir <a href="https://twelvedata.com/pricing" target="_blank" rel="noreferrer">Twelve Data</a>{" "}
+          anahtarı gerekir. Anahtarsız sağlayıcılar sunucu IP&apos;lerini engellediği için
+          başka yolu yok. Anahtarı ortam değişkenlerine <code>TWELVEDATA_API_KEY</code>{" "}
+          olarak ekleyip yeniden dağıtın.
         </div>
       )}
     </>
