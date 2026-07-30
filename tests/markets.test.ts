@@ -17,6 +17,7 @@ import {
   US_INSTRUMENTS,
 } from "../lib/markets/instruments";
 import { normalizeSymbol } from "../lib/markets/provider";
+import { parseCandleCsv, parseQuoteCsv, toStooqSymbol } from "../lib/markets/stooq";
 import { fetchChart, parseSpark, rateLimitedUntil, resetRateLimitState } from "../lib/markets/yahoo";
 import {
   aggregateCandles,
@@ -35,7 +36,7 @@ test("dört piyasa tanımlı ve her birinin sayfa yolu tekil", () => {
   assert.equal(new Set(slugs).size, slugs.length);
   for (const id of MARKET_IDS) {
     assert.equal(marketBySlug(MARKETS[id].slug)?.id, id);
-    assert.ok(MARKETS[id].intervals.length >= 5);
+    assert.ok(MARKETS[id].intervals.length >= 2);
   }
   assert.equal(marketBySlug("yok"), null);
   assert.equal(isMarketId("kripto"), true);
@@ -241,4 +242,65 @@ test("hız sınırında sağlayıcıya daha çok istek atılmaz", async () => {
     globalThis.fetch = gercekFetch;
     resetRateLimitState();
   }
+});
+
+test("ikinci kaynağın sembol eşlemesi piyasaya göre çalışır", () => {
+  assert.equal(toStooqSymbol("abd", "AAPL"), "aapl.us");
+  assert.equal(toStooqSymbol("abd", "^GSPC"), "^spx");
+  assert.equal(toStooqSymbol("emtia", "GC=F"), "xauusd");
+  assert.equal(toStooqSymbol("emtia", "CL=F"), "cl.f");
+  assert.equal(toStooqSymbol("emtia", "USDTRY=X"), "usdtry");
+  assert.equal(toStooqSymbol("bist", "THYAO.IS"), "thyao.tr");
+
+  // Kripto bu kaynaktan gelmez.
+  assert.equal(toStooqSymbol("kripto", "BTCUSDT"), null);
+});
+
+test("ikinci kaynağın toplu fiyat CSV'si çözümlenir", () => {
+  const csv = [
+    "Symbol,Date,Time,Open,High,Low,Close,Volume",
+    "AAPL.US,2026-07-29,22:00:04,210.5,214.2,209.1,213.76,44210000",
+    "XAUUSD,2026-07-29,22:00:04,2440,2470.5,2435,2461.3,0",
+    // Veri bulunamayan sembol: atlanmalı, çökmemeli.
+    "YOKBIR.US,N/D,N/D,N/D,N/D,N/D,N/D,N/D",
+  ].join("\n");
+
+  const rows = parseQuoteCsv(csv);
+  assert.equal(rows.length, 2, "geçersiz satır elenmeli");
+  assert.equal(rows[0].symbol, "aapl.us", "sembol küçük harfe indirilmeli");
+  assert.equal(rows[0].close, 213.76);
+  assert.equal(rows[0].high, 214.2);
+  assert.equal(rows[1].symbol, "xauusd");
+  assert.equal(rows[1].volume, 0);
+
+  assert.deepEqual(parseQuoteCsv(""), [], "boş yanıt boş liste vermeli");
+  assert.deepEqual(parseQuoteCsv("Symbol,Date"), [], "başlık tek başına satır üretmemeli");
+});
+
+test("ikinci kaynağın mum CSV'si analize uygun mum üretir", () => {
+  const csv = [
+    "Date,Open,High,Low,Close,Volume",
+    "2026-07-27,200,205,199,204,1000",
+    "2026-07-28,204,208,203,206,1200",
+    "bozuk,satir,,,,",
+    "2026-07-29,206,210,205,209,900",
+  ].join("\n");
+
+  const candles = parseCandleCsv(csv, "1d");
+  assert.equal(candles.length, 3, "bozuk satır atlanmalı");
+
+  for (const candle of candles) {
+    assert.ok(candle.high >= candle.low);
+    assert.ok(candle.high >= candle.open && candle.high >= candle.close);
+    assert.ok(candle.low <= candle.open && candle.low <= candle.close);
+    assert.ok(candle.closeTime > candle.openTime);
+    assert.equal(candle.quoteVolume, candle.volume * candle.close);
+  }
+
+  // Mumlar zaman sırasında olmalı (analiz motoru buna dayanır).
+  for (let i = 1; i < candles.length; i++) {
+    assert.ok(candles[i].openTime > candles[i - 1].openTime);
+  }
+
+  assert.equal(parseCandleCsv("Date,Open", "1d").length, 0);
 });

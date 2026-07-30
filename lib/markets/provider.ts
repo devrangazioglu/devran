@@ -30,6 +30,7 @@ import {
   type MarketId,
   type Quote,
 } from "./types";
+import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol } from "./stooq";
 import { fetchChart, fetchQuotes, fetchSparkQuotes, searchSymbols } from "./yahoo";
 
 /* ────────────────────────── Önbellek ────────────────────────── */
@@ -133,6 +134,39 @@ const PER_SYMBOL_FALLBACK_LIMIT = 60;
 async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
   const symbols = instruments.map((i) => i.symbol);
   const bySymbol = new Map(instruments.map((i) => [i.symbol, i]));
+
+  // Önce Stooq: tek istekte çok sembol döner ve bulut IP'lerini engellemez.
+  const stooqEsleme = new Map<string, Instrument>();
+  for (const instrument of instruments) {
+    const stooq = toStooqSymbol(instrument.market, instrument.symbol);
+    if (stooq) stooqEsleme.set(stooq, instrument);
+  }
+
+  if (stooqEsleme.size > 0) {
+    try {
+      const satirlar = await fetchStooqQuotes([...stooqEsleme.keys()]);
+      const quotes: Quote[] = [];
+      for (const satir of satirlar) {
+        const instrument = stooqEsleme.get(satir.symbol);
+        if (!instrument) continue;
+        const oncekiKapanis = satir.open || satir.close;
+        quotes.push({
+          ...instrument,
+          price: satir.close,
+          previousClose: oncekiKapanis,
+          changePercent:
+            oncekiKapanis === 0 ? 0 : ((satir.close - oncekiKapanis) / oncekiKapanis) * 100,
+          high: satir.high,
+          low: satir.low,
+          volume: satir.volume * satir.close,
+          updatedAt: Date.now(),
+        });
+      }
+      if (quotes.length > 0) return { quotes, source: "canli", updatedAt: Date.now() };
+    } catch {
+      // Stooq çalışmazsa aşağıdaki Yahoo yolu denenir.
+    }
+  }
 
   try {
     const rows = await fetchSparkQuotes(symbols).catch(() => fetchQuotes(symbols));
@@ -283,6 +317,20 @@ export async function getCandles(
   const key = `candles:${market}:${symbol}:${interval}:${limit}`;
   const cached = readCache<CandleSet>(key);
   if (cached) return cached;
+
+  // Günlük/haftalık veride önce Stooq denenir: Yahoo bulut IP'lerini
+  // sınırladığı için tek kaynağa bağlı kalmak piyasayı tamamen kapatıyordu.
+  const stooqSymbol = toStooqSymbol(market, symbol);
+  if (stooqSymbol && (interval === "1d" || interval === "1w")) {
+    try {
+      const candles = await fetchStooqCandles(stooqSymbol, interval, limit);
+      const result: CandleSet = { instrument, candles, source: "canli" };
+      writeCache(key, result, 180_000);
+      return result;
+    } catch {
+      // Stooq'ta yoksa Yahoo denenir.
+    }
+  }
 
   try {
     const chart = await fetchChart(symbol, interval, limit);

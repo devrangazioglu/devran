@@ -59,7 +59,13 @@ export type MarketMeta = {
   labelKey: string;
   /** Sayfa yolu: /piyasa/<slug> */
   slug: string;
-  /** Bu piyasada desteklenen zaman dilimleri. */
+  /**
+   * Bu piyasada desteklenen zaman dilimleri.
+   *
+   * Kripto dışı piyasalarda yalnızca günlük ve haftalık sunulur: gün içi veri
+   * veren tek kaynak bulut sunucularını sınırlıyor, dolayısıyla o periyotları
+   * arayüzde göstermek çalışmayan bir seçenek sunmak olurdu.
+   */
   intervals: Interval[];
   /** Fiyatların varsayılan para birimi. */
   currency: string;
@@ -80,7 +86,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "abd",
     labelKey: "market.abd",
     slug: "abd-borsasi",
-    intervals: ["5m", "15m", "30m", "1h", "4h", "1d", "1w"],
+    intervals: ["1d", "1w"],
     currency: "USD",
     alwaysOpen: false,
   },
@@ -88,7 +94,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "bist",
     labelKey: "market.bist",
     slug: "turkiye-borsasi",
-    intervals: ["15m", "30m", "1h", "4h", "1d", "1w"],
+    intervals: ["1d", "1w"],
     currency: "TRY",
     alwaysOpen: false,
   },
@@ -96,7 +102,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "emtia",
     labelKey: "market.emtia",
     slug: "dovizler",
-    intervals: ["15m", "30m", "1h", "4h", "1d", "1w"],
+    intervals: ["1d", "1w"],
     currency: "USD",
     alwaysOpen: false,
   },

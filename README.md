@@ -7,9 +7,9 @@ yorumlayan** üyelik girişli web uygulaması.
 | Piyasa | Kapsam | Sayfa |
 |---|---|---|
 | Kripto | Hacme göre ilk 60 parite (BTC, ETH, SOL…) | `/piyasa/kripto` |
-| Amerikan borsası | 46 hisse ve endeks (AAPL, NVDA, S&P 500, Nasdaq…) | `/piyasa/abd-borsasi` |
-| Türkiye borsası | 43 BIST hissesi ve endeksi (THYAO, ASELS, BIST 100…) | `/piyasa/turkiye-borsasi` |
-| Dövizler ve emtia | Altın, gümüş, petrol, doğal gaz, USD/TRY, EUR/USD… | `/piyasa/dovizler` |
+| Amerikan borsası | 46 hisse ve endeks (AAPL, NVDA, S&P 500, Nasdaq…) · günlük/haftalık | `/piyasa/abd-borsasi` |
+| Türkiye borsası | 43 BIST hissesi ve endeksi (THYAO, ASELS, BIST 100…) · günlük/haftalık | `/piyasa/turkiye-borsasi` |
+| Dövizler ve emtia | Altın, gümüş, petrol, doğal gaz, USD/TRY, EUR/USD… · günlük/haftalık | `/piyasa/dovizler` |
 
 > ⚠️ **Yasal uyarı:** Bu uygulama bir teknik analiz aracıdır, yatırım danışmanlığı hizmeti
 > değildir. Üretilen sinyaller geçmiş fiyat verisine dayanan otomatik hesaplamalardır ve
@@ -120,6 +120,7 @@ app/
 lib/
   markets/
     types.ts                   ortak Candle/Instrument tipleri, piyasa kayıtları, mum toplama
+    stooq.ts                   hisse/emtia/döviz için birincil kaynak (CSV, anahtarsız)
     instruments.ts             hisse, endeks, emtia ve döviz listeleri + arama eş anlamlıları
     provider.ts                tek giriş noktası: sembol çözümleme, fiyat, mum, arama
     yahoo.ts                   hisse/emtia/döviz veri istemcisi
@@ -168,11 +169,14 @@ piyasalarda "seans kapalı olabilir" riski eklenir.
 
 - **Kripto:** borsanın herkese açık spot uç noktaları (mum verisi ve 24 saatlik özet).
   Coğrafi kısıt olan ağlar için birden çok alan adı sırayla denenir.
-- **Hisse, endeks, emtia, döviz:** Yahoo Finance'in herkese açık grafik/kotasyon uç
-  noktaları. Bunlar **belgelenmiş bir API değildir**: sözleşmesi habersiz değişebilir,
-  hız sınırı uygulanabilir ve ticari kullanım için uygun olmayabilir. Kalıcı bir kurulum
-  planlıyorsanız sözleşmeli bir veri sağlayıcıya geçmeyi düşünün — `lib/markets/provider.ts`
-  tek giriş noktası olduğu için değişiklik yalnızca o dosyayı ilgilendirir.
+- **Hisse, endeks, emtia, döviz:** önce **Stooq** (CSV, anahtarsız), o veremezse
+  **Yahoo Finance**. Sıralama bilinçlidir: Yahoo, veri merkezi IP aralıklarından gelen
+  istekleri sınırlıyor, bu yüzden Vercel gibi ortamlarda kripto dışı piyasalar tamamen
+  boş kalıyordu. Stooq bulut IP'lerini engellemiyor ancak **yalnızca günlük ve haftalık**
+  veri sunuyor; kripto dışı piyasalarda arayüzde bu iki periyot gösterilmesinin sebebi budur.
+  Her iki kaynak da **belgelenmiş bir API değildir**; kalıcı bir kurulum için sözleşmeli bir
+  sağlayıcıya geçmeyi düşünün — `lib/markets/provider.ts` tek giriş noktası olduğu için
+  değişiklik yalnızca o dosyayı ilgilendirir.
 - **Demo veri:** `DEMO_DATA=1` iken sağlayıcıya erişilemezse tohumlanmış (deterministik)
   sentetik seriler üretilir ve arayüzde açıkça "demo veri" olarak işaretlenir.
 
