@@ -69,11 +69,18 @@ export async function GET() {
     ["yahoo-chart-THYAO", "https://query1.finance.yahoo.com/v8/finance/chart/THYAO.IS?interval=1d&range=1mo"],
     ["yahoo-chart-altin", "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d&range=1mo"],
 
-    // Anahtar istemeyen alternatifler
-    ["stooq-AAPL", "https://stooq.com/q/d/l/?s=aapl.us&i=d"],
-    ["stooq-altin", "https://stooq.com/q/d/l/?s=xauusd&i=d"],
-    ["stooq-usdtry", "https://stooq.com/q/d/l/?s=usdtry&i=d"],
-    ["stooq-THYAO", "https://stooq.com/q/d/l/?s=thyao.tr&i=d"],
+    // Birincil kaynak — uygulamanın kullandığı adreslerin birebir aynısı
+    [
+      "stooq-toplu-fiyat",
+      "https://stooq.com/q/l/?s=aapl.us+msft.us+xauusd+usdtry+thyao.tr&f=sd2t2ohlcv&h&e=csv",
+    ],
+    ["stooq-mum-AAPL", "https://stooq.com/q/d/l/?s=aapl.us&i=d"],
+    ["stooq-mum-altin", "https://stooq.com/q/d/l/?s=xauusd&i=d"],
+    ["stooq-mum-usdtry", "https://stooq.com/q/d/l/?s=usdtry&i=d"],
+    ["stooq-mum-THYAO", "https://stooq.com/q/d/l/?s=thyao.tr&i=d"],
+    // BIST için yedek sembol biçimleri (hangisinin veri döndüğünü görmek için)
+    ["stooq-THYAO-alt1", "https://stooq.com/q/d/l/?s=thyao&i=d"],
+    ["stooq-THYAO-alt2", "https://stooq.com/q/d/l/?s=thyao.is&i=d"],
 
     // Karşılaştırma için: kripto tarafı (çalıştığı biliniyor)
     ["binance-BTC", "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT"],
