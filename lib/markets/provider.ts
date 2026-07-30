@@ -111,6 +111,19 @@ export async function getInstruments(market: MarketId, limit = 60): Promise<Inst
 
 /* ────────────────────────── Fiyat listeleri ────────────────────────── */
 
+/**
+ * Bir kaynağın neden düştüğünü kısa, kullanıcıya gösterilebilir biçimde özetler.
+ *
+ * Kaynaklar sırayla denendiği için tek bir hata mesajı yanıltıcıydı: birinci
+ * kaynak bambaşka bir sebeple düşse bile kullanıcı ikincinin mesajını
+ * ("istek limitine takıldı") görüyor, hangisinin bozuk olduğu anlaşılmıyordu.
+ */
+function hataOzeti(error: unknown): string {
+  if (error instanceof MarketDataError) return `HTTP ${error.status}`;
+  if (error instanceof Error) return error.message.slice(0, 60);
+  return "bilinmeyen";
+}
+
 export type QuoteList = { quotes: Quote[]; source: DataSource; updatedAt: number };
 
 /**
@@ -142,6 +155,7 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     if (stooq) stooqEsleme.set(stooq, instrument);
   }
 
+  let stooqQuoteHatasi: string | null = null;
   if (stooqEsleme.size > 0) {
     try {
       const satirlar = await fetchStooqQuotes([...stooqEsleme.keys()]);
@@ -163,8 +177,10 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
         });
       }
       if (quotes.length > 0) return { quotes, source: "canli", updatedAt: Date.now() };
-    } catch {
+      stooqQuoteHatasi = "sonuç boş";
+    } catch (error) {
       // Stooq çalışmazsa aşağıdaki Yahoo yolu denenir.
+      stooqQuoteHatasi = hataOzeti(error);
     }
   }
 
@@ -223,9 +239,10 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     if (clean.length > 0) return { quotes: clean, source: "canli", updatedAt: Date.now() };
 
     if (demoEnabled()) return demoQuotes(instruments);
-    throw error instanceof MarketDataError
-      ? error
-      : new MarketDataError("Piyasa verisi alınamadı.", 503);
+    throw new MarketDataError(
+      `Fiyat listesi alınamadı (kaynak 1: ${stooqQuoteHatasi ?? "denenmedi"}, kaynak 2: ${hataOzeti(error)}).`,
+      error instanceof MarketDataError ? error.status : 503,
+    );
   }
 }
 
@@ -321,15 +338,21 @@ export async function getCandles(
   // Günlük/haftalık veride önce Stooq denenir: Yahoo bulut IP'lerini
   // sınırladığı için tek kaynağa bağlı kalmak piyasayı tamamen kapatıyordu.
   const stooqSymbols = toStooqSymbols(market, symbol);
+  let stooqHatasi: string | null = null;
   if (stooqSymbols.length > 0 && (interval === "1d" || interval === "1w")) {
     try {
       const candles = await fetchStooqCandles(stooqSymbols, interval, limit);
       const result: CandleSet = { instrument, candles, source: "canli" };
       writeCache(key, result, 180_000);
       return result;
-    } catch {
-      // Stooq'ta yoksa Yahoo denenir.
+    } catch (error) {
+      // Stooq'ta yoksa Yahoo denenir; sebebi hata mesajında görünsün.
+      stooqHatasi = hataOzeti(error);
     }
+  } else if (stooqSymbols.length === 0) {
+    stooqHatasi = "sembol eşlenmedi";
+  } else {
+    stooqHatasi = "gün içi veri yok";
   }
 
   try {
@@ -360,7 +383,11 @@ export async function getCandles(
       writeCache(key, result, 30_000);
       return result;
     }
-    throw error;
+    // Kullanıcı hangi kaynağın neden düştüğünü görebilsin.
+    throw new MarketDataError(
+      `${symbol} için veri alınamadı (kaynak 1: ${stooqHatasi ?? "denenmedi"}, kaynak 2: ${hataOzeti(error)}).`,
+      error instanceof MarketDataError ? error.status : 503,
+    );
   }
 }
 
