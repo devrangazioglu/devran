@@ -11,6 +11,7 @@ import {
   allStaticInstruments,
   BIST_INSTRUMENTS,
   COMMODITY_FX_INSTRUMENTS,
+  displayTicker,
   findStaticInstrument,
   staticInstruments,
   US_INSTRUMENTS,
@@ -69,6 +70,23 @@ test("tanımlı listelerde tekrar eden sembol yok ve alanlar dolu", () => {
   assert.equal(findStaticInstrument("bist", "THYAO.IS")?.ticker, "THYAO");
   assert.equal(findStaticInstrument("bist", "YOK"), null);
   assert.equal(staticInstruments("kripto").length, 0, "kripto listesi dinamik gelir");
+});
+
+test("gösterilecek kısa ad sağlayıcı sembolünü okunur kılar", () => {
+  // Tanımlı enstrümanlarda gerçek kısa ad kullanılır.
+  assert.equal(displayTicker("emtia", "GC=F"), "XAU");
+  assert.equal(displayTicker("emtia", "USDTRY=X"), "USD/TRY");
+  assert.equal(displayTicker("bist", "THYAO.IS"), "THYAO");
+  assert.equal(displayTicker("bist", "XU100.IS"), "BIST 100");
+  assert.equal(displayTicker("abd", "AAPL"), "AAPL");
+
+  // Kriptoda parite biçimine ayrıştırılır.
+  assert.equal(displayTicker("kripto", "BTCUSDT"), "BTC/USDT");
+  assert.equal(displayTicker("kripto", "ETHBTC"), "ETH/BTC");
+
+  // Tanımsız sembolde sağlayıcı sonekleri atılır, hiçbir zaman boş kalmaz.
+  assert.equal(displayTicker("bist", "YOKBIR.IS"), "YOKBIR");
+  assert.ok(displayTicker("abd", "ZZZZ").length > 0);
 });
 
 test("sembol doğrulama piyasaya göre çalışır", () => {

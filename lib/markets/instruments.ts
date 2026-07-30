@@ -6,6 +6,7 @@
  * listeye bir satır yazmak yeterlidir.
  */
 
+import { cryptoInstrument } from "./crypto-symbols";
 import { foldText, instrumentId, type AssetKind, type Instrument, type MarketId } from "./types";
 
 type Entry = {
@@ -253,4 +254,16 @@ export function allStaticInstruments(): Instrument[] {
 
 export function findStaticInstrument(market: MarketId, symbol: string): Instrument | null {
   return staticInstruments(market).find((i) => i.symbol === symbol) ?? null;
+}
+
+/**
+ * Kullanıcıya gösterilecek kısa ad.
+ *
+ * Sağlayıcı sembolleri okunur değildir ("GC=F", "THYAO.IS", "BTCUSDT"), bu yüzden
+ * tanımlı enstrümanlarda gerçek kısa ad ("XAU", "THYAO"), kriptoda parite biçimi
+ * ("BTC/USDT"), tanımsız sembollerde ise sağlayıcı sonekleri atılmış hâli kullanılır.
+ */
+export function displayTicker(market: MarketId, symbol: string): string {
+  if (market === "kripto") return cryptoInstrument(symbol).ticker;
+  return findStaticInstrument(market, symbol)?.ticker ?? symbol.replace(/\.IS$|=X$|=F$/, "");
 }

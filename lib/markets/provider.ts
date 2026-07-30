@@ -8,9 +8,11 @@
  */
 
 import { fetchCandles as fetchCryptoCandles, fetchMarkets as fetchCryptoMarkets } from "../binance";
+import { cryptoInstrument } from "./crypto-symbols";
 import { demoCandles } from "./demo";
 import {
   allStaticInstruments,
+  displayTicker,
   findStaticInstrument,
   instrumentAliases,
   staticInstruments,
@@ -29,43 +31,6 @@ import {
   type Quote,
 } from "./types";
 import { fetchChart, fetchQuotes, searchSymbols } from "./yahoo";
-
-/* ────────────────────────── Kripto adları ────────────────────────── */
-
-const COIN_NAMES: Record<string, string> = {
-  BTC: "Bitcoin", ETH: "Ethereum", BNB: "BNB", SOL: "Solana", XRP: "XRP",
-  ADA: "Cardano", DOGE: "Dogecoin", TRX: "TRON", DOT: "Polkadot", LINK: "Chainlink",
-  MATIC: "Polygon", LTC: "Litecoin", AVAX: "Avalanche", ATOM: "Cosmos", UNI: "Uniswap",
-  NEAR: "NEAR Protocol", APT: "Aptos", ARB: "Arbitrum", OP: "Optimism", INJ: "Injective",
-  FIL: "Filecoin", ETC: "Ethereum Classic", XLM: "Stellar", ICP: "Internet Computer",
-  HBAR: "Hedera", VET: "VeChain", ALGO: "Algorand", AAVE: "Aave", SUI: "Sui",
-  SEI: "Sei", TIA: "Celestia", RNDR: "Render", FET: "Artificial Superintelligence",
-  PEPE: "Pepe", SHIB: "Shiba Inu", WIF: "dogwifhat", BONK: "Bonk",
-};
-
-const QUOTE_ASSETS = ["USDT", "FDUSD", "USDC", "TUSD", "BTC", "ETH", "BNB", "TRY", "EUR"];
-
-function splitCryptoSymbol(symbol: string): { base: string; quote: string } {
-  for (const quote of QUOTE_ASSETS) {
-    if (symbol.endsWith(quote) && symbol.length > quote.length) {
-      return { base: symbol.slice(0, -quote.length), quote };
-    }
-  }
-  return { base: symbol, quote: "USDT" };
-}
-
-function cryptoInstrument(symbol: string): Instrument {
-  const { base, quote } = splitCryptoSymbol(symbol);
-  return {
-    id: instrumentId("kripto", symbol),
-    market: "kripto",
-    symbol,
-    name: COIN_NAMES[base] ?? base,
-    ticker: `${base}/${quote}`,
-    currency: quote,
-    kind: "kripto",
-  };
-}
 
 /* ────────────────────────── Önbellek ────────────────────────── */
 
@@ -114,7 +79,7 @@ export async function getInstrument(market: MarketId, symbol: string): Promise<I
     market,
     symbol,
     name: symbol,
-    ticker: symbol.replace(/\.IS$|=X$|=F$/, ""),
+    ticker: displayTicker(market, symbol),
     currency: MARKETS[market].currency,
     kind: market === "bist" || market === "abd" ? "hisse" : "emtia",
   };
@@ -399,7 +364,7 @@ export async function searchInstruments(query: string, limit = 12): Promise<Inst
           market,
           symbol,
           name: hit.name,
-          ticker: symbol.replace(/\.IS$|=X$|=F$/, ""),
+          ticker: displayTicker(market, symbol),
           currency: MARKETS[market].currency,
           kind: market === "emtia" ? "emtia" : "hisse",
         });

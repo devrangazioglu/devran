@@ -10,9 +10,11 @@ import { AssetAvatar, Change, MarketBadge, Score, SignalBadge } from "@/componen
 import { isBuySignal, isSellSignal } from "@/lib/analysis";
 import { getJson, type MarketsResponse, type ScanResponse, type ScanRow } from "@/lib/api-types";
 import { formatCompact, formatNumber, formatPrice, formatRelative } from "@/lib/format";
+import { displayTicker } from "@/lib/markets/instruments";
 import {
   MARKETS,
   MARKET_IDS,
+  parseInstrumentId,
   type Interval,
   type MarketId,
   type Quote,
@@ -249,14 +251,16 @@ export default function PanelClient({
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {watchlist.map((id) => {
-                const [itemMarket, symbol] = id.split(":");
+                const parsed = parseInstrumentId(id);
+                if (!parsed) return null;
+                const { market: itemMarket, symbol } = parsed;
                 return (
                   <Link
                     key={id}
                     href={`/varlik/${itemMarket}/${encodeURIComponent(symbol)}`}
                     className="pill"
                   >
-                    {symbol.replace(/\.IS$|=X$|=F$/, "")}
+                    {displayTicker(itemMarket, symbol)}
                   </Link>
                 );
               })}

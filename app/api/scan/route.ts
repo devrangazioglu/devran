@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { analyze } from "@/lib/analysis";
 import type { ScanRow } from "@/lib/api-types";
+import { displayTicker } from "@/lib/markets/instruments";
 import { getCandles, getQuotes, mapWithLimit } from "@/lib/markets/provider";
 import {
   isInterval,
@@ -83,7 +84,7 @@ export async function GET(request: Request) {
               market,
               symbol,
               name: symbol,
-              ticker: symbol.replace(/\.IS$|=X$|=F$/, ""),
+              ticker: displayTicker(market, symbol),
               currency: MARKETS[market].currency,
               kind: market === "kripto" ? "kripto" : "hisse",
             } satisfies Instrument),
