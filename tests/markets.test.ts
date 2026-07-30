@@ -20,7 +20,7 @@ import { parseFxPair, toCandles as fxToCandles } from "../lib/markets/frankfurte
 import { normalizeSymbol } from "../lib/markets/provider";
 import { fetchStooqCandles, parseCandleCsv, parseQuoteCsv, toStooqSymbol, toStooqSymbols } from "../lib/markets/stooq";
 import { krediAyir, krediSifirla } from "../lib/markets/kota";
-import { parseSeries, toTwelveSymbol } from "../lib/markets/twelvedata";
+import { batchHatasi, parseSeries, toTwelveSymbol } from "../lib/markets/twelvedata";
 import { fetchChart, parseSpark, rateLimitedUntil, resetRateLimitState } from "../lib/markets/yahoo";
 import {
   aggregateCandles,
@@ -467,4 +467,20 @@ test("kredi bütçesi dakikalık sınırı aşmaz ve pencere dolunca yenilenir",
 
   krediSifirla();
   assert.equal(await krediAyir(1), 1, "pencere yenilenince yeniden kredi verilmeli");
+});
+
+test("toplu yanıttaki kota hatası yüzeye çıkar", () => {
+  // Sağlayıcı kota hatasını her sembolün altında ayrı bildiriyor. Bu sembol
+  // bazında yutulunca "veri yok" sanılıyor ve uygulama istemeye devam ediyordu.
+  const hata = batchHatasi({
+    AAPL: { status: "error", code: 429, message: "You have run out of API credits for the day." },
+    MSFT: { status: "error", code: 429, message: "You have run out of API credits for the day." },
+  });
+
+  assert.ok(hata, "hata bulunmalı");
+  assert.equal(hata?.status, 429);
+  assert.match(hata?.message ?? "", /for the day/);
+
+  // Veri dönen yanıtta hata yoktur.
+  assert.equal(batchHatasi({ AAPL: { status: "ok", values: [] } }), null);
 });

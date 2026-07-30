@@ -30,9 +30,9 @@ import {
   type MarketId,
   type Quote,
 } from "./types";
-import { paylasilanOku, paylasilanYaz } from "./cache-store";
+import { paylasilanBayatOku, paylasilanOku, paylasilanYaz } from "./cache-store";
 import { fetchFxCandles, fetchFxQuotes, parseFxPair } from "./frankfurter";
-import { krediAyir, kotaBlokla, kotaBloklu, PIYASA_PAY } from "./kota";
+import { krediAyir, kotaBloklu, kotaHatasiniIsle, kotaMesaji, PIYASA_PAY } from "./kota";
 import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol, toStooqSymbols } from "./stooq";
 import { fetchTwelveBatch, fetchTwelveCandles, twelveDataEnabled } from "./twelvedata";
 import { fetchChart, fetchQuotes, fetchSparkQuotes, searchSymbols } from "./yahoo";
@@ -340,7 +340,7 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
       } catch (error) {
         // Sağlayıcı GERÇEKTEN kotayı reddettiyse tüm örnekler geri çekilsin.
         if (error instanceof MarketDataError && error.status === 429) {
-          await kotaBlokla();
+          await kotaHatasiniIsle(error.message);
           kotaDoluListe = true;
         }
         // Anahtar sorunluysa eski kaynaklar denenir.
@@ -350,6 +350,27 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
 
   if (kalan.length === 0 && toplanan.length > 0) {
     return { quotes: toplanan, source: "canli", updatedAt: Date.now() };
+  }
+
+  // Kota kapalıysa taze veri gelme ihtimali yok: süresi geçmiş kayıt varsa
+  // boş tablo yerine o gösterilir. Satırdaki "güncellendi" bilgisi verinin
+  // gerçek yaşını söyler, dolayısıyla kullanıcı yanıltılmaz.
+  if (kotaDoluListe && kalan.length > 0) {
+    const bayat = await paylasilanBayatOku<CandleSet>(
+      kalan.map((i) => candleCacheKey(i.market, i.symbol, "1d")),
+    );
+    const eskiler: Quote[] = [];
+    for (const instrument of kalan) {
+      const kayit = bayat.get(candleCacheKey(instrument.market, instrument.symbol, "1d"));
+      const quote = kayit ? quoteFromCandles(instrument, kayit.deger) : null;
+      if (quote) eskiler.push(quote);
+    }
+    if (eskiler.length > 0) {
+      const gelenler = new Set(eskiler.map((q) => q.symbol));
+      kalan = kalan.filter((i) => !gelenler.has(i.symbol));
+      toplanan.push(...eskiler);
+      if (kalan.length === 0) return { quotes: toplanan, source: "canli", updatedAt: Date.now() };
+    }
   }
 
   // Kalanlar için eski (anahtarsız) kaynaklar. Bunlar bulut IP'lerini
@@ -459,11 +480,7 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     // Kota hatası teknik ayrıntı değil, bekleme meselesi: kullanıcıya ne
     // yapması gerektiğini söyleyen bir cümle daha yararlı.
     if (kotaDoluListe || (error instanceof MarketDataError && error.status === 429)) {
-      throw new MarketDataError(
-        "Ücretsiz veri kotası şu an dolu. Liste birkaç dakika içinde kendiliğinden dolacak; " +
-          "aradığınız varlığı arama kutusundan bulup hemen analiz edebilirsiniz.",
-        429,
-      );
+      throw new MarketDataError(kotaMesaji(), 429);
     }
     throw new MarketDataError(
       `Fiyat listesi alınamadı (kaynak 1: ${stooqQuoteHatasi ?? "denenmedi"}, kaynak 2: ${hataOzeti(error)}).`,
@@ -592,7 +609,9 @@ export async function getCandles(
   // Kota durumu ayrı tutulur: veri gelmediğinde kullanıcıya "kaynak bulunamadı"
   // yerine gerçek sebebi ("kota dolu, birazdan dolacak") söylemek gerekiyor.
   let kotaDolu = false;
-  if (twelveDataEnabled()) kotaDolu = (await kotaBloklu()) || (await krediAyir(1)) < 1;
+  // `tekil`: kullanıcının açtığı varlık. Günlük kotanın son dilimi listelere
+  // değil buraya saklanır; tıklanan varlığın analizi listeden önemli.
+  if (twelveDataEnabled()) kotaDolu = (await kotaBloklu()) || (await krediAyir(1, true)) < 1;
 
   if (twelveDataEnabled() && !kotaDolu) {
     try {
@@ -604,8 +623,10 @@ export async function getCandles(
       return { ...result, candles: candles.slice(-limit) };
     } catch (error) {
       if (error instanceof MarketDataError && error.status === 429) {
-        await kotaBlokla();
-        throw error;
+        // Hemen hata fırlatma: aşağıda bayat önbellek denenecek, eski veri
+        // göstermek boş sayfadan iyidir.
+        await kotaHatasiniIsle(error.message);
+        kotaDolu = true;
       }
       // Anahtar yanlışsa aşağıdaki kaynaklar denenir.
     }
@@ -659,10 +680,13 @@ export async function getCandles(
       return result;
     }
     if (kotaDolu) {
-      throw new MarketDataError(
-        "Ücretsiz veri kotası şu an dolu. Bir dakika sonra tekrar deneyin.",
-        429,
-      );
+      // Son çare: süresi geçmiş kayıt. Grafik ve analiz eski veriyle de
+      // çalışır; hiç açılmamasından iyidir.
+      const kayit = (await paylasilanBayatOku<CandleSet>([key])).get(key);
+      if (kayit && kayit.deger.candles.length > 0) {
+        return { ...kayit.deger, candles: kayit.deger.candles.slice(-limit) };
+      }
+      throw new MarketDataError(kotaMesaji(), 429);
     }
     // Kullanıcı hangi kaynağın neden düştüğünü görebilsin.
     throw new MarketDataError(

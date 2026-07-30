@@ -211,7 +211,15 @@ piyasalarda "seans kapalı olabilir" riski eklenir.
      bırakılır (`TWELVEDATA_CREDITS_PER_MIN`). Yarım liste, boş listeden iyidir.
   5. **Tek kredi, iki iş:** liste ayrı bir fiyat isteği atmaz; tam mum serisi çekilir, fiyat
      son iki mumdan türetilir. Aynı kredi hem tabloyu hem grafiği/analizi doldurur.
-  6. **Paylaşımlı önbellek:** mumlar Postgres'te (`piyasa_onbellek` tablosu) dört saat
+  6. **Günlük bütçe:** asıl duvar dakikalık değil günlük sınır (800 kredi). Ölçüldü: bir günde
+     1508 kredi harcanmış ve site bütün gün boş kalmıştı. Günlük harcama da paylaşımlı sayaçta
+     tutulur (`TWELVEDATA_CREDITS_PER_DAY`); sınırın son %15'i yalnızca kullanıcının tıkladığı
+     varlıklara ayrılır. Sağlayıcı "günlük kota bitti" derse uygulama bir dakika değil, kotanın
+     sıfırlanacağı ana (UTC gece yarısı) kadar susar ve kullanıcıya kalan süreyi söyler.
+  7. **Bayat veri, boş sayfadan iyidir:** kota bittiğinde önbellekteki kayıt silinmez. Tazelik
+     süresi geçse bile gösterilir ve satırdaki "güncellendi" bilgisi verinin gerçek yaşını
+     söyler; böylece kullanıcı yanıltılmadan sayfa dolu kalır.
+  8. **Paylaşımlı önbellek:** mumlar Postgres'te (`piyasa_onbellek` tablosu) dört saat
      saklanır. Sunucusuz örnekler birbirinin belleğini görmediği ve soğuk başlangıçta bellek
      silindiği için tek başına bellek içi önbellek kotayı boşa harcıyordu; paylaşımlı
      önbellekle bir ziyaretçinin doldurduğu semboller herkese açık hâle gelir.

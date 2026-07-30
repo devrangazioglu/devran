@@ -20,7 +20,16 @@ export type SharedEntry<T> = { deger: T; biter: number };
 
 type Satir = { anahtar: string; deger: unknown; biter: string };
 
-/** Süresi geçmiş kayıtlar ara sıra temizlenir; her istekte silmeye gerek yok. */
+/**
+ * Süresi geçmiş kayıtlar hemen silinmez.
+ *
+ * Sağlayıcının günlük kotası bittiğinde taze veri alma imkânı yok; o anda
+ * kaydı silmek sayfayı bomboş bırakır. Eski veri, hiç veri olmamasından iyidir:
+ * kayıtlar bir hafta saklanır, "tazelik" süresi geçenler yaşı belirtilerek
+ * gösterilir (bkz. `paylasilanBayatOku`).
+ */
+const SAKLAMA_MS = 7 * 24 * 60 * 60_000;
+
 let sonTemizlik = 0;
 const TEMIZLIK_ARASI_MS = 10 * 60_000;
 
@@ -28,7 +37,9 @@ async function temizle(): Promise<void> {
   const simdi = Date.now();
   if (simdi - sonTemizlik < TEMIZLIK_ARASI_MS) return;
   sonTemizlik = simdi;
-  await query("delete from piyasa_onbellek where biter < $1", [simdi]).catch(() => undefined);
+  await query("delete from piyasa_onbellek where biter < $1", [simdi - SAKLAMA_MS]).catch(
+    () => undefined,
+  );
 }
 
 /** Verilen anahtarların süresi geçmemiş kayıtları. */
@@ -47,6 +58,33 @@ export async function paylasilanOku<T>(anahtarlar: string[]): Promise<Map<string
     }
   } catch {
     // Veritabanı erişilemezse önbellek yokmuş gibi devam edilir.
+  }
+  return out;
+}
+
+/**
+ * Süresi geçmiş olsa bile kayıtları getirir (son çare).
+ *
+ * Yalnızca taze veri alınamadığında kullanılır; çağıran, kaydın yaşını
+ * kullanıcıya göstermekle yükümlüdür.
+ */
+export async function paylasilanBayatOku<T>(
+  anahtarlar: string[],
+): Promise<Map<string, SharedEntry<T>>> {
+  const out = new Map<string, SharedEntry<T>>();
+  if (!postgresEnabled() || anahtarlar.length === 0) return out;
+
+  try {
+    await ensureSchema();
+    const satirlar = await query<Satir>(
+      "select anahtar, deger, biter from piyasa_onbellek where anahtar = any($1)",
+      [anahtarlar],
+    );
+    for (const satir of satirlar) {
+      out.set(satir.anahtar, { deger: satir.deger as T, biter: Number(satir.biter) });
+    }
+  } catch {
+    // Erişilemezse önbellek yokmuş gibi devam edilir.
   }
   return out;
 }

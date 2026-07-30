@@ -209,6 +209,31 @@ export async function fetchTwelveCandles(
 
 type TopluGovde = Record<string, SeriesGovde> | SeriesGovde;
 
+/**
+ * Toplu yanıttaki ortak hatayı bulur.
+ *
+ * Sağlayıcı kota hatasını her sembolün altında ayrı ayrı bildiriyor. Bunlar
+ * sembol bazında yutulunca "veri yok" sanılıyor, kota bittiği anlaşılmıyor ve
+ * uygulama istemeye devam ediyordu. Hiçbir sembol çözülemediyse ilk hata
+ * yüzeye çıkarılır.
+ */
+export function batchHatasi(govde: TopluGovde): MarketDataError | null {
+  const kayitlar: SeriesGovde[] =
+    "values" in govde || "status" in govde
+      ? [govde as SeriesGovde]
+      : Object.values(govde as Record<string, SeriesGovde>);
+
+  for (const kayit of kayitlar) {
+    if (kayit?.status === "error") {
+      return new MarketDataError(
+        kayit.message ?? "Veri sağlayıcı hatası.",
+        kayit.code === 429 ? 429 : 502,
+      );
+    }
+  }
+  return null;
+}
+
 /** Çoklu sembol yanıtını sembol→mum eşlemesine çevirir. */
 export function parseBatch(
   govde: TopluGovde,
@@ -273,7 +298,15 @@ export async function fetchTwelveBatch(
         `&outputsize=${Math.min(limit, 5000)}${borsaParametresi(market)}`,
     );
 
-    for (const [hedef, candles] of parseBatch(govde, interval, parca)) {
+    const cozulen = parseBatch(govde, interval, parca);
+    // Tek bir sembol bile çözülemediyse sebebi yut­ma: kota hatası buradan
+    // anlaşılıyor ve çağıran buna göre geri çekiliyor.
+    if (cozulen.size === 0) {
+      const hata = batchHatasi(govde);
+      if (hata) throw hata;
+    }
+
+    for (const [hedef, candles] of cozulen) {
       const uygulamaSembolu = eslesme.get(hedef);
       if (uygulamaSembolu) sonuc.set(uygulamaSembolu, candles.slice(-limit));
     }
