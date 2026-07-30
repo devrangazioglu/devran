@@ -160,3 +160,57 @@ export async function fetchFxCandles(
 
   return interval === "1w" ? haftalik(gunluk).slice(-limit) : gunluk;
 }
+
+/* ────────────────────────── Fiyat listesi ────────────────────────── */
+
+export type FxQuote = { symbol: string; price: number; previousClose: number };
+
+/**
+ * Birden çok çiftin son kuru ve bir önceki kapanışı.
+ *
+ * Çiftler taban para birimine göre gruplanır: sağlayıcı bir istekte tek taban
+ * için tüm karşı kurları verdiğinden, dokuz çift dört istekle çözülür.
+ * Son iki iş günü istenir ki günlük değişim yüzdesi hesaplanabilsin.
+ */
+export async function fetchFxQuotes(symbols: string[]): Promise<FxQuote[]> {
+  const gruplar = new Map<string, { symbol: string; to: string }[]>();
+  for (const symbol of symbols) {
+    const cift = parseFxPair(symbol);
+    if (!cift) continue;
+    const liste = gruplar.get(cift.from);
+    if (liste) liste.push({ symbol, to: cift.to });
+    else gruplar.set(cift.from, [{ symbol, to: cift.to }]);
+  }
+  if (gruplar.size === 0) return [];
+
+  // Tatiller yüzünden son iki yayın gününü yakalamak için bir hafta geriye bakılır.
+  const baslangic = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
+  const out: FxQuote[] = [];
+
+  for (const [from, hedefler] of gruplar) {
+    try {
+      const body = await iste<SeriesResponse>(
+        `/${baslangic}..?from=${from}&to=${hedefler.map((h) => h.to).join(",")}`,
+      );
+      const gunler = Object.keys(body.rates ?? {}).sort();
+      if (gunler.length === 0) continue;
+
+      const son = body.rates?.[gunler[gunler.length - 1]] ?? {};
+      const onceki = body.rates?.[gunler[gunler.length - 2]] ?? son;
+
+      for (const hedef of hedefler) {
+        const price = son[hedef.to];
+        if (typeof price !== "number" || price <= 0) continue;
+        out.push({
+          symbol: hedef.symbol,
+          price,
+          previousClose: onceki[hedef.to] ?? price,
+        });
+      }
+    } catch {
+      // Bir taban düşerse diğerleri gelmeye devam etsin.
+    }
+  }
+
+  return out;
+}

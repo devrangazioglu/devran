@@ -30,9 +30,9 @@ import {
   type MarketId,
   type Quote,
 } from "./types";
-import { fetchFxCandles, parseFxPair } from "./frankfurter";
+import { fetchFxCandles, fetchFxQuotes, parseFxPair } from "./frankfurter";
 import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol, toStooqSymbols } from "./stooq";
-import { fetchTwelveCandles, twelveDataEnabled } from "./twelvedata";
+import { fetchTwelveBatch, fetchTwelveCandles, twelveDataEnabled } from "./twelvedata";
 import { fetchChart, fetchQuotes, fetchSparkQuotes, searchSymbols } from "./yahoo";
 
 /* ────────────────────────── Önbellek ────────────────────────── */
@@ -150,9 +150,78 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
   const symbols = instruments.map((i) => i.symbol);
   const bySymbol = new Map(instruments.map((i) => [i.symbol, i]));
 
-  // Önce Stooq: tek istekte çok sembol döner ve bulut IP'lerini engellemez.
+  const toplanan: Quote[] = [];
+  let kalan = instruments;
+
+  // Dövizler: anahtarsız çalışan tek kaynak. Taban para birimi başına tek istek.
+  const fxSemboller = kalan.filter((i) => parseFxPair(i.symbol));
+  if (fxSemboller.length > 0) {
+    try {
+      const satirlar = await fetchFxQuotes(fxSemboller.map((i) => i.symbol));
+      const bySymbol = new Map(fxSemboller.map((i) => [i.symbol, i]));
+      for (const satir of satirlar) {
+        const instrument = bySymbol.get(satir.symbol);
+        if (!instrument) continue;
+        toplanan.push({
+          ...instrument,
+          price: satir.price,
+          previousClose: satir.previousClose,
+          changePercent:
+            satir.previousClose === 0
+              ? 0
+              : ((satir.price - satir.previousClose) / satir.previousClose) * 100,
+          high: Math.max(satir.price, satir.previousClose),
+          low: Math.min(satir.price, satir.previousClose),
+          // ECB kur verisinde hacim yok.
+          volume: 0,
+          updatedAt: Date.now(),
+        });
+      }
+      const gelenler = new Set(toplanan.map((q) => q.symbol));
+      kalan = kalan.filter((i) => !gelenler.has(i.symbol));
+    } catch {
+      // Kur kaynağı düşerse aşağıdaki sağlayıcılar denenir.
+    }
+  }
+
+  // Hisse, endeks ve emtia: anahtarlı sağlayıcı. Son iki mumdan fiyat türetilir,
+  // böylece ayrı bir kotasyon isteği harcanmaz.
+  if (kalan.length > 0 && twelveDataEnabled()) {
+    try {
+      const seriler = await fetchTwelveBatch(kalan[0].market, kalan.map((i) => i.symbol), "1d", 2);
+      const bySymbol = new Map(kalan.map((i) => [i.symbol, i]));
+      for (const [symbol, candles] of seriler) {
+        const instrument = bySymbol.get(symbol);
+        if (!instrument || candles.length === 0) continue;
+        const son = candles[candles.length - 1];
+        const onceki = candles[candles.length - 2] ?? son;
+        toplanan.push({
+          ...instrument,
+          price: son.close,
+          previousClose: onceki.close,
+          changePercent:
+            onceki.close === 0 ? 0 : ((son.close - onceki.close) / onceki.close) * 100,
+          high: son.high,
+          low: son.low,
+          volume: son.quoteVolume,
+          updatedAt: Date.now(),
+        });
+      }
+      const gelenler = new Set(toplanan.map((q) => q.symbol));
+      kalan = kalan.filter((i) => !gelenler.has(i.symbol));
+    } catch {
+      // Anahtar sorunluysa ya da kredi bittiyse eski kaynaklar denenir.
+    }
+  }
+
+  if (kalan.length === 0 && toplanan.length > 0) {
+    return { quotes: toplanan, source: "canli", updatedAt: Date.now() };
+  }
+
+  // Kalanlar için eski (anahtarsız) kaynaklar. Bunlar bulut IP'lerini
+  // engelliyor olabilir; sonuç boş dönerse elde olanla devam edilir.
   const stooqEsleme = new Map<string, Instrument>();
-  for (const instrument of instruments) {
+  for (const instrument of kalan) {
     const stooq = toStooqSymbol(instrument.market, instrument.symbol);
     if (stooq) stooqEsleme.set(stooq, instrument);
   }
@@ -211,7 +280,7 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
   } catch (error) {
     // Toplu sorguların ikisi de çalışmazsa günlük mumlardan fiyat üretilir.
     // Sağlayıcıyı boğmamak için hem az eşzamanlılık hem de sembol üst sınırı var.
-    const quotes = await mapWithLimit(instruments.slice(0, PER_SYMBOL_FALLBACK_LIMIT), 3, async (instrument) => {
+    const quotes = await mapWithLimit(kalan.slice(0, PER_SYMBOL_FALLBACK_LIMIT), 3, async (instrument) => {
       try {
         const chart = await fetchChart(instrument.symbol, "1d", 5);
         const candles = chart.candles;
@@ -238,7 +307,11 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     });
 
     const clean = quotes.filter((q): q is Quote => q !== null);
-    if (clean.length > 0) return { quotes: clean, source: "canli", updatedAt: Date.now() };
+
+    // Önceki kaynaklardan gelenler burada kaybolmamalı: bir piyasanın yarısı
+    // çalışıyorsa yarısını göstermek, hepsini hataya çevirmekten iyidir.
+    const hepsi = [...toplanan, ...clean];
+    if (hepsi.length > 0) return { quotes: hepsi, source: "canli", updatedAt: Date.now() };
 
     if (demoEnabled()) return demoQuotes(instruments);
     throw new MarketDataError(
