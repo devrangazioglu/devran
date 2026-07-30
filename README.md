@@ -229,6 +229,38 @@ piyasalarda "seans kapalı olabilir" riski eklenir.
 - **Demo veri:** `DEMO_DATA=1` iken sağlayıcıya erişilemezse tohumlanmış (deterministik)
   sentetik seriler üretilir ve arayüzde açıkça "demo veri" olarak işaretlenir.
 
+## Piyasa verisi nereden geliyor?
+
+Kripto dışı veriyi web sunucusundan çekmek iki duvara çarpıyordu: anahtarsız
+kaynaklar (Yahoo, Stooq) bulut sağlayıcısının IP aralığını engelliyor (ölçüldü:
+429 ve CSV yerine HTML engel sayfası), anahtarlı kaynak ise ücretsiz katmanda
+günde 800 kredi veriyor ve bir günde bitiyor — 800 sınıra karşı 1508 kredi
+harcandığı ve sitenin bütün gün boş kaldığı ölçüldü.
+
+Bu yüzden veri **uygulamanın çalıştığı yerden çekilmiyor**. Günde bir çalışan bir
+GitHub Actions işi (`.github/workflows/piyasa-verisi.yml`) veriyi kendi
+makinesinden çekip doğrudan paylaşımlı önbelleğe yazıyor (`scripts/besle.ts`).
+Site zaten önce oraya baktığı için hiçbir sağlayıcıya gitmiyor: ABD, BIST ve
+emtia listelerinin tamamı, taramalar ve analizler **sıfır** sağlayıcı isteğiyle
+geliyor — ölçüldü.
+
+**Kurulum (bir kez):**
+
+1. GitHub deposunda **Settings → Secrets and variables → Actions → New repository
+   secret** yolundan `DATABASE_URL` adında bir secret ekleyin; değeri Vercel'deki
+   Postgres bağlantı dizesinin aynısı olsun.
+2. **Actions → Piyasa verisi → Run workflow** ile bir kez elle çalıştırın. Kütükte
+   her piyasa için kaç sembolün yazıldığı görünür.
+
+Sonrasında iş her gün 22:20 UTC'de (TSİ 01:20) kendiliğinden çalışır; ABD seansı
+kapandıktan sonrasına denk gelir. Bir piyasadan hiç veri gelmezse iş başarısız
+sayılır ve GitHub bildirim gönderir — sessizce boş dönen bir besleme, sitenin
+günlerce eski veriyle kalması demek olurdu.
+
+**Yedek yol:** besleme çalışmazsa site eski davranışına döner (Twelve Data +
+kredi bütçesi + bayat önbellek), yani hiçbir şey görünmez hâle gelmez; yalnızca
+liste daha yavaş dolar.
+
 ## Arama motoru görünürlüğü (SEO)
 
 - **Her dilin kendi adresi var.** Dil önce yalnızca çerezle seçiliyordu; arama motorları çerez

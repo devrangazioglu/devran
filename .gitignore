@@ -28,3 +28,4 @@ next-env.d.ts
 
 # test derleme çıktısı
 /.test-build/
+/.scripts-build/
