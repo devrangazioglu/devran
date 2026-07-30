@@ -2,7 +2,11 @@ import { auth } from "@/auth";
 import { DEFAULT_SETTINGS, findUserByEmail } from "@/lib/users";
 import SettingsClient from "./SettingsClient";
 
-export const metadata = { title: "Ayarlar — Kriptosinyal" };
+// Üye alanı: içerik kişiye özel, arama sonuçlarında yeri yok.
+export const metadata = {
+  title: "Ayarlar",
+  robots: { index: false, follow: false },
+};
 
 export default async function SettingsPage() {
   const session = await auth();

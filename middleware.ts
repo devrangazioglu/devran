@@ -16,6 +16,11 @@ export function middleware(request: NextRequest) {
   return NextResponse.next({ request: { headers } });
 }
 
+/**
+ * Tüm sayfalar eşlenir: üye alanı geri dönüş adresini, kök düzen ise
+ * `<html lang>` için adresteki dili buradan öğrenir. Statik dosyalar ve API
+ * uçları dışarıda bırakılır.
+ */
 export const config = {
-  matcher: ["/panel", "/tarayici", "/takip", "/ayarlar", "/varlik/:path*"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml).*)"],
 };

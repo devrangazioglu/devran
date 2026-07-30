@@ -2000,3 +2000,43 @@ canvas {
 .gauge-arc {
   transition: stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+/* ── Piyasa sayfası açıklama ve SSS bölümleri ──────────────────
+   Arama motorunun sayfayı anlaması için tabloların altında gerçek
+   metin bulunur; bu bölümler onun düzenidir. */
+.market-about,
+.market-faq {
+  margin-top: 42px;
+  max-width: 760px;
+  /* Tanıtım sayfasındaki .faq ortalanır; burada metin sola hizalı kalmalı. */
+  margin-inline: 0;
+  text-align: start;
+}
+
+.market-about h2,
+.market-faq h2 {
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+
+.market-about p {
+  color: var(--text-muted);
+  line-height: 1.75;
+  margin-bottom: 14px;
+}
+
+.market-faq details {
+  border-top: 1px solid var(--border-soft);
+  padding: 14px 0;
+}
+
+.market-faq summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.market-faq p {
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-top: 10px;
+}

@@ -507,6 +507,90 @@ export const tr = {
     "Bu piyasa şu an kapalı olabilir; son kapanış verisiyle üretilen sinyal seans açılışında değişebilir.",
   "risk.none":
     "Belirgin bir teknik çelişki tespit edilmedi; yine de risk yönetimi olmadan işlem açmayın.",
+
+  /* ── Arama motoru başlıkları ve açıklamaları ─────────────────
+     Başlık ~60, açıklama ~155 karakteri geçmemeli: fazlası arama
+     sonucunda kesiliyor ve cümlenin sonu kullanıcıya ulaşmıyor. */
+  "seo.home.title": "Teknik analiz ve al/sat sinyalleri",
+  "seo.home.description":
+    "Kripto, ABD borsası, Borsa İstanbul, döviz ve emtia için 16 teknik göstergeyi hesaplayıp AL / SAT / BEKLE sinyali üretir ve sonucu sade bir dille yorumlar.",
+
+  "seo.kripto.title": "Kripto teknik analiz ve al/sat sinyalleri",
+  "seo.kripto.description":
+    "Bitcoin, Ethereum ve yüzlerce altcoin için RSI, MACD, EMA ve Bollinger tabanlı canlı teknik analiz; her parite için AL / SAT / BEKLE sinyali ve gerekçesi.",
+  "seo.abd.title": "Amerikan borsası teknik analiz ve hisse sinyalleri",
+  "seo.abd.description":
+    "S&P 500, Nasdaq ve Dow hisseleri için günlük teknik analiz: 16 gösterge, destek-direnç seviyeleri ve gerekçesiyle birlikte AL / SAT / BEKLE sinyali.",
+  "seo.bist.title": "Borsa İstanbul teknik analiz ve BIST hisse sinyalleri",
+  "seo.bist.description":
+    "BIST 100 ve BIST 30 hisseleri için teknik analiz: RSI, MACD, hareketli ortalamalar ve formasyonlarla üretilen AL / SAT / BEKLE sinyalleri, Türkçe yorumla.",
+  "seo.emtia.title": "Döviz, altın ve petrol teknik analizi",
+  "seo.emtia.description":
+    "Dolar/TL, euro, altın, gümüş ve petrol için teknik analiz ve al/sat sinyalleri. Kur verisi Avrupa Merkez Bankası referans kurlarına dayanır.",
+
+  /* ── Piyasa sayfası içeriği ──────────────────────────────── */
+  "market.kripto.h1": "Kripto teknik analiz ve sinyaller",
+  "market.abd.h1": "Amerikan borsası teknik analiz ve sinyaller",
+  "market.bist.h1": "Borsa İstanbul teknik analiz ve sinyaller",
+  "market.emtia.h1": "Döviz ve emtia teknik analizi",
+
+  "market.kripto.aboutTitle": "Kripto paralarda teknik analiz nasıl okunur?",
+  "market.kripto.about":
+    "Kripto piyasası 7 gün 24 saat açıktır; bu yüzden hafta sonu boşluğu yoktur ve göstergeler kesintisiz veriyle çalışır. Buradaki tabloda her parite için son fiyat, günlük değişim ve işlem hacmi yer alır; bir satıra tıkladığınızda o parite için 16 gösterge, destek-direnç seviyeleri, formasyonlar ve bir işlem planı hesaplanır. Yüksek volatilite nedeniyle stop mesafesi ATR'ye göre genişletilir.",
+  "market.abd.aboutTitle": "Amerikan hisselerinde sinyaller nasıl üretilir?",
+  "market.abd.about":
+    "Amerikan borsası hafta içi belirli saatlerde açıktır; kapanış sonrası üretilen sinyaller bir sonraki seansın açılışında değişebilir. Listede endeksler ve işlem hacmi en yüksek hisseler bulunur. Her hisse için trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stokastik), volatilite (Bollinger, ATR) ve hacim göstergeleri ayrı ayrı oy verir; sinyal bu oyların ağırlıklı ortalamasıdır.",
+  "market.bist.aboutTitle": "BIST hisselerinde teknik analiz",
+  "market.bist.about":
+    "Borsa İstanbul hisseleri için sinyaller günlük kapanış verisiyle üretilir. Tabloda BIST 100 ve BIST 30 endeksleriyle birlikte işlem hacmi yüksek hisseler yer alır. Her hisse için hesaplanan skor −100 ile +100 arasındadır: +45 ve üzeri güçlü alış, −45 ve altı güçlü satış sayılır; arada kalan bölge kararsız piyasayı gösterir ve BEKLE olarak işaretlenir.",
+  "market.emtia.aboutTitle": "Döviz, altın ve petrolde teknik analiz",
+  "market.emtia.about":
+    "Döviz kurları Avrupa Merkez Bankası'nın günlük referans kurlarından gelir; bu veri yalnızca kapanış değeri içerdiği için gün içi en yüksek/en düşük seviyeye dayanan göstergeler (ATR, Stokastik, Williams %R) burada dar kalır, kapanışa dayananlar (RSI, MACD, EMA, Bollinger) tam çalışır. Altın, gümüş ve petrol tarafında ise tam mum verisi kullanılır.",
+
+  "market.methodology":
+    "Tüm göstergeler kendi sunucumuzda, açık kaynak formüllerle hesaplanır; dışarıdan hazır sinyal satın alınmaz. Skor, göstergelerin ağırlıklı oyundan üretilir ve aynı veriden her zaman aynı sonucu verir. Üretilen sinyaller yatırım tavsiyesi değildir.",
+
+  "market.kripto.faq1.q": "Kripto sinyalleri hangi periyotta üretiliyor?",
+  "market.kripto.faq1.a":
+    "1 dakikadan 1 haftaya kadar sekiz periyot desteklenir. Kısa periyotlar daha çok sinyal üretir ama gürültü de fazladır; 4 saatlik ve günlük periyotlar trend takibi için daha güvenilirdir.",
+  "market.kripto.faq2.q": "Veriler ne kadar günceldir?",
+  "market.kripto.faq2.a":
+    "Kripto fiyatları saniyeler içinde tazelenir; sayfa açıldığında son kapanan mum kullanılır. Her satırdaki güncelleme zamanı verinin gerçek yaşını gösterir.",
+  "market.kripto.faq3.q": "Sinyal doğrudan al-sat kararı mıdır?",
+  "market.kripto.faq3.a":
+    "Hayır. Sinyal, göstergelerin o anki durumunun özetidir; kişisel risk toleransınızı, pozisyon büyüklüğünüzü ve piyasa haberlerini hesaba katmaz. Yatırım tavsiyesi değildir.",
+
+  "market.abd.faq1.q": "Hisse verileri gerçek zamanlı mı?",
+  "market.abd.faq1.a":
+    "Ücretsiz veri katmanı günlük kapanış verisi sunar; gün içi anlık fiyat yoktur. Her satırda verinin ne zaman güncellendiği yazar.",
+  "market.abd.faq2.q": "Hangi hisseler listeleniyor?",
+  "market.abd.faq2.a":
+    "Endeksler ve işlem hacmi en yüksek hisseler hazır listede gelir. Listede olmayan bir hisseyi arama kutusundan bulup açtığınızda analizi o an hesaplanır.",
+  "market.abd.faq3.q": "Borsa kapalıyken sinyal değişir mi?",
+  "market.abd.faq3.a":
+    "Kapalı seansta sinyal sabit kalır; son kapanışla hesaplanır. Açılışta oluşan boşluk (gap) göstergeleri değiştirebileceği için seans başında sinyalin yenilenmesi beklenir.",
+
+  "market.bist.faq1.q": "BIST hisselerinde hangi göstergeler kullanılıyor?",
+  "market.bist.faq1.a":
+    "Diğer piyasalarla aynı 16 gösterge: RSI, MACD, EMA 9/21/50/200, Bollinger, Stokastik, ATR, ADX, Supertrend, OBV, MFI, CCI, Williams %R, ROC, VWAP ve hacim oranı.",
+  "market.bist.faq2.q": "Temettü ve sermaye artırımı fiyatlara yansıyor mu?",
+  "market.bist.faq2.a":
+    "Veri sağlayıcının düzeltilmiş kapanış serisi kullanılır; temettü ve bölünme kaynaklı boşluklar bu seride düzeltilmiş olarak gelir.",
+  "market.bist.faq3.q": "Analiz Türkçe mi?",
+  "market.bist.faq3.a":
+    "Evet. Gösterge yorumları ve işlem planı Türkçe üretilir; ayrıca İngilizce dahil sekiz dilde arayüz desteği vardır.",
+
+  "market.emtia.faq1.q": "Dolar/TL kuru nereden geliyor?",
+  "market.emtia.faq1.a":
+    "Avrupa Merkez Bankası'nın her iş günü yayımladığı referans kurlarından. Hafta sonu ve resmî tatillerde yeni kur yayımlanmaz, son iş gününün kuru geçerlidir.",
+  "market.emtia.faq2.q": "Altın fiyatı gram mı ons mu?",
+  "market.emtia.faq2.a":
+    "Altın ve gümüş, uluslararası piyasadaki ons/dolar fiyatıyla (XAU/USD, XAG/USD) gösterilir; gram altın için kur çevrimi yapmanız gerekir.",
+  "market.emtia.faq3.q": "Petrol hangi tip?",
+  "market.emtia.faq3.a":
+    "Hem WTI hem Brent listelenir. İkisi arasındaki fark bölgesel arz koşullarından kaynaklanır ve sinyalleri birbirinden ayrışabilir.",
+
+  "nav.home": "Ana sayfa",
 } as const;
 
 export type DictionaryKey = keyof typeof tr;

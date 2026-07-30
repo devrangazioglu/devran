@@ -4,33 +4,42 @@ import { auth } from "@/auth";
 import LanguageSwitcher from "./LanguageSwitcher";
 import MobileMenu from "./MobileMenu";
 import { getI18n } from "@/lib/i18n/server";
+import { localeHref } from "@/lib/i18n/routing";
+import type { Locale } from "@/lib/i18n";
 import { MARKETS, MARKET_IDS } from "@/lib/markets/types";
 
-/** Herkese açık sayfaların üst menüsü. */
-export default async function SiteNav() {
-  const [session, { t }] = await Promise.all([auth(), getI18n()]);
+/**
+ * Herkese açık sayfaların üst menüsü.
+ *
+ * Dil URL'den gelir: menüdeki her bağlantı aynı dilde kalmalı, yoksa
+ * ziyaretçi İngilizce sayfadan Türkçe sayfaya düşer ve arama motoru dil
+ * sürümleri arasında kopuk bir bağlantı ağı görür.
+ */
+export default async function SiteNav({ locale: istenen }: { locale?: Locale } = {}) {
+  const [session, { t, locale }] = await Promise.all([auth(), getI18n(istenen)]);
+  const yol = (path: string) => localeHref(locale, path);
 
   const marketLinks = MARKET_IDS.map((id) => ({
-    href: `/piyasa/${MARKETS[id].slug}`,
+    href: yol(`/piyasa/${MARKETS[id].slug}`),
     label: t(`market.${id}` as "market.kripto"),
   }));
 
   const menuLinks = [
     ...marketLinks,
-    { href: "/#nasil", label: t("nav.how") },
-    { href: "/#sss", label: t("nav.faq") },
+    { href: `${yol("/")}#nasil`, label: t("nav.how") },
+    { href: `${yol("/")}#sss`, label: t("nav.faq") },
     ...(session?.user
       ? [{ href: "/panel", label: t("nav.panel") }]
       : [
-          { href: "/giris", label: t("nav.login") },
-          { href: "/kayit", label: t("nav.register") },
+          { href: yol("/giris"), label: t("nav.login") },
+          { href: yol("/kayit"), label: t("nav.register") },
         ]),
   ];
 
   return (
     <header className="nav">
       <div className="container container-wide nav-inner">
-        <Link href="/" className="logo">
+        <Link href={yol("/")} className="logo">
           <span className="logo-mark">◉</span>
           <span>
             Kripto<em>sinyal</em>
@@ -43,8 +52,8 @@ export default async function SiteNav() {
               {link.label}
             </Link>
           ))}
-          <a href="/#nasil">{t("nav.how")}</a>
-          <a href="/#sss">{t("nav.faq")}</a>
+          <a href={`${yol("/")}#nasil`}>{t("nav.how")}</a>
+          <a href={`${yol("/")}#sss`}>{t("nav.faq")}</a>
         </nav>
 
         <div className="nav-actions">
@@ -57,10 +66,10 @@ export default async function SiteNav() {
             </Link>
           ) : (
             <>
-              <Link href="/giris" className="btn btn-ghost btn-sm only-desktop">
+              <Link href={yol("/giris")} className="btn btn-ghost btn-sm only-desktop">
                 {t("nav.login")}
               </Link>
-              <Link href="/kayit" className="btn btn-primary btn-sm">
+              <Link href={yol("/kayit")} className="btn btn-primary btn-sm">
                 {t("nav.register")}
               </Link>
             </>

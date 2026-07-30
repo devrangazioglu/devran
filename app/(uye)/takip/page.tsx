@@ -2,7 +2,11 @@ import { auth } from "@/auth";
 import { DEFAULT_SETTINGS, findUserByEmail } from "@/lib/users";
 import WatchlistClient from "./WatchlistClient";
 
-export const metadata = { title: "Takip listem — Kriptosinyal" };
+// Üye alanı: içerik kişiye özel, arama sonuçlarında yeri yok.
+export const metadata = {
+  title: "Takip listem",
+  robots: { index: false, follow: false },
+};
 
 export default async function WatchlistPage() {
   const session = await auth();

@@ -486,4 +486,85 @@ export const en: Dictionary = {
     "This market may be closed right now; a signal from the last close can change at the open.",
   "risk.none":
     "No clear technical contradiction was detected; still, never trade without risk management.",
+
+  /* ── Search engine titles and descriptions ── */
+  "seo.home.title": "Technical analysis and buy/sell signals",
+  "seo.home.description":
+    "Buy / sell / wait signals from 16 technical indicators across crypto, US stocks, Borsa Istanbul, forex and commodities — with the reasoning written out in plain language.",
+
+  "seo.kripto.title": "Crypto technical analysis and buy/sell signals",
+  "seo.kripto.description":
+    "Live technical analysis for Bitcoin, Ethereum and hundreds of altcoins: RSI, MACD, EMA and Bollinger based buy / sell / wait signals with the reasoning for each pair.",
+  "seo.abd.title": "US stock market technical analysis and signals",
+  "seo.abd.description":
+    "Daily technical analysis for S&P 500, Nasdaq and Dow stocks: 16 indicators, support and resistance levels, and a buy / sell / wait signal with its reasoning.",
+  "seo.bist.title": "Borsa Istanbul (BIST) technical analysis and signals",
+  "seo.bist.description":
+    "Technical analysis for BIST 100 and BIST 30 stocks: buy / sell / wait signals built from RSI, MACD, moving averages and chart patterns, explained in plain language.",
+  "seo.emtia.title": "Forex, gold and oil technical analysis",
+  "seo.emtia.description":
+    "Technical analysis and buy/sell signals for USD/TRY, EUR/USD, gold, silver and oil. Exchange rates come from European Central Bank reference rates.",
+
+  "market.kripto.h1": "Crypto technical analysis and signals",
+  "market.abd.h1": "US stock market technical analysis and signals",
+  "market.bist.h1": "Borsa Istanbul technical analysis and signals",
+  "market.emtia.h1": "Forex and commodity technical analysis",
+
+  "market.kripto.aboutTitle": "How to read technical analysis in crypto",
+  "market.kripto.about":
+    "The crypto market trades around the clock, so there are no weekend gaps and indicators work on an unbroken series. The table lists the last price, daily change and traded volume for each pair; opening a row computes 16 indicators, support and resistance levels, chart patterns and a trade plan for that pair. Because volatility is high, the stop distance is widened according to ATR.",
+  "market.abd.aboutTitle": "How signals are produced for US stocks",
+  "market.abd.about":
+    "The US market trades on weekdays during set hours, so a signal produced after the close can change at the next open. The list contains the indices and the most traded stocks. For each stock, trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stochastic), volatility (Bollinger, ATR) and volume indicators each cast a vote; the signal is the weighted average of those votes.",
+  "market.bist.aboutTitle": "Technical analysis for BIST stocks",
+  "market.bist.about":
+    "Signals for Borsa Istanbul stocks are produced from daily closing data. The table lists the BIST 100 and BIST 30 indices along with the most traded stocks. Each score runs from −100 to +100: +45 and above is a strong buy, −45 and below a strong sell, and the band in between marks an undecided market, shown as WAIT.",
+  "market.emtia.aboutTitle": "Technical analysis for forex, gold and oil",
+  "market.emtia.about":
+    "Exchange rates come from the European Central Bank's daily reference rates. That series carries closing values only, so indicators that depend on the intraday high and low (ATR, Stochastic, Williams %R) stay narrow here, while close-based ones (RSI, MACD, EMA, Bollinger) work fully. Gold, silver and oil use full candle data.",
+
+  "market.methodology":
+    "Every indicator is computed on our own servers from open formulas; no ready-made signals are bought from anyone. The score comes from a weighted vote of the indicators and always returns the same result for the same data. These signals are not investment advice.",
+
+  "market.kripto.faq1.q": "Which timeframes are crypto signals produced on?",
+  "market.kripto.faq1.a":
+    "Eight timeframes, from one minute to one week. Shorter ones produce more signals but also more noise; the 4-hour and daily timeframes are more reliable for following a trend.",
+  "market.kripto.faq2.q": "How fresh is the data?",
+  "market.kripto.faq2.a":
+    "Crypto prices refresh within seconds, and the last closed candle is used when the page loads. The update time on each row shows the real age of the data.",
+  "market.kripto.faq3.q": "Is a signal a decision to buy or sell?",
+  "market.kripto.faq3.a":
+    "No. A signal summarises what the indicators say at that moment; it knows nothing about your risk tolerance, position size or the news. It is not investment advice.",
+
+  "market.abd.faq1.q": "Is the stock data real time?",
+  "market.abd.faq1.a":
+    "The free data tier provides daily closing data, not live intraday prices. Each row states when its data was last updated.",
+  "market.abd.faq2.q": "Which stocks are listed?",
+  "market.abd.faq2.a":
+    "The indices and the most traded stocks come in the ready-made list. Any stock outside it can be found through search, and its analysis is computed the moment you open it.",
+  "market.abd.faq3.q": "Do signals change while the market is closed?",
+  "market.abd.faq3.a":
+    "A signal stays fixed while the market is closed, since it is computed from the last close. An opening gap can move the indicators, so expect it to refresh at the open.",
+
+  "market.bist.faq1.q": "Which indicators are used for BIST stocks?",
+  "market.bist.faq1.a":
+    "The same 16 as everywhere else: RSI, MACD, EMA 9/21/50/200, Bollinger, Stochastic, ATR, ADX, Supertrend, OBV, MFI, CCI, Williams %R, ROC, VWAP and volume ratio.",
+  "market.bist.faq2.q": "Are dividends and splits reflected in the prices?",
+  "market.bist.faq2.a":
+    "The provider's adjusted close series is used, so gaps caused by dividends and splits arrive already corrected.",
+  "market.bist.faq3.q": "Is the analysis available in English?",
+  "market.bist.faq3.a":
+    "Yes. Indicator commentary and the trade plan are produced in both Turkish and English, and the interface is available in eight languages.",
+
+  "market.emtia.faq1.q": "Where does the USD/TRY rate come from?",
+  "market.emtia.faq1.a":
+    "From the European Central Bank's reference rates, published every business day. No new rate is published on weekends and holidays; the last business day's rate applies.",
+  "market.emtia.faq2.q": "Is the gold price per gram or per ounce?",
+  "market.emtia.faq2.a":
+    "Gold and silver are shown at the international ounce/dollar price (XAU/USD, XAG/USD); converting to grams or another currency is up to you.",
+  "market.emtia.faq3.q": "Which type of oil is listed?",
+  "market.emtia.faq3.a":
+    "Both WTI and Brent. The gap between them comes from regional supply conditions, and their signals can diverge.",
+
+  "nav.home": "Home",
 };

@@ -12,7 +12,11 @@ export async function generateMetadata({
   params: Promise<{ market: string; symbol: string }>;
 }) {
   const { symbol } = await params;
-  return { title: `${decodeURIComponent(symbol).toUpperCase()} — Kriptosinyal` };
+  // Üye alanı: analiz sayfası kişiye özel ayarlarla üretilir, dizine girmez.
+  return {
+    title: decodeURIComponent(symbol).toUpperCase(),
+    robots: { index: false, follow: false },
+  };
 }
 
 export default async function AssetPage({

@@ -2,7 +2,11 @@ import { auth } from "@/auth";
 import { DEFAULT_SETTINGS, findUserByEmail } from "@/lib/users";
 import ScannerClient from "./ScannerClient";
 
-export const metadata = { title: "Sinyal tarayıcı — Kriptosinyal" };
+// Üye alanı: içerik kişiye özel, arama sonuçlarında yeri yok.
+export const metadata = {
+  title: "Sinyal tarayıcı",
+  robots: { index: false, follow: false },
+};
 
 export default async function ScannerPage() {
   const session = await auth();

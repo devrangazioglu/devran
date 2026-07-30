@@ -9,7 +9,15 @@
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Veri kaynağı tanısı — Kriptosinyal" };
+/**
+ * Bu sayfa arama motoru için değersiz: içeriği kişiye özel ya da ham teşhis
+ * verisi. `follow` açık bırakılır, böylece içindeki bağlantılar taranmaya
+ * devam eder ama sayfanın kendisi sonuçlarda çıkmaz.
+ */
+export const metadata = {
+  title: "Veri kaynağı tanısı",
+  robots: { index: false, follow: true },
+};
 
 type Sonuc = {
   ad: string;

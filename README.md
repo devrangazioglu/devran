@@ -229,6 +229,31 @@ piyasalarda "seans kapalı olabilir" riski eklenir.
 - **Demo veri:** `DEMO_DATA=1` iken sağlayıcıya erişilemezse tohumlanmış (deterministik)
   sentetik seriler üretilir ve arayüzde açıkça "demo veri" olarak işaretlenir.
 
+## Arama motoru görünürlüğü (SEO)
+
+- **Her dilin kendi adresi var.** Dil önce yalnızca çerezle seçiliyordu; arama motorları çerez
+  göndermediği için Türkçe dışındaki yedi dil arama sonuçlarında hiç yoktu. Artık varsayılan dil
+  öneksiz (`/piyasa/kripto`), diğerleri önekli yayımlanır (`/en/piyasa/kripto`) ve her sayfa
+  sekiz dilin tamamını `hreflang` ile birbirine bağlar (`x-default` Türkçe'yi gösterir).
+- **Kanonik adresler mutlaktır.** `NEXT_PUBLIC_SITE_URL` tanımlıysa o, yoksa Vercel'in ürettiği
+  üretim adresi kullanılır. Kendi alan adınızı aldığınızda bu değişkeni tanımlayın — yoksa
+  kanonik bağlantılar ve site haritası yanlış alan adını gösterir.
+- **`/robots.txt` ve `/sitemap.xml` üretilir.** Site haritasında herkese açık her sayfa, her dilde
+  ve dil alternatifleriyle birlikte listelenir. Üye alanı, API uçları, `/tani` ve `/ara` dizine
+  girmez; bu sayfalar ayrıca `noindex` etiketi taşır.
+- **Yapılandırılmış veri (JSON-LD):** ana sayfada `WebSite` (site içi arama kutusu),
+  `Organization` ve `FAQPage`; piyasa sayfalarında `BreadcrumbList`, `ItemList` ve piyasaya özel
+  `FAQPage`. SSS içeriği sayfada gösterilen metinle aynı kaynaktan gelir, dolayısıyla arama
+  sonucundaki cevap sayfadakinden şaşmaz.
+- **Paylaşım görseli** (`/opengraph-image`) çalışma anında üretilir; depoda ikili dosya tutulmaz.
+- **Metin içerik:** piyasa sayfalarında tablonun altında o piyasayı anlatan bir bölüm ve üç
+  soruluk SSS bulunur. Yalnızca sayı dolu bir tablo, arama motoruna sayfanın neyle ilgili
+  olduğunu söylemez.
+
+**Kodun yapamayacağı kısım:** teknik altyapı sıralamanın yalnızca bir ayağıdır. Üst sıralar için
+ayrıca kendi alan adı, düzenli yayımlanan içerik ve dış bağlantılar gerekir; bunlar dağıtım
+sonrası yapılacak işlerdir.
+
 ## Vercel'e kurulum
 
 1. **Postgres bağlayın:** Vercel panelinde proje → **Storage** → **Postgres (Neon)** →

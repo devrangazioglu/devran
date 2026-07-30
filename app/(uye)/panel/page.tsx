@@ -2,7 +2,11 @@ import { auth } from "@/auth";
 import { DEFAULT_SETTINGS, findUserByEmail } from "@/lib/users";
 import PanelClient from "./PanelClient";
 
-export const metadata = { title: "Panel — Kriptosinyal" };
+// Üye alanı: içerik kişiye özel, arama sonuçlarında yeri yok.
+export const metadata = {
+  title: "Panel",
+  robots: { index: false, follow: false },
+};
 
 export default async function PanelPage() {
   const session = await auth();

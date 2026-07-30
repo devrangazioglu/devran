@@ -8,7 +8,15 @@ import { getI18n } from "@/lib/i18n/server";
 import { safeNextPath, withNextPath } from "@/lib/next-path";
 import LoginForm from "./LoginForm";
 
-export const metadata = { title: "Giriş — Kriptosinyal" };
+/**
+ * Bu sayfa arama motoru için değersiz: içeriği kişiye özel ya da ham teşhis
+ * verisi. `follow` açık bırakılır, böylece içindeki bağlantılar taranmaya
+ * devam eder ama sayfanın kendisi sonuçlarda çıkmaz.
+ */
+export const metadata = {
+  title: "Giriş",
+  robots: { index: false, follow: true },
+};
 
 export default async function LoginPage({
   searchParams,
