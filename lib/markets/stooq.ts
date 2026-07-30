@@ -197,7 +197,11 @@ async function iste(path: string, timeoutMs = 12_000): Promise<string> {
     if (response.status === 429) {
       throw new MarketDataError("Veri sağlayıcı istek limitine takıldı, birazdan tekrar deneyin.", 429);
     }
-    if (!response.ok) throw new MarketDataError(`Veri sağlayıcı yanıtı: ${response.status}`, 502);
+    // Gerçek durum kodu korunur: hata mesajında "502" görüp 404'ü aramak
+    // teşhisi yanlış yöne çeviriyordu.
+    if (!response.ok) {
+      throw new MarketDataError(`Veri sağlayıcı yanıtı: ${response.status}`, response.status);
+    }
     return await response.text();
   } catch (error) {
     if (error instanceof MarketDataError) throw error;
