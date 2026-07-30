@@ -11,6 +11,7 @@ export default async function ScannerPage() {
 
   return (
     <ScannerClient
+      defaultMarket={settings.defaultMarket}
       defaultInterval={settings.defaultInterval}
       defaultLimit={settings.scanLimit}
       onlyStrong={settings.onlyStrongSignals}

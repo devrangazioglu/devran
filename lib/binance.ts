@@ -1,24 +1,22 @@
 /**
- * Binance genel (public) REST API istemcisi.
+ * Kripto piyasası veri istemcisi (Binance genel/public REST uç noktaları).
  *
- * - API anahtarı gerektirmez; yalnızca herkese açık piyasa verisi okunur.
- * - Birden fazla uç nokta denenir (bir bölge/host engellenirse diğerine düşer).
- * - Yanıtlar kısa süreli bellek içi önbellekte tutulur (istek limitini korumak için).
- * - Hiçbir uç noktaya ulaşılamazsa `DEMO_DATA=1` ile üretilmiş, açıkça
- *   "demo" olarak işaretlenen sentetik veriye düşülür (geliştirme/çevrimdışı için).
+ * API anahtarı gerektirmez; yalnızca herkese açık piyasa verisi okunur.
+ * Ortak tipler `lib/markets/types.ts` içinde tanımlıdır — bu dosya yalnızca
+ * kripto piyasasının sağlayıcı ayrıntılarını bilir.
  */
 
-export type Candle = {
-  openTime: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  closeTime: number;
-  quoteVolume: number;
-  trades: number;
-};
+import {
+  demoEnabled,
+  intervalMinutes,
+  MarketDataError,
+  type Candle,
+  type DataSource,
+  type Interval,
+} from "./markets/types";
+
+export { INTERVALS, isInterval, MarketDataError as BinanceError } from "./markets/types";
+export type { Candle, DataSource, Interval } from "./markets/types";
 
 export type Ticker = {
   symbol: string;
@@ -33,33 +31,6 @@ export type Ticker = {
   quoteVolume: number;
   trades: number;
 };
-
-export type DataSource = "binance" | "demo";
-
-export type Interval =
-  | "1m"
-  | "5m"
-  | "15m"
-  | "30m"
-  | "1h"
-  | "4h"
-  | "1d"
-  | "1w";
-
-export const INTERVALS: { value: Interval; label: string; minutes: number }[] = [
-  { value: "1m", label: "1 dakika", minutes: 1 },
-  { value: "5m", label: "5 dakika", minutes: 5 },
-  { value: "15m", label: "15 dakika", minutes: 15 },
-  { value: "30m", label: "30 dakika", minutes: 30 },
-  { value: "1h", label: "1 saat", minutes: 60 },
-  { value: "4h", label: "4 saat", minutes: 240 },
-  { value: "1d", label: "1 gün", minutes: 1440 },
-  { value: "1w", label: "1 hafta", minutes: 10080 },
-];
-
-export function isInterval(value: string): value is Interval {
-  return INTERVALS.some((i) => i.value === value);
-}
 
 /** Sembolün geçerli bir Binance sembolü olup olmadığını kabaca doğrular. */
 export function normalizeSymbol(input: string): string | null {
@@ -112,16 +83,6 @@ function writeCache(key: string, value: unknown, ttlMs: number) {
 
 /* ────────────────────────────── İstek ────────────────────────────── */
 
-export class BinanceError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-    this.name = "BinanceError";
-  }
-}
-
 let lastGoodHost: string | null = null;
 
 async function request<T>(path: string, timeoutMs = 10_000): Promise<T> {
@@ -139,37 +100,32 @@ async function request<T>(path: string, timeoutMs = 10_000): Promise<T> {
       });
 
       if (response.status === 429 || response.status === 418) {
-        throw new BinanceError(
-          "Binance istek limitine takıldı, birazdan tekrar deneyin.",
+        throw new MarketDataError(
+          "Veri sağlayıcı istek limitine takıldı, birazdan tekrar deneyin.",
           429,
         );
       }
       if (response.status === 400) {
         // Geçersiz sembol/parametre — başka host denemek anlamsız.
         const body = (await response.json().catch(() => null)) as { msg?: string } | null;
-        throw new BinanceError(body?.msg ?? "Geçersiz istek (sembol bulunamadı?)", 400);
+        throw new MarketDataError(body?.msg ?? "Geçersiz istek (sembol bulunamadı?)", 400);
       }
-      if (!response.ok) throw new BinanceError(`Binance yanıtı: ${response.status}`, 502);
+      if (!response.ok) throw new MarketDataError(`Veri sağlayıcı yanıtı: ${response.status}`, 502);
 
       lastGoodHost = host;
       return (await response.json()) as T;
     } catch (error) {
-      if (error instanceof BinanceError && (error.status === 400 || error.status === 429)) throw error;
+      if (error instanceof MarketDataError && (error.status === 400 || error.status === 429)) throw error;
       lastError = error;
     } finally {
       clearTimeout(timer);
     }
   }
 
-  throw new BinanceError(
-    `Binance API'sine ulaşılamadı (${lastError instanceof Error ? lastError.message : "bilinmeyen hata"}).`,
+  throw new MarketDataError(
+    `Piyasa verisine ulaşılamadı (${lastError instanceof Error ? lastError.message : "bilinmeyen hata"}).`,
     503,
   );
-}
-
-/** Ağ erişimi yoksa sentetik veriye düşülsün mü? */
-function demoEnabled(): boolean {
-  return process.env.DEMO_DATA === "1";
 }
 
 /* ────────────────────────────── Mum verisi ────────────────────────────── */
@@ -205,11 +161,11 @@ export async function fetchCandles(
       quoteVolume: Number(k[7]),
       trades: k[8],
     }));
-    const result: CandleResponse = { candles, source: "binance" };
+    const result: CandleResponse = { candles, source: "canli" };
     writeCache(key, result, ttlForInterval(interval));
     return result;
   } catch (error) {
-    if (error instanceof BinanceError && error.status === 503 && demoEnabled()) {
+    if (error instanceof MarketDataError && error.status === 503 && demoEnabled()) {
       const result: CandleResponse = {
         candles: demoCandles(symbol, interval, limit),
         source: "demo",
@@ -222,7 +178,7 @@ export async function fetchCandles(
 }
 
 function ttlForInterval(interval: Interval): number {
-  const minutes = INTERVALS.find((i) => i.value === interval)?.minutes ?? 60;
+  const minutes = intervalMinutes(interval);
   // Mum periyodunun ~1/20'si kadar, 10 sn ile 5 dk arasında.
   return Math.min(Math.max((minutes * 60_000) / 20, 10_000), 300_000);
 }
@@ -280,11 +236,11 @@ export async function fetchMarkets(quote = "USDT"): Promise<TickerResponse> {
       )
       .sort((a, b) => b.quoteVolume - a.quoteVolume);
 
-    const result: TickerResponse = { tickers, source: "binance" };
+    const result: TickerResponse = { tickers, source: "canli" };
     writeCache(key, result, 20_000);
     return result;
   } catch (error) {
-    if (error instanceof BinanceError && error.status === 503 && demoEnabled()) {
+    if (error instanceof MarketDataError && error.status === 503 && demoEnabled()) {
       const result: TickerResponse = { tickers: demoMarkets(quote), source: "demo" };
       writeCache(key, result, 20_000);
       return result;
@@ -303,11 +259,11 @@ export async function fetchTicker(symbol: string): Promise<{ ticker: Ticker; sou
     const raw = await request<RawTicker>(
       `/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`,
     );
-    const result = { ticker: toTicker(raw), source: "binance" as const };
+    const result = { ticker: toTicker(raw), source: "canli" as const };
     writeCache(key, result, 15_000);
     return result;
   } catch (error) {
-    if (error instanceof BinanceError && error.status === 503 && demoEnabled()) {
+    if (error instanceof MarketDataError && error.status === 503 && demoEnabled()) {
       const markets = demoMarkets(splitSymbol(symbol).quote || "USDT");
       const found =
         markets.find((t) => t.symbol === symbol) ?? demoTicker(symbol);
@@ -377,7 +333,7 @@ function basePrice(symbol: string): number {
 }
 
 function demoCandles(symbol: string, interval: Interval, limit: number): Candle[] {
-  const minutes = INTERVALS.find((i) => i.value === interval)?.minutes ?? 60;
+  const minutes = intervalMinutes(interval);
   const step = minutes * 60_000;
   const now = Math.floor(Date.now() / step) * step;
   const random = seeded(hash(symbol + interval));

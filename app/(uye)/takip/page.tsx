@@ -10,7 +10,7 @@ export default async function WatchlistPage() {
 
   return (
     <WatchlistClient
-      initialSymbols={user?.watchlist ?? []}
+      initialIds={user?.watchlist ?? []}
       defaultInterval={user?.settings.defaultInterval ?? DEFAULT_SETTINGS.defaultInterval}
     />
   );

@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 
-import { INTERVALS } from "@/lib/binance";
+import { useI18n } from "@/components/I18nProvider";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { formatDate } from "@/lib/format";
+import { INTERVALS, MARKETS, MARKET_IDS } from "@/lib/markets/types";
 import type { UserSettings } from "@/lib/users";
 
 export default function SettingsClient({
@@ -20,6 +23,7 @@ export default function SettingsClient({
   settings: UserSettings;
   hasPassword: boolean;
 }) {
+  const { t, intl } = useI18n();
   const [form, setForm] = useState<UserSettings>(settings);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -38,20 +42,21 @@ export default function SettingsClient({
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
       setStatus("error");
-      setMessage(body?.error ?? "Ayarlar kaydedilemedi.");
+      setMessage(body?.error ?? t("settings.saveFailed"));
       return;
     }
     setStatus("saved");
-    setMessage("Ayarlar kaydedildi.");
+    setMessage(t("settings.saved"));
   }
 
   return (
     <>
       <div className="page-head">
         <div>
-          <h1>Ayarlar</h1>
-          <p className="sub">Analiz tercihlerinizi ve hesap bilgilerinizi yönetin.</p>
+          <h1>{t("settings.title")}</h1>
+          <p className="sub">{t("settings.sub")}</p>
         </div>
+        <LanguageSwitcher />
       </div>
 
       {message && (
@@ -60,26 +65,48 @@ export default function SettingsClient({
 
       <div className="grid-2">
         <div className="card">
-          <div className="card-title">Analiz tercihleri</div>
+          <div className="card-title">{t("settings.prefs")}</div>
           <form onSubmit={save}>
             <div className="field">
-              <label htmlFor="interval">Varsayılan zaman dilimi</label>
+              <label htmlFor="market">{t("settings.defaultMarket")}</label>
               <select
-                id="interval"
+                id="market"
                 className="select"
-                value={form.defaultInterval}
-                onChange={(e) => setForm({ ...form, defaultInterval: e.target.value })}
+                value={form.defaultMarket}
+                onChange={(e) => setForm({ ...form, defaultMarket: e.target.value })}
               >
-                {INTERVALS.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label} ({item.value})
+                {MARKET_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {t(`market.${id}` as "market.kripto")}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="field">
-              <label htmlFor="scanLimit">Tarayıcıda taranacak coin sayısı</label>
+              <label htmlFor="interval">{t("settings.defaultInterval")}</label>
+              <select
+                id="interval"
+                className="select"
+                value={form.defaultInterval}
+                onChange={(e) => setForm({ ...form, defaultInterval: e.target.value })}
+              >
+                {INTERVALS.filter((item) =>
+                  MARKETS[
+                    (MARKET_IDS.includes(form.defaultMarket as never)
+                      ? form.defaultMarket
+                      : "kripto") as "kripto"
+                  ].intervals.includes(item.value),
+                ).map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {t(`interval.${item.value}` as "interval.4h")} ({item.value})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="scanLimit">{t("settings.scanLimit")}</label>
               <select
                 id="scanLimit"
                 className="select"
@@ -88,12 +115,12 @@ export default function SettingsClient({
               >
                 {[10, 20, 30, 40, 60].map((value) => (
                   <option key={value} value={value}>
-                    {value} coin
+                    {t("scan.assetCount", { count: value })}
                   </option>
                 ))}
               </select>
               <span className="dim" style={{ fontSize: 12 }}>
-                Daha yüksek sayı daha uzun sürer; Binance istek limitine dikkat edin.
+                {t("settings.scanLimitHint")}
               </span>
             </div>
 
@@ -104,57 +131,49 @@ export default function SettingsClient({
                   checked={form.onlyStrongSignals}
                   onChange={(e) => setForm({ ...form, onlyStrongSignals: e.target.checked })}
                 />
-                Tarayıcıda varsayılan olarak yalnızca güçlü sinyalleri göster
+                {t("settings.onlyStrong")}
               </label>
             </div>
 
             <button className="btn btn-primary" type="submit" disabled={status === "saving"}>
-              {status === "saving" ? <span className="spinner" /> : null} Kaydet
+              {status === "saving" ? <span className="spinner" /> : null} {t("settings.save")}
             </button>
           </form>
         </div>
 
         <div className="stack">
           <div className="card">
-            <div className="card-title">Hesap</div>
+            <div className="card-title">{t("settings.account")}</div>
             <div className="kv">
-              <span>E-posta</span>
+              <span>{t("auth.email")}</span>
               <strong>{email}</strong>
             </div>
             <div className="kv">
-              <span>Ad</span>
+              <span>{t("auth.name")}</span>
               <strong>{name || "—"}</strong>
             </div>
             <div className="kv">
-              <span>Kayıt tarihi</span>
+              <span>{t("settings.registeredAt")}</span>
+              <strong>{createdAt ? formatDate(createdAt, intl) : "—"}</strong>
+            </div>
+            <div className="kv">
+              <span>{t("settings.loginMethod")}</span>
               <strong>
-                {createdAt ? new Date(createdAt).toLocaleDateString("tr-TR") : "—"}
+                {hasPassword ? t("settings.loginPassword") : t("settings.loginGoogle")}
               </strong>
             </div>
             <div className="kv">
-              <span>Giriş yöntemi</span>
-              <strong>{hasPassword ? "E-posta + parola" : "Google"}</strong>
-            </div>
-            <div className="kv">
-              <span>Takip listesi</span>
-              <strong>{watchlistCount} parite</strong>
+              <span>{t("nav.watchlist")}</span>
+              <strong>{t("settings.watchlistCount", { count: watchlistCount })}</strong>
             </div>
           </div>
 
           <div className="card">
-            <div className="card-title">Veri ve gizlilik</div>
+            <div className="card-title">{t("settings.privacy")}</div>
             <ul className="bullet-list">
-              <li>
-                Binance&apos;e yalnızca herkese açık piyasa uç noktalarından istek atılır; API
-                anahtarı kullanılmaz, hesabınıza erişilmez.
-              </li>
-              <li>
-                Parolanız scrypt ile, kullanıcıya özel tuzla saklanır; düz metin olarak hiçbir
-                yere yazılmaz.
-              </li>
-              <li>
-                Takip listeniz ve tercihleriniz sunucudaki kullanıcı deposunda tutulur.
-              </li>
+              <li>{t("settings.privacy.1")}</li>
+              <li>{t("settings.privacy.2")}</li>
+              <li>{t("settings.privacy.3")}</li>
             </ul>
           </div>
         </div>

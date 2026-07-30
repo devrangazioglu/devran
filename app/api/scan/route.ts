@@ -1,61 +1,29 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { analyze, type SignalLabel } from "@/lib/analysis";
-import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { analyze } from "@/lib/analysis";
+import type { ScanRow } from "@/lib/api-types";
+import { getCandles, getQuotes, mapWithLimit } from "@/lib/markets/provider";
 import {
-  BinanceError,
-  fetchCandles,
-  fetchMarkets,
   isInterval,
-  normalizeSymbol,
-} from "@/lib/binance";
+  isMarketId,
+  MarketDataError,
+  MARKETS,
+  parseInstrumentId,
+  type DataSource,
+  type Instrument,
+  type Interval,
+} from "@/lib/markets/types";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export type ScanRow = {
-  symbol: string;
-  base: string;
-  quote: string;
-  price: number;
-  changePercent24h: number;
-  quoteVolume: number;
-  signal: SignalLabel;
-  score: number;
-  confidence: number;
-  rsi: number | null;
-  adx: number | null;
-  atrPercent: number;
-  trendLabel: string;
-  patterns: string[];
-};
-
-/** Binance'i boğmamak için aynı anda en fazla bu kadar istek. */
+/** Sağlayıcıyı boğmamak için aynı anda en fazla bu kadar istek. */
 const CONCURRENCY = 6;
 
-async function mapWithLimit<T, R>(
-  items: T[],
-  limit: number,
-  task: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let cursor = 0;
-
-  async function worker() {
-    while (cursor < items.length) {
-      const index = cursor++;
-      results[index] = await task(items[index]);
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return results;
-}
-
 export async function GET(request: Request) {
-  // Tarama Binance kotasını en çok tüketen uç nokta: yalnızca üyelere açık ve sınırlı.
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Bu işlem için giriş yapmalısınız." }, { status: 401 });
@@ -69,72 +37,118 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+  const marketParam = searchParams.get("market") ?? "kripto";
   const intervalParam = searchParams.get("interval") ?? "4h";
   const limit = Math.min(Math.max(Number(searchParams.get("limit") ?? 30), 5), 60);
-  const quote = (searchParams.get("quote") ?? "USDT").toUpperCase();
-  const symbolsParam = searchParams.get("symbols");
+  const idsParam = searchParams.get("ids");
 
+  if (!isMarketId(marketParam)) {
+    return NextResponse.json({ error: "Geçersiz piyasa." }, { status: 400 });
+  }
   if (!isInterval(intervalParam)) {
     return NextResponse.json({ error: "Geçersiz zaman dilimi." }, { status: 400 });
   }
-  const interval = intervalParam;
+  const interval = intervalParam as Interval;
 
   try {
-    let symbols: string[];
-    let volumeBySymbol = new Map<string, number>();
-    let changeBySymbol = new Map<string, number>();
-    let source: "binance" | "demo" = "binance";
+    // Taranacak varlıklar: ya verilen kimlikler (takip listesi) ya da piyasanın ilk N'i.
+    let targets: { instrument: Instrument; price: number; changePercent: number; volume: number }[] = [];
+    let source: DataSource = "canli";
 
-    if (symbolsParam) {
-      // Takip listesi taraması: verilen semboller.
-      symbols = symbolsParam
+    if (idsParam) {
+      const ids = idsParam
         .split(",")
-        .map((s) => normalizeSymbol(s))
-        .filter((s): s is string => s !== null)
+        .map((id) => parseInstrumentId(id.trim()))
+        .filter((v): v is { market: typeof marketParam; symbol: string } => v !== null)
         .slice(0, 60);
-      const markets = await fetchMarkets(quote).catch(() => null);
-      if (markets) {
-        source = markets.source;
-        for (const t of markets.tickers) {
-          volumeBySymbol.set(t.symbol, t.quoteVolume);
-          changeBySymbol.set(t.symbol, t.priceChangePercent);
+
+      const quoteCache = new Map<string, Awaited<ReturnType<typeof getQuotes>>>();
+      for (const { market } of ids) {
+        if (!quoteCache.has(market)) {
+          const quotes = await getQuotes(market, 60).catch(() => null);
+          if (quotes) {
+            quoteCache.set(market, quotes);
+            if (quotes.source === "demo") source = "demo";
+          }
         }
       }
-    } else {
-      const markets = await fetchMarkets(quote);
-      source = markets.source;
-      const top = markets.tickers.slice(0, limit);
-      symbols = top.map((t) => t.symbol);
-      volumeBySymbol = new Map(top.map((t) => [t.symbol, t.quoteVolume]));
-      changeBySymbol = new Map(top.map((t) => [t.symbol, t.priceChangePercent]));
-    }
 
-    if (symbols.length === 0) {
-      return NextResponse.json({ source, interval, rows: [], updatedAt: Date.now() });
-    }
-
-    const rows = await mapWithLimit(symbols, CONCURRENCY, async (symbol): Promise<ScanRow | null> => {
-      try {
-        const { candles, source: candleSource } = await fetchCandles(symbol, interval, 250);
-        const analysis = analyze(symbol, interval, candles, candleSource);
+      targets = ids.map(({ market, symbol }) => {
+        const quote = quoteCache.get(market)?.quotes.find((q) => q.symbol === symbol);
         return {
-          symbol,
-          base: analysis.base,
-          quote: analysis.quote,
-          price: analysis.price,
-          changePercent24h: changeBySymbol.get(symbol) ?? analysis.changePercent,
-          quoteVolume: volumeBySymbol.get(symbol) ?? 0,
+          instrument:
+            quote ??
+            ({
+              id: `${market}:${symbol}`,
+              market,
+              symbol,
+              name: symbol,
+              ticker: symbol.replace(/\.IS$|=X$|=F$/, ""),
+              currency: MARKETS[market].currency,
+              kind: market === "kripto" ? "kripto" : "hisse",
+            } satisfies Instrument),
+          price: quote?.price ?? 0,
+          changePercent: quote?.changePercent ?? 0,
+          volume: quote?.volume ?? 0,
+        };
+      });
+    } else {
+      const { quotes, source: quoteSource } = await getQuotes(marketParam, limit);
+      source = quoteSource;
+      targets = quotes.slice(0, limit).map((quote) => ({
+        instrument: quote,
+        price: quote.price,
+        changePercent: quote.changePercent,
+        volume: quote.volume,
+      }));
+    }
+
+    if (targets.length === 0) {
+      return NextResponse.json({
+        market: idsParam ? "mixed" : marketParam,
+        interval,
+        source,
+        updatedAt: Date.now(),
+        scanned: 0,
+        rows: [],
+      });
+    }
+
+    const rows = await mapWithLimit(targets, CONCURRENCY, async (target): Promise<ScanRow | null> => {
+      const { instrument } = target;
+      // Bu piyasada desteklenmeyen periyot için en yakın desteklenene düş.
+      const supported = MARKETS[instrument.market].intervals;
+      const effective = supported.includes(interval) ? interval : supported[supported.length - 2];
+
+      try {
+        const { candles, source: candleSource } = await getCandles(
+          instrument.market,
+          instrument.symbol,
+          effective,
+          250,
+        );
+        const analysis = analyze(instrument, effective, candles, candleSource);
+        return {
+          id: instrument.id,
+          market: instrument.market,
+          symbol: instrument.symbol,
+          name: instrument.name,
+          ticker: instrument.ticker,
+          currency: instrument.currency,
+          price: target.price || analysis.price,
+          changePercent: target.changePercent || analysis.changePercent,
+          volume: target.volume,
           signal: analysis.signal,
           score: analysis.score,
           confidence: analysis.confidence,
           rsi: analysis.indicators.rsi,
           adx: analysis.indicators.adx,
           atrPercent: analysis.volatility.atrPercent,
-          trendLabel: analysis.trendStrength.label,
-          patterns: analysis.patterns.map((p) => p.name),
+          trendLabelKey: analysis.trendStrength.labelKey,
+          patterns: analysis.patterns.map((p) => p.id),
         };
       } catch {
-        // Tek bir sembol düşerse tarama devam etsin.
+        // Tek bir varlık düşerse tarama devam etsin.
         return null;
       }
     });
@@ -143,14 +157,15 @@ export async function GET(request: Request) {
     clean.sort((a, b) => b.score - a.score);
 
     return NextResponse.json({
-      source,
+      market: idsParam ? "mixed" : marketParam,
       interval,
+      source,
       updatedAt: Date.now(),
       scanned: clean.length,
       rows: clean,
     });
   } catch (error) {
-    const status = error instanceof BinanceError ? error.status : 500;
+    const status = error instanceof MarketDataError ? error.status : 500;
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Tarama yapılamadı." },
       { status },

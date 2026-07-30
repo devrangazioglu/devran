@@ -2,39 +2,43 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { analyze, chartSeries } from "@/lib/analysis";
-import { clientIp, rateLimit } from "@/lib/rate-limit";
-import {
-  BinanceError,
-  fetchCandles,
-  fetchTicker,
-  isInterval,
-  normalizeSymbol,
-  type Interval,
-} from "@/lib/binance";
 import { buildCommentary } from "@/lib/commentary";
+import { analysisReady } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
+import { getCandles, getQuotes, normalizeSymbol } from "@/lib/markets/provider";
+import {
+  isInterval,
+  isMarketId,
+  MarketDataError,
+  MARKETS,
+  type Interval,
+  type MarketId,
+} from "@/lib/markets/types";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 45;
 
-/** Detay sayfasında üst zaman dilimleriyle uyum kontrolü için. */
-const HIGHER_TIMEFRAMES: Record<Interval, Interval[]> = {
-  "1m": ["5m", "15m", "1h"],
-  "5m": ["15m", "1h", "4h"],
-  "15m": ["1h", "4h", "1d"],
-  "30m": ["1h", "4h", "1d"],
-  "1h": ["4h", "1d", "1w"],
-  "4h": ["1h", "1d", "1w"],
-  "1d": ["4h", "1w", "1w"],
-  "1w": ["1d", "4h", "1h"],
-};
+/** Detay sayfasında karşılaştırılacak üst zaman dilimleri. */
+function higherTimeframes(market: MarketId, interval: Interval): Interval[] {
+  const available = MARKETS[market].intervals;
+  const index = available.indexOf(interval);
+  const higher = available.slice(index + 1, index + 4);
+  // Yeterli üst periyot yoksa alt periyotlarla tamamla.
+  if (higher.length < 3) {
+    const lower = available.slice(Math.max(index - (3 - higher.length), 0), index);
+    return [...higher, ...lower].slice(0, 3);
+  }
+  return higher;
+}
 
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Bu işlem için giriş yapmalısınız." }, { status: 401 });
   }
-  const limiter = rateLimit(`analyze:${session.user.email ?? clientIp(request)}`, 60, 60_000);
+  const limiter = rateLimit(`analyze:${session.user.email ?? clientIp(request)}`, 90, 60_000);
   if (!limiter.allowed) {
     return NextResponse.json(
       { error: "Çok sık analiz isteği yapıldı, biraz bekleyin." },
@@ -43,37 +47,40 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const symbol = normalizeSymbol(searchParams.get("symbol") ?? "");
+  const marketParam = searchParams.get("market") ?? "kripto";
   const intervalParam = searchParams.get("interval") ?? "4h";
 
+  if (!isMarketId(marketParam)) {
+    return NextResponse.json({ error: "Geçersiz piyasa." }, { status: 400 });
+  }
+  const symbol = normalizeSymbol(marketParam, searchParams.get("symbol") ?? "");
   if (!symbol) {
     return NextResponse.json({ error: "Geçersiz sembol." }, { status: 400 });
   }
-  if (!isInterval(intervalParam)) {
-    return NextResponse.json({ error: "Geçersiz zaman dilimi." }, { status: 400 });
+  if (!isInterval(intervalParam) || !MARKETS[marketParam].intervals.includes(intervalParam)) {
+    return NextResponse.json({ error: "Bu piyasa için geçersiz zaman dilimi." }, { status: 400 });
   }
   const interval = intervalParam;
+  const locale = await getLocale();
 
   try {
-    const [{ candles, source }, tickerResult] = await Promise.all([
-      fetchCandles(symbol, interval, 300),
-      fetchTicker(symbol).catch(() => null),
-    ]);
-
-    const analysis = analyze(symbol, interval, candles, source);
-    const commentary = buildCommentary(analysis);
+    const { candles, source, instrument } = await getCandles(marketParam, symbol, interval, 300);
+    const analysis = analyze(instrument, interval, candles, source);
+    const commentary = buildCommentary(analysis, locale);
     const series = chartSeries(candles);
 
-    // Üst zaman dilimlerinde de hızlı bir bakış (trend uyumu).
-    const others = [...new Set(HIGHER_TIMEFRAMES[interval])].filter((i) => i !== interval);
+    // Fiyat listesinden gün içi istatistikler (varsa).
+    const quote = await getQuotes(marketParam, 60)
+      .then(({ quotes }) => quotes.find((q) => q.symbol === symbol) ?? null)
+      .catch(() => null);
+
     const timeframes = await Promise.all(
-      others.map(async (other) => {
+      higherTimeframes(marketParam, interval).map(async (other) => {
         try {
-          const result = await fetchCandles(symbol, other, 250);
-          const otherAnalysis = analyze(symbol, other, result.candles, result.source);
+          const result = await getCandles(marketParam, symbol, other, 250);
+          const otherAnalysis = analyze(instrument, other, result.candles, result.source);
           return {
             interval: other,
-            label: otherAnalysis.intervalLabel,
             signal: otherAnalysis.signal,
             score: otherAnalysis.score,
             confidence: otherAnalysis.confidence,
@@ -84,14 +91,14 @@ export async function GET(request: Request) {
       }),
     );
 
-    // Grafik yükünü küçük tutmak için son 180 mum yeterli.
     const visible = 180;
     const trim = <T,>(list: T[]) => list.slice(-visible);
 
     return NextResponse.json({
       analysis,
       commentary,
-      ticker: tickerResult?.ticker ?? null,
+      analysisLocalized: analysisReady(locale),
+      quote,
       candles: trim(candles),
       series: {
         ema21: trim(series.ema21),
@@ -107,7 +114,7 @@ export async function GET(request: Request) {
       timeframes: timeframes.filter((t) => t !== null),
     });
   } catch (error) {
-    const status = error instanceof BinanceError ? error.status : 500;
+    const status = error instanceof MarketDataError ? error.status : 500;
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Analiz yapılamadı." },
       { status },

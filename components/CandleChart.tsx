@@ -43,11 +43,14 @@ export default function CandleChart({
   overlays,
   height = 380,
   showBands = true,
+  intl = "tr-TR",
 }: {
   candles: ChartCandle[];
   overlays?: Overlays;
   height?: number;
   showBands?: boolean;
+  /** Sayı ve tarih biçimlendirmede kullanılacak Intl etiketi. */
+  intl?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -124,7 +127,7 @@ export default function CandleChart({
       ctx.stroke();
       ctx.fillStyle = COLORS.text;
       ctx.textAlign = "left";
-      ctx.fillText(formatPrice(price), width - padding.right + 8, py);
+      ctx.fillText(formatPrice(price, intl), width - padding.right + 8, py);
     }
 
     // Bollinger bantları (dolgu)
@@ -213,7 +216,7 @@ export default function CandleChart({
       const index = Math.round((i * (candles.length - 1)) / (labelCount - 1 || 1));
       // Etiketler kenarlardan taşmasın diye konum sınırlandırılır.
       const cx = Math.min(Math.max(x(index), padding.left + 44), width - padding.right - 44);
-      ctx.fillText(formatTime(candles[index].openTime), cx, height - 10);
+      ctx.fillText(formatTime(candles[index].openTime, intl), cx, height - 10);
     }
 
     // Crosshair
@@ -234,7 +237,7 @@ export default function CandleChart({
       ctx.arc(cx, cy, 3, 0, Math.PI * 2);
       ctx.fill();
     }
-  }, [candles, overlays, width, height, hover, showBands]);
+  }, [candles, overlays, width, height, hover, showBands, intl]);
 
   const handleMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -272,8 +275,8 @@ export default function CandleChart({
         )}
         {active && (
           <span className="mono" style={{ marginLeft: "auto", color: "var(--text)" }}>
-            A {formatPrice(active.open)} · Y {formatPrice(active.high)} · D{" "}
-            {formatPrice(active.low)} · K {formatPrice(active.close)}
+            O {formatPrice(active.open, intl)} · H {formatPrice(active.high, intl)} · L{" "}
+            {formatPrice(active.low, intl)} · C {formatPrice(active.close, intl)}
           </span>
         )}
       </div>

@@ -3,31 +3,43 @@ import { redirect } from "next/navigation";
 
 import { auth, googleAuthEnabled } from "@/auth";
 import ConfigWarning from "@/components/ConfigWarning";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { getI18n } from "@/lib/i18n/server";
+import { safeNextPath, withNextPath } from "@/lib/next-path";
 import LoginForm from "./LoginForm";
 
-export const metadata = { title: "Giriş yap — Kriptosinyal" };
+export const metadata = { title: "Giriş — Kriptosinyal" };
 
-export default async function LoginPage() {
-  const session = await auth();
-  if (session?.user) redirect("/panel");
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ devam?: string }>;
+}) {
+  const [session, { t }, params] = await Promise.all([auth(), getI18n(), searchParams]);
+  // Üye alanından yönlendirildiyse girişten sonra o sayfaya dönülür.
+  const next = safeNextPath(params.devam);
+  if (session?.user) redirect(next);
 
   return (
     <div className="auth-wrap">
       <div className="auth-card">
-        <Link href="/" className="logo" style={{ marginBottom: 22 }}>
-          <span className="logo-mark">₿</span>
-          <span>
-            Kripto<em>sinyal</em>
-          </span>
-        </Link>
-        <h1>Tekrar hoş geldiniz</h1>
-        <p className="sub">Analiz paneline erişmek için giriş yapın.</p>
+        <div className="auth-head">
+          <Link href="/" className="logo">
+            <span className="logo-mark">◉</span>
+            <span>
+              Kripto<em>sinyal</em>
+            </span>
+          </Link>
+          <LanguageSwitcher compact />
+        </div>
+        <h1>{t("auth.loginTitle")}</h1>
+        <p className="sub">{t("auth.loginSub")}</p>
         <ConfigWarning />
-        <LoginForm googleEnabled={googleAuthEnabled} />
-        <p className="muted" style={{ fontSize: 13, marginTop: 20, textAlign: "center" }}>
-          Hesabınız yok mu?{" "}
-          <Link href="/kayit" style={{ color: "var(--accent)" }}>
-            Ücretsiz kayıt olun
+        <LoginForm googleEnabled={googleAuthEnabled} next={next} />
+        <p className="muted auth-alt">
+          {t("auth.noAccount")}{" "}
+          <Link href={withNextPath("/kayit", next)} style={{ color: "var(--accent)" }}>
+            {t("auth.registerLink")}
           </Link>
         </p>
       </div>

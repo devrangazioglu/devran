@@ -61,7 +61,12 @@ test("bozuk ayar/takip verisi varsayılanlara tamamlanır", () => {
   assert.equal(settings.scanLimit, 30);
   assert.equal(settings.onlyStrongSignals, true);
   assert.equal(settings.defaultInterval, "4h");
-  assert.deepEqual(normalizeWatchlist([1, "BTCUSDT", null]), ["BTCUSDT"]);
+  assert.equal(settings.defaultMarket, "kripto");
+  // Eski kayıtlar (yalnızca sembol) kripto piyasasına eşlenir.
+  assert.deepEqual(normalizeWatchlist([1, "BTCUSDT", null, "abd:AAPL"]), [
+    "kripto:BTCUSDT",
+    "abd:AAPL",
+  ]);
 });
 
 /* ────────────────────── Arka uç sözleşmesi ────────────────────── */
@@ -129,15 +134,21 @@ function storeContract(label: string, getStore: () => UserStore) {
       await store.insert(buildUser({ email, passwordHash: null }));
 
       const updated = await store.update(email, (user) => {
-        user.watchlist = ["AVAXUSDT", "INJUSDT"];
-        user.settings = { defaultInterval: "1h", scanLimit: 60, onlyStrongSignals: true };
+        user.watchlist = ["kripto:AVAXUSDT", "bist:ASELS.IS"];
+        user.settings = {
+          defaultInterval: "1h",
+          defaultMarket: "abd",
+          scanLimit: 60,
+          onlyStrongSignals: true,
+        };
       });
-      assert.deepEqual(updated?.watchlist, ["AVAXUSDT", "INJUSDT"]);
+      assert.deepEqual(updated?.watchlist, ["kripto:AVAXUSDT", "bist:ASELS.IS"]);
 
       // Yeniden okuyup kalıcılığı doğrula.
       const reread = await store.findByEmail(email);
-      assert.deepEqual(reread?.watchlist, ["AVAXUSDT", "INJUSDT"]);
+      assert.deepEqual(reread?.watchlist, ["kripto:AVAXUSDT", "bist:ASELS.IS"]);
       assert.equal(reread?.settings.defaultInterval, "1h");
+      assert.equal(reread?.settings.defaultMarket, "abd");
       assert.equal(reread?.settings.scanLimit, 60);
       assert.equal(reread?.settings.onlyStrongSignals, true);
     });
@@ -148,7 +159,7 @@ function storeContract(label: string, getStore: () => UserStore) {
       await store.insert(buildUser({ email, passwordHash: "scrypt:cc:dd" }));
 
       await store.update(email, (user) => {
-        user.watchlist = ["BTCUSDT"];
+        user.watchlist = ["kripto:BTCUSDT"];
       });
 
       const reread = await store.findByEmail(email);
@@ -185,7 +196,13 @@ function storeContract(label: string, getStore: () => UserStore) {
       user.watchlist = [];
       await store.insert(user);
 
-      const symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT", "XRPUSDT"];
+      const symbols = [
+        "kripto:BTCUSDT",
+        "kripto:ETHUSDT",
+        "abd:AAPL",
+        "bist:THYAO.IS",
+        "emtia:GC=F",
+      ];
       await Promise.all(
         symbols.map((symbol) =>
           store.update(email, (current) => {

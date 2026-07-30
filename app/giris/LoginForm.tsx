@@ -4,7 +4,16 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
+import { useI18n } from "@/components/I18nProvider";
+
+export default function LoginForm({
+  googleEnabled,
+  next = "/panel",
+}: {
+  googleEnabled: boolean;
+  next?: string;
+}) {
+  const { t } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,16 +29,14 @@ export default function LoginForm({ googleEnabled }: { googleEnabled: boolean })
 
     setLoading(false);
     if (result?.error) {
-      // "CredentialsSignin" yanlış bilgi demektir; diğer hatalar (ör. veritabanına
-      // ulaşılamaması) sunucu sorunudur — kullanıcıyı yanlış yönlendirmeyelim.
       setError(
         result.error === "CredentialsSignin"
-          ? "E-posta veya parola hatalı."
-          : `Giriş yapılamadı: sunucu tarafında bir sorun oluştu (${result.error}). Sunucu günlüklerini kontrol edin.`,
+          ? t("auth.badCredentials")
+          : t("auth.serverProblem", { code: result.error }),
       );
       return;
     }
-    router.push("/panel");
+    router.push(next);
     router.refresh();
   }
 
@@ -39,7 +46,7 @@ export default function LoginForm({ googleEnabled }: { googleEnabled: boolean })
 
       <form onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="email">E-posta</label>
+          <label htmlFor="email">{t("auth.email")}</label>
           <input
             id="email"
             className="input"
@@ -52,7 +59,7 @@ export default function LoginForm({ googleEnabled }: { googleEnabled: boolean })
           />
         </div>
         <div className="field">
-          <label htmlFor="password">Parola</label>
+          <label htmlFor="password">{t("auth.password")}</label>
           <input
             id="password"
             className="input"
@@ -66,18 +73,18 @@ export default function LoginForm({ googleEnabled }: { googleEnabled: boolean })
         </div>
         <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
           {loading ? <span className="spinner" /> : null}
-          {loading ? "Giriş yapılıyor…" : "Giriş yap"}
+          {loading ? t("auth.loggingIn") : t("auth.login")}
         </button>
       </form>
 
       {googleEnabled && (
         <>
-          <div className="divider">veya</div>
+          <div className="divider">{t("auth.or")}</div>
           <button
             className="btn btn-ghost btn-block"
-            onClick={() => signIn("google", { callbackUrl: "/panel" })}
+            onClick={() => signIn("google", { callbackUrl: next })}
           >
-            Google ile devam et
+            {t("auth.google")}
           </button>
         </>
       )}

@@ -4,7 +4,16 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function RegisterForm({ googleEnabled }: { googleEnabled: boolean }) {
+import { useI18n } from "@/components/I18nProvider";
+
+export default function RegisterForm({
+  googleEnabled,
+  next = "/panel",
+}: {
+  googleEnabled: boolean;
+  next?: string;
+}) {
+  const { t } = useI18n();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -17,7 +26,7 @@ export default function RegisterForm({ googleEnabled }: { googleEnabled: boolean
     setError(null);
 
     if (password.length < 8) {
-      setError("Parola en az 8 karakter olmalı.");
+      setError(t("auth.shortPassword"));
       return;
     }
 
@@ -30,26 +39,22 @@ export default function RegisterForm({ googleEnabled }: { googleEnabled: boolean
         body: JSON.stringify({ name, email, password }),
       });
     } catch {
-      setError("Sunucuya ulaşılamadı; bağlantınızı kontrol edip tekrar deneyin.");
+      setError(t("auth.networkError"));
       setLoading(false);
       return;
     }
 
     if (!response.ok) {
-      // Yanıt JSON değilse (ör. platformun ham hata sayfası) durum kodunu ve
-      // gövdenin başını göster — gerçek sebep kaybolmasın.
-      const text = await response.text().catch(() => "");
+      // Yanıt JSON değilse durum kodunu ve gövdenin başını göster.
+      const raw = await response.text().catch(() => "");
       let message: string | null = null;
       try {
-        message = (JSON.parse(text) as { error?: string }).error ?? null;
+        message = (JSON.parse(raw) as { error?: string }).error ?? null;
       } catch {
         // JSON değil.
       }
       setError(
-        message ??
-          `Kayıt tamamlanamadı (HTTP ${response.status}). Sunucu yanıtı: ${
-            text.slice(0, 160) || "boş"
-          }`,
+        message ?? `${t("auth.registerFailed")} (HTTP ${response.status}) ${raw.slice(0, 160)}`,
       );
       setLoading(false);
       return;
@@ -60,10 +65,10 @@ export default function RegisterForm({ googleEnabled }: { googleEnabled: boolean
     setLoading(false);
 
     if (result?.error) {
-      setError("Hesap oluşturuldu ancak otomatik giriş yapılamadı. Giriş sayfasını deneyin.");
+      setError(t("auth.autoLoginFailed"));
       return;
     }
-    router.push("/panel");
+    router.push(next);
     router.refresh();
   }
 
@@ -73,7 +78,7 @@ export default function RegisterForm({ googleEnabled }: { googleEnabled: boolean
 
       <form onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="name">Ad (isteğe bağlı)</label>
+          <label htmlFor="name">{t("auth.name")}</label>
           <input
             id="name"
             className="input"
@@ -81,11 +86,11 @@ export default function RegisterForm({ googleEnabled }: { googleEnabled: boolean
             autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Adınız"
+            placeholder={t("auth.namePlaceholder")}
           />
         </div>
         <div className="field">
-          <label htmlFor="email">E-posta</label>
+          <label htmlFor="email">{t("auth.email")}</label>
           <input
             id="email"
             className="input"
@@ -98,7 +103,7 @@ export default function RegisterForm({ googleEnabled }: { googleEnabled: boolean
           />
         </div>
         <div className="field">
-          <label htmlFor="password">Parola</label>
+          <label htmlFor="password">{t("auth.password")}</label>
           <input
             id="password"
             className="input"
@@ -108,30 +113,29 @@ export default function RegisterForm({ googleEnabled }: { googleEnabled: boolean
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="En az 8 karakter"
+            placeholder={t("auth.passwordPlaceholder")}
           />
         </div>
         <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
           {loading ? <span className="spinner" /> : null}
-          {loading ? "Hesap oluşturuluyor…" : "Hesap oluştur"}
+          {loading ? t("auth.registering") : t("auth.register")}
         </button>
       </form>
 
       {googleEnabled && (
         <>
-          <div className="divider">veya</div>
+          <div className="divider">{t("auth.or")}</div>
           <button
             className="btn btn-ghost btn-block"
-            onClick={() => signIn("google", { callbackUrl: "/panel" })}
+            onClick={() => signIn("google", { callbackUrl: next })}
           >
-            Google ile kayıt ol
+            {t("auth.googleRegister")}
           </button>
         </>
       )}
 
       <p className="dim" style={{ fontSize: 12, marginTop: 16, lineHeight: 1.6 }}>
-        Kayıt olarak, uygulamanın yatırım tavsiyesi vermediğini ve üretilen sinyallerin
-        yalnızca teknik analiz amaçlı olduğunu kabul etmiş olursunuz.
+        {t("auth.registerTerms")}
       </p>
     </>
   );

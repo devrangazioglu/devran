@@ -1,112 +1,132 @@
 /**
  * Analiz sonucunu insan diline çevirir.
  *
- * Şablon tabanlı, deterministik bir üretici: aynı veriden her zaman aynı yorum
- * çıkar, harici bir servise ihtiyaç duymaz.
+ * Şablon tabanlı ve deterministik: aynı veriden her zaman aynı yorum çıkar,
+ * harici bir servise ihtiyaç duyulmaz. Metinler sözlükten geldiği için her
+ * dilde çalışır (analiz metinleri hazır olmayan dillerde İngilizceye düşer).
  */
 
-import type { Analysis, IndicatorCheck } from "./analysis";
+import type { Analysis } from "./analysis";
+import { intervalLabel, patternName, renderNote } from "./analysis-text";
 import { formatNumber, formatPercent, formatPrice } from "./format";
+import { intlTag, makeT, type Locale } from "./i18n";
 
 export type Commentary = {
-  /** Tek cümlelik özet. */
   headline: string;
   /** Sırasıyla: genel görünüm, trend, momentum, hacim/volatilite, seviyeler, plan. */
   paragraphs: string[];
-  /** Madde madde öne çıkanlar. */
   highlights: string[];
-  /** Dikkat edilmesi gereken riskler. */
   risks: string[];
 };
 
-const SIGNAL_SENTENCE: Record<Analysis["signal"], string> = {
-  "GÜÇLÜ AL": "göstergelerin büyük çoğunluğu alış yönünde birleşiyor",
-  AL: "göstergeler alış tarafına eğilimli",
-  BEKLE: "göstergeler net bir yön vermiyor",
-  SAT: "göstergeler satış tarafına eğilimli",
-  "GÜÇLÜ SAT": "göstergelerin büyük çoğunluğu satış yönünde birleşiyor",
-};
+export function buildCommentary(analysis: Analysis, locale: Locale): Commentary {
+  const t = makeT(locale);
+  const intl = intlTag(locale);
+  const { instrument, signal, score, confidence, indicators, trade, interval } = analysis;
 
-export function buildCommentary(analysis: Analysis): Commentary {
-  const { base, quote, intervalLabel, signal, score, confidence, indicators, trade } = analysis;
-  const pair = `${base}/${quote}`;
+  const asset = instrument.ticker;
+  const period = intervalLabel(t, interval);
+  const price = (value: number | null) => formatPrice(value, intl);
+  const number = (value: number | null, digits = 2) => formatNumber(value, intl, digits);
 
-  const headline = `${pair} ${intervalLabel}lik grafikte ${signal} sinyali veriyor (skor ${formatNumber(score, 0)}, güven %${confidence}).`;
+  const headline = t("commentary.headline", {
+    asset,
+    interval: period,
+    signal: t(`signal.${signal}` as "signal.BUY"),
+    score: number(score, 0),
+    confidence,
+  });
 
   const paragraphs: string[] = [];
 
   // 1) Genel görünüm
   paragraphs.push(
-    `${pair} şu anda ${formatPrice(analysis.price)} ${quote} seviyesinde ve son mumda ${formatPercent(
-      analysis.changePercent,
-    )} değişim gösterdi. ${intervalLabel}lik zaman diliminde ${SIGNAL_SENTENCE[signal]}: ` +
-      `${analysis.tally.al} gösterge alış, ${analysis.tally.sat} gösterge satış, ${analysis.tally.notr} gösterge nötr yönde oy kullandı. ` +
-      `Ağırlıklı skor ${formatNumber(score, 1)} (−100 ile +100 arasında) ve modelin bu sinyale güveni %${confidence}.`,
+    t("commentary.overview", {
+      asset,
+      price: price(analysis.price),
+      currency: instrument.currency,
+      change: number(analysis.changePercent),
+      interval: period,
+      summary: t(`commentary.summary.${signal}` as "commentary.summary.BUY"),
+      buy: analysis.tally.buy,
+      sell: analysis.tally.sell,
+      neutral: analysis.tally.neutral,
+      score: number(score, 1),
+      confidence,
+    }),
   );
 
   // 2) Trend
   const trendParts: string[] = [];
   if (indicators.ema50 !== null && indicators.ema200 !== null) {
     trendParts.push(
-      indicators.ema50 > indicators.ema200
-        ? `EMA 50 (${formatPrice(indicators.ema50)}) EMA 200'ün (${formatPrice(indicators.ema200)}) üzerinde, yani ana trend yukarı yönlü`
-        : `EMA 50 (${formatPrice(indicators.ema50)}) EMA 200'ün (${formatPrice(indicators.ema200)}) altında, yani ana trend aşağı yönlü`,
+      t(
+        indicators.ema50 > indicators.ema200
+          ? "commentary.trend.emaUp"
+          : "commentary.trend.emaDown",
+        { ema50: price(indicators.ema50), ema200: price(indicators.ema200) },
+      ),
     );
   }
   if (indicators.supertrendDirection !== null) {
     trendParts.push(
-      indicators.supertrendDirection === 1
-        ? `Supertrend alış tarafında ve ${formatPrice(indicators.supertrend)} seviyesini takip eden destek olarak kullanıyor`
-        : `Supertrend satış tarafında ve ${formatPrice(indicators.supertrend)} seviyesi takip eden direnç görevi görüyor`,
+      t(
+        indicators.supertrendDirection === 1
+          ? "commentary.trend.stUp"
+          : "commentary.trend.stDown",
+        { level: price(indicators.supertrend) },
+      ),
     );
   }
   trendParts.push(
-    `ADX ${indicators.adx === null ? "hesaplanamadı" : formatNumber(indicators.adx, 1)} ile trendin gücü "${analysis.trendStrength.label}"`,
+    t("commentary.trend.adx", {
+      adx: indicators.adx === null ? "—" : number(indicators.adx, 1),
+      label: t(analysis.trendStrength.labelKey as "trend.strong"),
+    }),
   );
-  paragraphs.push(`Trend tarafında: ${trendParts.join(". ")}.`);
+  paragraphs.push(t("commentary.trend", { parts: trendParts.join(". ") }));
 
   // 3) Momentum
   const momentumParts: string[] = [];
   if (indicators.rsi !== null) {
-    const rsiState =
+    const key =
       indicators.rsi >= 70
-        ? "aşırı alım bölgesinde — yükseliş sürse bile geri çekilme riski artıyor"
+        ? "commentary.momentum.rsiOverbought"
         : indicators.rsi <= 30
-          ? "aşırı satım bölgesinde — tepki alımları için zemin oluşuyor"
+          ? "commentary.momentum.rsiOversold"
           : indicators.rsi > 50
-            ? "orta bandın üzerinde, alıcılar hafif önde"
-            : "orta bandın altında, satıcılar hafif önde";
-    momentumParts.push(`RSI ${formatNumber(indicators.rsi, 1)} ile ${rsiState}`);
+            ? "commentary.momentum.rsiBull"
+            : "commentary.momentum.rsiBear";
+    momentumParts.push(t(key, { rsi: number(indicators.rsi, 1) }));
   }
   if (indicators.macd !== null && indicators.macdSignal !== null) {
     momentumParts.push(
-      indicators.macd > indicators.macdSignal
-        ? "MACD sinyal çizgisinin üzerinde seyrediyor (pozitif momentum)"
-        : "MACD sinyal çizgisinin altında seyrediyor (negatif momentum)",
+      t(
+        indicators.macd > indicators.macdSignal
+          ? "commentary.momentum.macdUp"
+          : "commentary.momentum.macdDown",
+      ),
     );
   }
   if (indicators.stochK !== null) {
-    momentumParts.push(
-      `Stokastik %K ${formatNumber(indicators.stochK, 0)} seviyesinde`,
-    );
+    momentumParts.push(t("commentary.momentum.stoch", { k: number(indicators.stochK, 0) }));
   }
-  paragraphs.push(`Momentum tarafında: ${momentumParts.join(", ")}.`);
+  paragraphs.push(t("commentary.momentum", { parts: momentumParts.join(", ") }));
 
   // 4) Hacim ve volatilite
   const volumeCheck = analysis.checks.find((c) => c.id === "volume");
   const obvCheck = analysis.checks.find((c) => c.id === "obv");
-  const volatilityText =
-    `Volatilite ${analysis.volatility.regime} seviyede: ATR, fiyatın %${formatNumber(analysis.volatility.atrPercent)} kadarı; ` +
-    `yani ${analysis.intervalLabel}lik bir mumda ortalama ${formatPrice(trade.atr)} ${quote} hareket bekleniyor.` +
-    (analysis.volatility.squeeze
-      ? " Bollinger bantları son 60 mumun en dar aralığında; sıkışma sonrası sert bir yön hareketi görülebilir."
-      : "");
+  const volatility =
+    t("commentary.volatility", {
+      regime: t(analysis.volatility.regimeKey as "vol.normal"),
+      atrPercent: number(analysis.volatility.atrPercent),
+      interval: period,
+      atr: price(trade.atr),
+      currency: instrument.currency,
+    }) + (analysis.volatility.squeeze ? t("commentary.volatility.squeeze") : "");
+
   paragraphs.push(
-    [
-      obvCheck ? obvCheck.note : null,
-      volumeCheck ? volumeCheck.note : null,
-      volatilityText,
-    ]
+    [obvCheck ? renderNote(t, obvCheck) : null, volumeCheck ? renderNote(t, volumeCheck) : null, volatility]
       .filter(Boolean)
       .join(" "),
   );
@@ -114,33 +134,46 @@ export function buildCommentary(analysis: Analysis): Commentary {
   // 5) Seviyeler
   const resistance = analysis.levels.resistances[0];
   const support = analysis.levels.supports[0];
-  const levelSentences: string[] = [];
-  if (support) {
-    levelSentences.push(
-      `En yakın destek ${formatPrice(support.price)} (%${formatNumber(Math.abs(support.distancePercent))} aşağıda, ${support.strength} dokunuşla test edilmiş)`,
-    );
-  }
-  if (resistance) {
-    levelSentences.push(
-      `en yakın direnç ${formatPrice(resistance.price)} (%${formatNumber(Math.abs(resistance.distancePercent))} yukarıda, ${resistance.strength} dokunuş)`,
-    );
-  }
-  if (levelSentences.length) {
+  if (support && resistance) {
     paragraphs.push(
-      `${levelSentences.join(", ")}. Bu seviyelerin kapanış bazında kırılması, mevcut sinyali doğrulayan ya da geçersiz kılan ilk teknik referans olur.`,
+      t("commentary.levels", {
+        support: price(support.price),
+        supportDistance: number(Math.abs(support.distancePercent)),
+        supportTouches: support.strength,
+        resistance: price(resistance.price),
+        resistanceDistance: number(Math.abs(resistance.distancePercent)),
+        resistanceTouches: resistance.strength,
+      }),
+    );
+  } else if (support) {
+    paragraphs.push(
+      t("commentary.levels.supportOnly", {
+        support: price(support.price),
+        supportDistance: number(Math.abs(support.distancePercent)),
+        supportTouches: support.strength,
+      }),
+    );
+  } else if (resistance) {
+    paragraphs.push(
+      t("commentary.levels.resistanceOnly", {
+        resistance: price(resistance.price),
+        resistanceDistance: number(Math.abs(resistance.distancePercent)),
+        resistanceTouches: resistance.strength,
+      }),
     );
   }
 
   // 6) Plan
-  const direction = trade.side === "LONG" ? "uzun (alış)" : "kısa (satış)";
   paragraphs.push(
-    (trade.advisory
-      ? `Sinyal "BEKLE" olduğu için aşağıdaki plan yalnızca senaryo niteliğindedir; net bir tetikleyici oluşana kadar pozisyon almamak da bir tercihtir. `
-      : "") +
-      `Skorun yönüne göre ${direction} senaryosunda giriş ${formatPrice(trade.entry)}, zarar durdur ${formatPrice(
-        trade.stopLoss,
-      )} (%${formatNumber(trade.riskPercent)} risk) ve ilk hedef ${formatPrice(trade.targets[0])} olarak hesaplanıyor; ` +
-      `bu, yaklaşık ${formatNumber(trade.riskReward, 2)}:1 risk/ödül oranına karşılık geliyor. Zarar durdur seviyesi son 12 mumun swing noktası ile 1,5×ATR'den daha uzak olanına göre belirlendi.`,
+    (trade.advisory ? t("commentary.plan.advisory") : "") +
+      t("commentary.plan", {
+        side: t(trade.side === "LONG" ? "commentary.plan.long" : "commentary.plan.short"),
+        entry: price(trade.entry),
+        stop: price(trade.stopLoss),
+        riskPercent: number(trade.riskPercent),
+        target: price(trade.targets[0]),
+        rr: number(trade.riskReward, 2),
+      }),
   );
 
   // Öne çıkanlar
@@ -148,54 +181,41 @@ export function buildCommentary(analysis: Analysis): Commentary {
   const strongest = [...analysis.checks]
     .sort((a, b) => Math.abs(b.direction * b.weight) - Math.abs(a.direction * a.weight))
     .slice(0, 3);
-  for (const check of strongest) highlights.push(`${check.name}: ${check.note}`);
+  for (const check of strongest) {
+    highlights.push(`${t(check.labelKey as "ind.rsi")}: ${renderNote(t, check)}`);
+  }
   for (const pattern of analysis.patterns.slice(0, 3)) {
-    highlights.push(`${pattern.name} — ${pattern.note}`);
+    highlights.push(`${patternName(t, pattern.id)} — ${t(`pattern.${pattern.id}.note` as "pattern.doji.note")}`);
   }
 
   // Riskler
   const risks: string[] = [];
   if (analysis.trendStrength.adx !== null && analysis.trendStrength.adx < 20) {
+    risks.push(t("risk.weakTrend"));
+  }
+  if (confidence < 45) risks.push(t("risk.lowConfidence"));
+  if (indicators.rsi !== null && indicators.rsi >= 70 && score > 0) risks.push(t("risk.overboughtBuy"));
+  if (indicators.rsi !== null && indicators.rsi <= 30 && score < 0) risks.push(t("risk.oversoldSell"));
+  if (analysis.volatility.regimeKey === "vol.high") {
     risks.push(
-      "ADX 20'nin altında: trend zayıf, yatay piyasada kesişim sinyalleri sık yanıltır (whipsaw riski).",
+      t("risk.highVolatility", { atrPercent: number(analysis.volatility.atrPercent) }),
     );
   }
-  if (confidence < 45) {
-    risks.push("Göstergeler arasında uyum düşük; sinyalin kalıcılığı sınırlı olabilir.");
+  for (const pattern of analysis.patterns) {
+    const conflicting =
+      (score > 0 && pattern.bias === "SELL") || (score < 0 && pattern.bias === "BUY");
+    if (conflicting) {
+      risks.push(t("risk.conflictingPattern", { pattern: patternName(t, pattern.id) }));
+    }
   }
-  if (indicators.rsi !== null && indicators.rsi >= 70 && analysis.score > 0) {
-    risks.push("Alış sinyali aşırı alım bölgesinde üretildi; geç giriş riski var.");
-  }
-  if (indicators.rsi !== null && indicators.rsi <= 30 && analysis.score < 0) {
-    risks.push("Satış sinyali aşırı satım bölgesinde üretildi; sert tepki yükselişi gelebilir.");
-  }
-  if (analysis.volatility.regime === "yüksek") {
-    risks.push(
-      `Volatilite yüksek (ATR %${formatNumber(analysis.volatility.atrPercent)}); pozisyon boyutu küçültülmeli ve stop mesafesi buna göre ayarlanmalı.`,
-    );
-  }
-  const conflicting = analysis.patterns.filter(
-    (p) => p.bias !== "NÖTR" && ((analysis.score > 0 && p.bias === "SAT") || (analysis.score < 0 && p.bias === "AL")),
-  );
-  for (const pattern of conflicting) {
-    risks.push(`${pattern.name} formasyonu genel sinyalin tersi yönde uyarı veriyor.`);
-  }
-  if (analysis.source === "demo") {
-    risks.push(
-      "Bu analiz DEMO veriyle üretildi (Binance API'sine ulaşılamadı); rakamlar gerçek piyasayı yansıtmaz.",
-    );
-  }
-  if (risks.length === 0) {
-    risks.push("Belirgin bir teknik çelişki tespit edilmedi; yine de risk yönetimi olmadan işlem açmayın.");
-  }
+  if (instrument.market !== "kripto") risks.push(t("risk.closedMarket"));
+  if (analysis.source === "demo") risks.push(t("risk.demoData"));
+  if (risks.length === 0) risks.push(t("risk.none"));
 
   return { headline, paragraphs, highlights, risks };
 }
 
-/** Gösterge listesini kategoriye göre gruplar (arayüzde tablo için). */
-export function groupChecks(checks: IndicatorCheck[]): { category: string; items: IndicatorCheck[] }[] {
-  const order = ["Trend", "Momentum", "Volatilite", "Hacim"];
-  return order
-    .map((category) => ({ category, items: checks.filter((c) => c.category === category) }))
-    .filter((group) => group.items.length > 0);
+/** Yüzdelik değişimi işaretiyle biçimlendirir (kartlarda kullanılır). */
+export function changeText(value: number, locale: Locale): string {
+  return formatPercent(value, intlTag(locale));
 }

@@ -1,13 +1,22 @@
 /** API route'larının döndürdüğü gövdelerin paylaşılan tipleri. */
 
 import type { Analysis, SignalLabel } from "./analysis";
-import type { Candle, DataSource, Interval, Ticker } from "./binance";
+import type { Candle, DataSource, Instrument, Interval, MarketId, Quote } from "./markets/types";
 import type { Commentary } from "./commentary";
+
+export type MarketsResponse = {
+  market: MarketId;
+  source: DataSource;
+  updatedAt: number;
+  quotes: Quote[];
+};
 
 export type AnalyzeResponse = {
   analysis: Analysis;
   commentary: Commentary;
-  ticker: Ticker | null;
+  /** Analiz metinleri aktif dilde hazır değilse arayüz not gösterir. */
+  analysisLocalized: boolean;
+  quote: Quote | null;
   candles: Candle[];
   series: {
     ema21: (number | null)[];
@@ -22,45 +31,46 @@ export type AnalyzeResponse = {
   };
   timeframes: {
     interval: Interval;
-    label: string;
     signal: SignalLabel;
     score: number;
     confidence: number;
   }[];
 };
 
-export type MarketsResponse = {
-  source: DataSource;
-  updatedAt: number;
-  tickers: Ticker[];
+export type ScanRow = {
+  id: string;
+  market: MarketId;
+  symbol: string;
+  name: string;
+  ticker: string;
+  currency: string;
+  price: number;
+  changePercent: number;
+  volume: number;
+  signal: SignalLabel;
+  score: number;
+  confidence: number;
+  rsi: number | null;
+  adx: number | null;
+  atrPercent: number;
+  trendLabelKey: string;
+  patterns: string[];
 };
 
 export type ScanResponse = {
-  source: DataSource;
+  market: MarketId | "mixed";
   interval: Interval;
+  source: DataSource;
   updatedAt: number;
   scanned: number;
-  rows: {
-    symbol: string;
-    base: string;
-    quote: string;
-    price: number;
-    changePercent24h: number;
-    quoteVolume: number;
-    signal: SignalLabel;
-    score: number;
-    confidence: number;
-    rsi: number | null;
-    adx: number | null;
-    atrPercent: number;
-    trendLabel: string;
-    patterns: string[];
-  }[];
+  rows: ScanRow[];
 };
+
+export type SearchResponse = { results: Instrument[] };
 
 export type ApiError = { error: string };
 
-/** JSON getirir; hata gövdesindeki Türkçe mesajı fırlatır. */
+/** JSON getirir; hata gövdesindeki mesajı fırlatır. */
 export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal, cache: "no-store" });
   const body = (await response.json().catch(() => null)) as T | ApiError | null;

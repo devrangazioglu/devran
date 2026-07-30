@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { isInterval } from "@/lib/binance";
+import { isInterval, isMarketId } from "@/lib/markets/types";
 import { DEFAULT_SETTINGS, findUserByEmail, saveSettings, UserStoreError } from "@/lib/users";
 
 export const runtime = "nodejs";
@@ -28,6 +28,9 @@ export async function POST(request: Request) {
 
   if (typeof body.defaultInterval === "string" && isInterval(body.defaultInterval)) {
     patch.defaultInterval = body.defaultInterval;
+  }
+  if (typeof body.defaultMarket === "string" && isMarketId(body.defaultMarket)) {
+    patch.defaultMarket = body.defaultMarket;
   }
   if (typeof body.scanLimit === "number" && Number.isFinite(body.scanLimit)) {
     patch.scanLimit = Math.min(Math.max(Math.round(body.scanLimit), 5), 60);

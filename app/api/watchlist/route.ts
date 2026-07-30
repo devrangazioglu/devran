@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { normalizeSymbol } from "@/lib/binance";
+import { normalizeSymbol } from "@/lib/markets/provider";
+import { parseInstrumentId } from "@/lib/markets/types";
 import { getWatchlist, toggleWatchlist, UserStoreError } from "@/lib/users";
 
 export const runtime = "nodejs";
@@ -20,12 +21,15 @@ export async function POST(request: Request) {
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "Giriş gerekli." }, { status: 401 });
 
-  const body = (await request.json().catch(() => null)) as { symbol?: unknown } | null;
-  const symbol = typeof body?.symbol === "string" ? normalizeSymbol(body.symbol) : null;
-  if (!symbol) return NextResponse.json({ error: "Geçersiz sembol." }, { status: 400 });
+  const body = (await request.json().catch(() => null)) as { id?: unknown } | null;
+  const parsed = typeof body?.id === "string" ? parseInstrumentId(body.id) : null;
+  const symbol = parsed ? normalizeSymbol(parsed.market, parsed.symbol) : null;
+  if (!parsed || !symbol) {
+    return NextResponse.json({ error: "Geçersiz varlık kimliği." }, { status: 400 });
+  }
 
   try {
-    const result = await toggleWatchlist(email, symbol);
+    const result = await toggleWatchlist(email, `${parsed.market}:${symbol}`);
     if (!result) return NextResponse.json({ error: "Kullanıcı bulunamadı." }, { status: 404 });
     return NextResponse.json(result);
   } catch (error) {

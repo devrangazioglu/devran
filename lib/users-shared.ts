@@ -17,6 +17,8 @@ const scrypt = promisify(scryptCallback) as (
 export type UserSettings = {
   /** Varsayılan analiz zaman dilimi. */
   defaultInterval: string;
+  /** Panelde ve tarayıcıda açılacak varsayılan piyasa. */
+  defaultMarket: string;
   /** Tarayıcıda taranacak coin sayısı. */
   scanLimit: number;
   /** Sinyal listesinde yalnızca güçlü sinyalleri göster. */
@@ -37,11 +39,18 @@ export type PublicUser = Omit<User, "passwordHash">;
 
 export const DEFAULT_SETTINGS: UserSettings = {
   defaultInterval: "4h",
+  defaultMarket: "kripto",
   scanLimit: 30,
   onlyStrongSignals: false,
 };
 
-export const DEFAULT_WATCHLIST = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"];
+export const DEFAULT_WATCHLIST = [
+  "kripto:BTCUSDT",
+  "kripto:ETHUSDT",
+  "abd:AAPL",
+  "bist:THYAO.IS",
+  "emtia:GC=F",
+];
 
 /** Depo yazılamadığında/erişilemediğinde fırlatılır. */
 export class UserStoreError extends Error {
@@ -130,6 +139,10 @@ export function normalizeSettings(raw: unknown): UserSettings {
       typeof value.defaultInterval === "string"
         ? value.defaultInterval
         : DEFAULT_SETTINGS.defaultInterval,
+    defaultMarket:
+      typeof value.defaultMarket === "string"
+        ? value.defaultMarket
+        : DEFAULT_SETTINGS.defaultMarket,
     scanLimit:
       typeof value.scanLimit === "number" && Number.isFinite(value.scanLimit)
         ? value.scanLimit
@@ -141,8 +154,15 @@ export function normalizeSettings(raw: unknown): UserSettings {
   };
 }
 
-/** Depodan gelen ham takip listesini temizler. */
+/**
+ * Depodan gelen ham takip listesini temizler.
+ *
+ * Liste artık "piyasa:sembol" kimliklerini tutar (ör. "kripto:BTCUSDT").
+ * Yalnızca sembol içeren eski kayıtlar kripto piyasasına eşlenir.
+ */
 export function normalizeWatchlist(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [...DEFAULT_WATCHLIST];
-  return raw.filter((item): item is string => typeof item === "string");
+  return raw
+    .filter((item): item is string => typeof item === "string" && item.length > 0)
+    .map((item) => (item.includes(":") ? item : `kripto:${item}`));
 }

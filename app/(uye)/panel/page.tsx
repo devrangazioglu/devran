@@ -11,7 +11,8 @@ export default async function PanelPage() {
 
   return (
     <PanelClient
-      name={user?.name ?? session?.user?.name ?? "yatırımcı"}
+      name={user?.name ?? session?.user?.name ?? ""}
+      defaultMarket={settings.defaultMarket}
       defaultInterval={settings.defaultInterval}
       watchlist={user?.watchlist ?? []}
     />
