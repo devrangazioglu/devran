@@ -860,6 +860,9 @@ th.num {
 
 .stack {
   display: grid;
+  /* Örtük "auto" iz, içindeki en geniş öğenin min-content genişliğine büyür ve
+     dar ekranda kapsayıcıyı taşırır; sıfır minimum bunu engeller. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
 
@@ -955,6 +958,12 @@ th.num {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
+}
+
+/* Grafikler kendi kutularını ölçerek boyutlanır; ilk çizim ile ölçüm arasında
+   geçici olarak geniş kalırlarsa sayfayı yatay kaydırmaya zorlamasınlar. */
+canvas {
+  max-width: 100%;
 }
 
 .chart-legend {

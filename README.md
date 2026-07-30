@@ -1,30 +1,54 @@
 # Kriptosinyal
 
-Binance'in **herkese açık** piyasa verisini çekip coinlere teknik analiz yapan, sonucu
-ağırlıklı bir skora çevirerek **AL / SAT / BEKLE** sinyali üreten ve bu sinyali **Türkçe
-olarak yorumlayan** üyelik girişli web uygulaması.
+Dört piyasadan **herkese açık** fiyat verisi çekip teknik analiz yapan, sonucu ağırlıklı bir
+skora çevirerek **AL / SAT / BEKLE** sinyali üreten ve bu sinyali **kullanıcının dilinde
+yorumlayan** üyelik girişli web uygulaması.
+
+| Piyasa | Kapsam | Sayfa |
+|---|---|---|
+| Kripto | Hacme göre ilk 60 parite (BTC, ETH, SOL…) | `/piyasa/kripto` |
+| Amerikan borsası | 46 hisse ve endeks (AAPL, NVDA, S&P 500, Nasdaq…) | `/piyasa/abd-borsasi` |
+| Türkiye borsası | 43 BIST hissesi ve endeksi (THYAO, ASELS, BIST 100…) | `/piyasa/turkiye-borsasi` |
+| Dövizler ve emtia | Altın, gümüş, petrol, doğal gaz, USD/TRY, EUR/USD… | `/piyasa/dovizler` |
 
 > ⚠️ **Yasal uyarı:** Bu uygulama bir teknik analiz aracıdır, yatırım danışmanlığı hizmeti
 > değildir. Üretilen sinyaller geçmiş fiyat verisine dayanan otomatik hesaplamalardır ve
-> alım-satım tavsiyesi niteliği taşımaz. Kripto varlıklar yüksek volatiliteye sahiptir.
+> alım-satım tavsiyesi niteliği taşımaz.
 
 ## Özellikler
 
 - 🔐 **Üyelik sistemi** — e-posta + parola (scrypt ile hash'lenir) ve isteğe bağlı Google ile giriş
-- 📈 **Binance Spot API** — mum verisi (klines) ve 24 saatlik özet; **API anahtarı gerekmez**
+- 🌍 **Dört piyasa, tek motor** — analiz kodu varlık türünü bilmez; aynı göstergeler hisseye,
+  endekse, altına ve coine uygulanır
+- 🔎 **Birleşik arama** — ana sayfada ve üye menüsünde tüm piyasalarda arama; aksan duyarsız
+  ("altin" → Altın) ve çok dilli eş anlamlılarla ("gold", "oil", "borsa istanbul")
 - 📊 **16 teknik gösterge** — RSI, MACD, EMA 9/21/50/200, Bollinger, Stokastik, ATR, ADX+DI,
   Supertrend, OBV, MFI, CCI, Williams %R, ROC, VWAP, hacim oranı
 - 🧮 **Ağırlıklı skor motoru** — her gösterge −1…+1 yön üretir, ağırlıklandırılır ve −100…+100
   arası tek skora indirgenir; skor sinyale çevrilir
-- 🗣️ **Türkçe yorum** — trend, momentum, hacim, volatilite, seviyeler ve riskler paragraf paragraf
+- 🏆 **Top 10 AL** — panelde seçili piyasa ve periyot için en güçlü alış sinyalleri sıralı liste
+- 🗣️ **Çok dilli yorum** — trend, momentum, hacim, volatilite, seviyeler ve riskler paragraf paragraf
 - 🕯️ **Formasyon tespiti** — yutan mumlar, çekiç, kayan yıldız, doji, sabah/akşam yıldızı,
   golden/death cross, MACD kesişimi, RSI uyumsuzluğu, Bollinger sıkışması
 - 🎯 **İşlem planı** — ATR ve swing noktalarına göre giriş, zarar durdur, 3 hedef, risk/ödül
 - 🧭 **Destek / direnç** — pivot kümeleme ile seviyeler ve dokunuş sayısına göre güç
-- 🔎 **Sinyal tarayıcı** — en yüksek hacimli 60 pariteye kadar tarama, filtreleme ve sıralama
-- ⭐ **Takip listesi** — hesaba kayıtlı pariteler, tek ekranda analiz
-- 📉 **Bağımlılıksız grafikler** — canvas ile mum grafiği (EMA + Bollinger + hacim), RSI ve MACD panelleri
-- ⏱️ **8 zaman dilimi** — 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w + üst periyot uyumu
+- 🔦 **Sinyal tarayıcı** — piyasa genelinde tarama, filtreleme ve sıralama
+- ⭐ **Takip listesi** — piyasalar arası karışık liste (`kripto:BTCUSDT`, `bist:THYAO.IS`…)
+- 📉 **Bağımlılıksız grafikler** — canvas ile mum grafiği (EMA + Bollinger + hacim), RSI ve MACD
+- ✨ **Hareketli arayüz** — fareyi izleyen arka plan, kaydırdıkça beliren kartlar, ışık efekti;
+  `prefers-reduced-motion` ve dokunmatik cihazlarda kapanır
+- 📱 **Ayrı mobil düzen** — dar ekranda tablolar kart listesine dönüşür, çekmece menü ve alt sekme çubuğu
+
+## Diller
+
+Sekiz dil desteklenir: **Türkçe, İngilizce, İspanyolca, Almanca, Fransızca, Rusça, Arapça
+(sağdan sola), Çince.** Dil seçimi `dil` çerezinde saklanır.
+
+Arayüz metinleri sekiz dilde de tamdır. **Analiz yorumları yalnızca Türkçe ve İngilizce
+yazılmıştır**; diğer altı dilde bu bölüm İngilizceye düşer ve arayüz bunu açıkça belirtir.
+Yeni dil eklemek için `lib/i18n/dictionaries/` altına bir sözlük yazıp
+`lib/i18n/config.ts` listesine eklemek yeterlidir; eksik anahtarlar önce İngilizceye,
+sonra Türkçeye düşer.
 
 ## Kurulum
 
@@ -47,14 +71,14 @@ sayfasından hesap oluşturun.
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Google ile giriş. Boşsa yalnızca e-posta + parola görünür |
 | `USERS_FILE` | — | Dosya deposu yolu (varsayılan `data/users.json`, git'e girmez) |
 | `PGPOOL_MAX` | — | Postgres havuzundaki en fazla bağlantı (varsayılan 3) |
-| `DEMO_DATA` | — | `1` ise Binance'e erişilemediğinde sentetik demo veri üretilir (geliştirme için) |
+| `DEMO_DATA` | — | `1` ise piyasa verisine erişilemediğinde sentetik demo veri üretilir (geliştirme için) |
 
 Eksik yapılandırma sessiz kalmaz: `AUTH_SECRET` yoksa ya da üretimde kalıcı bir
 veritabanı tanımlı değilse giriş/kayıt sayfalarında ne yapılması gerektiğini
 söyleyen bir uyarı görünür.
 
-Binance için **API anahtarı gerekmez**; yalnızca herkese açık uç noktalar okunur, emir
-gönderilmez, hesabınıza erişilmez.
+Piyasa verisi için **API anahtarı gerekmez**; yalnızca herkese açık uç noktalar okunur,
+emir gönderilmez, hesabınıza erişilmez.
 
 ## Komutlar
 
@@ -62,7 +86,7 @@ gönderilmez, hesabınıza erişilmez.
 npm run dev        # geliştirme sunucusu
 npm run build      # üretim derlemesi
 npm start          # üretim sunucusu
-npm test           # gösterge, sinyal motoru ve kullanıcı deposu testleri (50 test)
+npm test           # piyasa katmanı, dil katmanı, sinyal motoru ve kullanıcı deposu testleri
 npm run typecheck  # tsc --noEmit
 ```
 
@@ -77,43 +101,55 @@ TEST_DATABASE_URL=postgres://postgres@127.0.0.1:5432/postgres npm test
 
 ```
 app/
-  page.tsx                     tanıtım (landing) sayfası
+  page.tsx                     tanıtım sayfası (arama kutusu, canlı şerit, piyasa kartları)
+  piyasa/[slug]/               herkese açık piyasa sayfaları (dört piyasa)
   giris/, kayit/               giriş ve kayıt sayfaları
   (uye)/                       oturum gerektiren alan
-    layout.tsx                 oturum kontrolü + üst menü
-    panel/                     piyasa özeti, güçlü sinyaller, piyasa tablosu
-    coin/[symbol]/             detay: grafik, göstergeler, yorum, plan, seviyeler
+    layout.tsx                 oturum kontrolü + üst menü + alt sekme çubuğu
+    panel/                     piyasa özeti, Top 10 AL, güçlü satışlar, piyasa tablosu
+    varlik/[market]/[symbol]/  detay: grafik, göstergeler, yorum, plan, seviyeler
     tarayici/                  sinyal tarayıcı (filtre + sıralama)
-    takip/                     takip listesi
-    ayarlar/                   tercihler ve hesap bilgisi
+    takip/                     takip listesi (aramayla ekleme)
+    ayarlar/                   tercihler, varsayılan piyasa, dil
   api/
-    analyze/                   tek parite için tam analiz + yorum + grafik serileri
-    scan/                      çoklu parite taraması
-    markets/                   24 saatlik piyasa özeti
+    analyze/                   tek varlık için tam analiz + yorum + grafik serileri
+    scan/                      piyasa taraması ya da takip listesi taraması
+    markets/                   piyasa fiyat listesi
+    search/                    dört piyasada birden arama
     register/, watchlist/, settings/, auth/
 lib/
-  binance.ts                   Binance istemcisi (çok uç noktalı, önbellekli, demo yedekli)
+  markets/
+    types.ts                   ortak Candle/Instrument tipleri, piyasa kayıtları, mum toplama
+    instruments.ts             hisse, endeks, emtia ve döviz listeleri + arama eş anlamlıları
+    provider.ts                tek giriş noktası: sembol çözümleme, fiyat, mum, arama
+    yahoo.ts                   hisse/emtia/döviz veri istemcisi
+    demo.ts                    deterministik sentetik veri (DEMO_DATA)
+  binance.ts                   kripto veri istemcisi
   indicators.ts                saf gösterge fonksiyonları
-  analysis.ts                  skor motoru, formasyonlar, seviyeler, işlem planı
-  commentary.ts                Türkçe yorum üretici
-  users.ts                     kullanıcı deposu genel arayüzü (arka uç seçimi)
-  users-shared.ts              tipler, varsayılanlar, scrypt parola işlemleri
-  users-postgres.ts            Postgres arka ucu (üretim)
-  users-file.ts                dosya arka ucu (yerel geliştirme)
-  db.ts                        Postgres havuzu, işlemler ve şema oluşturma
+  analysis.ts                  varlıktan bağımsız skor motoru, formasyonlar, seviyeler, plan
+  analysis-text.ts             gösterge açıklamalarının dile çevrilmesi
+  commentary.ts                yorum üretici (dil sözlüklerinden)
+  i18n/                        sekiz dilin sözlükleri, çeviri ve yedek dil zinciri
+  next-path.ts                 giriş sonrası dönüş yolunun doğrulanması
+  users*.ts, db.ts             kullanıcı deposu (Postgres / dosya) ve şema
   rate-limit.ts                bellek içi istek sınırlayıcı
-  format.ts, api-types.ts      biçimlendirme ve paylaşılan API tipleri
+  format.ts, api-types.ts      dile duyarlı biçimlendirme ve paylaşılan API tipleri
 components/
+  AssetSearch.tsx              gecikmeli arama kutusu (klavye ile gezinme)
+  LanguageSwitcher.tsx         dil seçici
+  motion/                      fareyi izleyen arka plan, beliren kartlar, ışık efekti
+  MobileMenu.tsx, MobileTabBar.tsx   mobil çekmece ve alt sekme çubuğu
   CandleChart.tsx              canvas mum grafiği
   IndicatorChart.tsx           RSI / MACD panelleri
-  ui.tsx                       skor göstergesi, rozetler, coin ikonları
-  ConfigWarning.tsx            eksik AUTH_SECRET / veritabanı uyarısı
+  ui.tsx                       skor göstergesi, rozetler, varlık ikonları
+middleware.ts                  istenen yolu başlığa yazar (giriş sonrası geri dönüş için)
 tests/                         node:test birim testleri
 ```
 
 ## Skor motoru nasıl çalışır?
 
-1. Seçilen parite ve periyot için Binance'ten son **300 mum** çekilir (`/api/v3/klines`).
+1. Seçilen varlık ve periyot için son **300 mum** çekilir. Sağlayıcı 4 saatlik veri
+   sunmuyorsa 4 adet 60 dakikalık mum birleştirilerek üretilir.
 2. 16 gösterge hesaplanır. Her biri kendi kuralına göre bir **yön** (−1 … +1) ve bir
    **ağırlık** (0,6 … 1,5) üretir. Örnek: RSI ≤ 30 → +0,85 (aşırı satım, alış lehine);
    EMA 50 < EMA 200 → negatif yön (ana trend aşağı).
@@ -124,6 +160,22 @@ tests/                         node:test birim testleri
    belirlenir; ilk hedef mümkünse en yakın anlamlı direnç/destek, sonraki hedefler 1,618 ve
    2,618 R seviyeleridir.
 
+Motor yalnızca `Candle` dizisi ile çalışır; bir hisseyi, endeksi, altını ve coini
+birbirinden ayırt etmez. Piyasaya özgü tek fark yorumdaki uyarılardır: 7/24 açık olmayan
+piyasalarda "seans kapalı olabilir" riski eklenir.
+
+## Veri kaynakları
+
+- **Kripto:** borsanın herkese açık spot uç noktaları (mum verisi ve 24 saatlik özet).
+  Coğrafi kısıt olan ağlar için birden çok alan adı sırayla denenir.
+- **Hisse, endeks, emtia, döviz:** Yahoo Finance'in herkese açık grafik/kotasyon uç
+  noktaları. Bunlar **belgelenmiş bir API değildir**: sözleşmesi habersiz değişebilir,
+  hız sınırı uygulanabilir ve ticari kullanım için uygun olmayabilir. Kalıcı bir kurulum
+  planlıyorsanız sözleşmeli bir veri sağlayıcıya geçmeyi düşünün — `lib/markets/provider.ts`
+  tek giriş noktası olduğu için değişiklik yalnızca o dosyayı ilgilendirir.
+- **Demo veri:** `DEMO_DATA=1` iken sağlayıcıya erişilemezse tohumlanmış (deterministik)
+  sentetik seriler üretilir ve arayüzde açıkça "demo veri" olarak işaretlenir.
+
 ## Vercel'e kurulum
 
 1. **Postgres bağlayın:** Vercel panelinde proje → **Storage** → **Postgres (Neon)** →
@@ -133,7 +185,7 @@ tests/                         node:test birim testleri
    `openssl rand -base64 32` çıktısı. Bu değişken olmadan oturum açma çalışmaz.
 3. İsterseniz `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` ekleyip Google girişini açın
    (yönlendirme adresi: `https://SITENIZ/api/auth/callback/google`).
-4. Yeniden dağıtın. `DEMO_DATA` **tanımlanmasın** — üretimde gerçek Binance verisi kullanılır.
+4. Yeniden dağıtın. `DEMO_DATA` **tanımlanmasın** — üretimde gerçek piyasa verisi kullanılır.
 
 Kalıcı diski olan bir platformda (VPS, Railway, Fly.io) çalıştırıyorsanız Postgres zorunlu
 değildir; `DATABASE_URL` boş bırakıldığında dosya deposu kullanılır.
@@ -143,18 +195,18 @@ değildir; `DATABASE_URL` boş bırakıldığında dosya deposu kullanılır.
 - **Kullanıcı deposu:** iki arka uç aynı sözleşmeyi (`UserStore`) uygular —
   `lib/users-postgres.ts` (üretim) ve `lib/users-file.ts` (yerel geliştirme).
   `lib/users.ts` `DATABASE_URL` değişkenine göre aralarında seçim yapar, çağrı noktaları
-  hiç değişmez. Başka bir veritabanı kullanmak isterseniz üçüncü bir arka uç yazıp
-  aynı sözleşmeyi uygulamanız yeterli.
+  hiç değişmez.
 - **Eşzamanlılık:** Postgres arka ucunda takip listesi/ayar güncellemeleri
   `select … for update` ile aynı işlem (transaction) içinde yapılır; aynı anda gelen
   istekler birbirinin yazdığını ezmez (testlerle doğrulanır).
-- **İstek limiti:** Binance IP başına ağırlık limiti uygular. Tarama sayısını yükseltirken
-  (`ayarlar` → coin sayısı) dikkatli olun; yanıtlar bellek içinde önbelleğe alınır ve tarama
-  en fazla 6 eşzamanlı istek yapar.
-- **Coğrafi kısıtlar:** bazı ağlarda `api.binance.com` engellidir. İstemci sırayla
-  `api-gcp`, `api1`, `api2` ve `data-api.binance.vision` uç noktalarını dener.
+- **İstek limiti:** sağlayıcılar IP başına limit uygular. Tarama sayısını yükseltirken
+  (`ayarlar` → varlık sayısı) dikkatli olun; yanıtlar bellek içinde önbelleğe alınır ve
+  tarama en fazla 6 eşzamanlı istek yapar. Kayıt, analiz ve tarama uç noktalarının kendi
+  hız sınırları vardır.
+- **Piyasa saatleri:** kripto dışındaki piyasalar seans dışında sabit fiyat döndürür;
+  analiz yine çalışır ama yorum bölümünde bu durum uyarı olarak belirtilir.
 
 ## Teknoloji
 
-Next.js 15 (App Router) · React 19 · TypeScript · Auth.js (next-auth v5) · harici çalışma
-zamanı bağımlılığı olmayan kendi gösterge/grafik kodu.
+Next.js 15 (App Router) · React 19 · TypeScript · Auth.js (next-auth v5) · Postgres (`pg`) ·
+harici çalışma zamanı bağımlılığı olmayan kendi gösterge/grafik/dil kodu.
