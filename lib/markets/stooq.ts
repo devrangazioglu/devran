@@ -53,27 +53,45 @@ const OZEL: Record<string, string> = {
  * tahmin olarak denenir; veri gelmezse çağıran Yahoo'ya düşer.
  */
 export function toStooqSymbol(market: MarketId, symbol: string): string | null {
-  if (market === "kripto") return null;
+  return toStooqSymbols(market, symbol)[0] ?? null;
+}
+
+/**
+ * Denenecek Stooq sembollerini sırayla verir.
+ *
+ * Sağlayıcının bazı varlıklar için hangi yazımı kullandığı belgeli değil
+ * (altın "xauusd" mu "gc.f" mi, BIST "thyao.tr" mi "thyao" mu). Tek bir
+ * tahmine bağlı kalmak o varlığı sessizce boş bırakıyordu; sıradaki yazım
+ * yalnızca bir öncekinden veri gelmediğinde denenir.
+ */
+export function toStooqSymbols(market: MarketId, symbol: string): string[] {
+  if (market === "kripto") return [];
+
   if (market === "bist") {
-    return symbol.endsWith(".IS") ? `${symbol.slice(0, -3).toLowerCase()}.tr` : null;
+    if (!symbol.endsWith(".IS")) return [];
+    const kok = symbol.slice(0, -3).toLowerCase();
+    return [`${kok}.tr`, kok];
   }
 
+  const adaylar: string[] = [];
   const ozel = OZEL[symbol];
-  if (ozel) return ozel;
+  if (ozel) adaylar.push(ozel);
 
   // Döviz: "USDTRY=X" → "usdtry"
-  if (symbol.endsWith("=X")) return symbol.slice(0, -2).toLowerCase();
+  if (symbol.endsWith("=X")) adaylar.push(symbol.slice(0, -2).toLowerCase());
 
   // Vadeli: "XX=F" → "xx.f"
-  if (symbol.endsWith("=F")) return `${symbol.slice(0, -2).toLowerCase()}.f`;
+  if (symbol.endsWith("=F")) adaylar.push(`${symbol.slice(0, -2).toLowerCase()}.f`);
 
-  // Diğer endeksler
-  if (symbol.startsWith("^")) return symbol.toLowerCase();
+  // Endeksler
+  if (symbol.startsWith("^")) adaylar.push(symbol.toLowerCase());
 
-  // ABD hissesi: "AAPL" → "aapl.us"
-  if (market === "abd") return `${symbol.toLowerCase()}.us`;
+  // ABD hissesi: "AAPL" → "aapl.us", olmazsa "aapl"
+  if (market === "abd" && !symbol.startsWith("^")) {
+    adaylar.push(`${symbol.toLowerCase()}.us`, symbol.toLowerCase());
+  }
 
-  return null;
+  return [...new Set(adaylar)];
 }
 
 /* ────────────────────────── CSV ────────────────────────── */
@@ -206,17 +224,40 @@ export async function fetchStooqQuotes(stooqSymbols: string[]): Promise<StooqQuo
   return out;
 }
 
-/** Günlük ya da haftalık mumlar. Gün içi periyot desteklenmez. */
+/**
+ * Günlük ya da haftalık mumlar. Gün içi periyot desteklenmez.
+ * Verilen yazımlardan veri döndüren ilki kullanılır.
+ */
 export async function fetchStooqCandles(
-  stooqSymbol: string,
+  stooqSymbols: string | string[],
   interval: Interval,
   limit = 300,
 ): Promise<Candle[]> {
   if (interval !== "1d" && interval !== "1w") {
     throw new MarketDataError("Bu kaynak gün içi veri sunmuyor.", 400);
   }
-  const text = await iste(`/q/d/l/?s=${encodeURIComponent(stooqSymbol)}&i=${interval === "1w" ? "w" : "d"}`);
-  const candles = parseCandleCsv(text, interval);
-  if (candles.length === 0) throw new MarketDataError("Bu sembol için veri bulunamadı.", 404);
-  return candles.slice(-limit);
+
+  const adaylar = typeof stooqSymbols === "string" ? [stooqSymbols] : stooqSymbols;
+  let sonHata: unknown = null;
+
+  for (const aday of adaylar) {
+    try {
+      const text = await iste(
+        `/q/d/l/?s=${encodeURIComponent(aday)}&i=${interval === "1w" ? "w" : "d"}`,
+      );
+      const candles = parseCandleCsv(text, interval);
+      // Analiz en az birkaç yüz mum ister; birkaç satırlık yanıt genelde
+      // "sembol bulunamadı" demektir, sıradaki yazım denenir.
+      if (candles.length >= 30) return candles.slice(-limit);
+      sonHata = new MarketDataError("Bu sembol için yeterli veri yok.", 404);
+    } catch (error) {
+      sonHata = error;
+      // Hız sınırında sıradaki yazımı denemenin anlamı yok.
+      if (error instanceof MarketDataError && error.status === 429) throw error;
+    }
+  }
+
+  throw sonHata instanceof MarketDataError
+    ? sonHata
+    : new MarketDataError("Bu sembol için veri bulunamadı.", 404);
 }

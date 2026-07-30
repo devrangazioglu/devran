@@ -17,7 +17,7 @@ import {
   US_INSTRUMENTS,
 } from "../lib/markets/instruments";
 import { normalizeSymbol } from "../lib/markets/provider";
-import { parseCandleCsv, parseQuoteCsv, toStooqSymbol } from "../lib/markets/stooq";
+import { fetchStooqCandles, parseCandleCsv, parseQuoteCsv, toStooqSymbol, toStooqSymbols } from "../lib/markets/stooq";
 import { fetchChart, parseSpark, rateLimitedUntil, resetRateLimitState } from "../lib/markets/yahoo";
 import {
   aggregateCandles,
@@ -303,4 +303,60 @@ test("ikinci kaynağın mum CSV'si analize uygun mum üretir", () => {
   }
 
   assert.equal(parseCandleCsv("Date,Open", "1d").length, 0);
+});
+
+test("sembol yazımı tutmazsa sıradaki yazım denenir", async () => {
+  // Sağlayıcının hangi yazımı taşıdığı belgeli değil; ilki boş dönerse
+  // ikincisine geçilmeli, aksi hâlde varlık sessizce kaybolur.
+  assert.deepEqual(toStooqSymbols("bist", "THYAO.IS"), ["thyao.tr", "thyao"]);
+  assert.deepEqual(toStooqSymbols("abd", "AAPL"), ["aapl.us", "aapl"]);
+  // Endekste de bilinen karşılık önce, ham yazım yedek olarak denenir.
+  assert.deepEqual(toStooqSymbols("abd", "^GSPC"), ["^spx", "^gspc"]);
+  assert.deepEqual(toStooqSymbols("kripto", "BTCUSDT"), []);
+
+  const govde = (n: number) =>
+    ["Date,Open,High,Low,Close,Volume"]
+      .concat(
+        Array.from({ length: n }, (_, i) => {
+          const gun = String((i % 28) + 1).padStart(2, "0");
+          return `2026-01-${gun},100,101,99,100.5,1000`;
+        }),
+      )
+      .join("\n");
+
+  const gercekFetch = globalThis.fetch;
+  const istenen: string[] = [];
+  globalThis.fetch = (async (url: string) => {
+    istenen.push(String(url));
+    // İlk yazım ("thyao.tr") bilinmeyen sembol: neredeyse boş CSV.
+    if (String(url).includes("thyao.tr")) return new Response(govde(1), { status: 200 });
+    return new Response(govde(60), { status: 200 });
+  }) as unknown as typeof fetch;
+
+  try {
+    const candles = await fetchStooqCandles(toStooqSymbols("bist", "THYAO.IS"), "1d", 300);
+    assert.equal(candles.length, 60, "ikinci yazımdan veri gelmeli");
+    assert.equal(istenen.length, 2, "önce ilk yazım, sonra ikincisi denenmeli");
+    assert.ok(istenen[0].includes("thyao.tr"));
+    assert.ok(istenen[1].includes("thyao"));
+  } finally {
+    globalThis.fetch = gercekFetch;
+  }
+});
+
+test("hiçbir yazım tutmazsa anlamlı hata verir", async () => {
+  const gercekFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response("Date,Open,High,Low,Close,Volume", { status: 200 })) as typeof fetch;
+  try {
+    await assert.rejects(
+      () => fetchStooqCandles(["yok.tr", "yok"], "1d", 300),
+      /veri yok|veri bulunamadı/,
+    );
+  } finally {
+    globalThis.fetch = gercekFetch;
+  }
+});
+
+test("bu kaynak gün içi periyot için kullanılmaz", async () => {
+  await assert.rejects(() => fetchStooqCandles(["aapl.us"], "4h", 300), /gün içi/);
 });

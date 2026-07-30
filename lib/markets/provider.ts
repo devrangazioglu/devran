@@ -30,7 +30,7 @@ import {
   type MarketId,
   type Quote,
 } from "./types";
-import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol } from "./stooq";
+import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol, toStooqSymbols } from "./stooq";
 import { fetchChart, fetchQuotes, fetchSparkQuotes, searchSymbols } from "./yahoo";
 
 /* ────────────────────────── Önbellek ────────────────────────── */
@@ -320,10 +320,10 @@ export async function getCandles(
 
   // Günlük/haftalık veride önce Stooq denenir: Yahoo bulut IP'lerini
   // sınırladığı için tek kaynağa bağlı kalmak piyasayı tamamen kapatıyordu.
-  const stooqSymbol = toStooqSymbol(market, symbol);
-  if (stooqSymbol && (interval === "1d" || interval === "1w")) {
+  const stooqSymbols = toStooqSymbols(market, symbol);
+  if (stooqSymbols.length > 0 && (interval === "1d" || interval === "1w")) {
     try {
-      const candles = await fetchStooqCandles(stooqSymbol, interval, limit);
+      const candles = await fetchStooqCandles(stooqSymbols, interval, limit);
       const result: CandleSet = { instrument, candles, source: "canli" };
       writeCache(key, result, 180_000);
       return result;
