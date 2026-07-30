@@ -28,7 +28,7 @@ export default async function TaniPage() {
   let hata: string | null = null;
 
   try {
-    const response = await fetch(`${protokol}://${host}/api/tani`, { cache: "no-store" });
+    const response = await fetch(`${protokol}://${host}/api/tani?gercek=1`, { cache: "no-store" });
     veri = (await response.json()) as typeof veri;
   } catch (error) {
     hata = error instanceof Error ? error.message : "bilinmeyen hata";

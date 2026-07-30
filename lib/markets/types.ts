@@ -71,6 +71,17 @@ export type MarketMeta = {
   currency: string;
   /** 7/24 açık mı (kripto) yoksa seans saatleri mi var. */
   alwaysOpen: boolean;
+  /**
+   * Hazır listelerde (panel, piyasa sayfası, tarama) gösterilecek enstrüman
+   * sayısı.
+   *
+   * Kripto dışı piyasalarda veri ücretsiz katmandan geliyor ve her sembol
+   * kotadan bir kredi harcıyor. 46 sembollük bir liste kotaya sığmadığı için
+   * ekran boş kalıyordu; hazır liste kotaya sığacak kadar kısa tutulur.
+   * Listede olmayan varlıklar kaybolmaz: aramadan bulunur ve tıklanınca o an
+   * analiz edilir (tek sembol = tek kredi).
+   */
+  listSize?: number;
 };
 
 export const MARKETS: Record<MarketId, MarketMeta> = {
@@ -83,6 +94,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     alwaysOpen: true,
   },
   abd: {
+    listSize: 12,
     id: "abd",
     labelKey: "market.abd",
     slug: "abd-borsasi",
@@ -91,6 +103,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     alwaysOpen: false,
   },
   bist: {
+    listSize: 12,
     id: "bist",
     labelKey: "market.bist",
     slug: "turkiye-borsasi",
@@ -99,6 +112,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     alwaysOpen: false,
   },
   emtia: {
+    listSize: 20,
     id: "emtia",
     labelKey: "market.emtia",
     slug: "dovizler",

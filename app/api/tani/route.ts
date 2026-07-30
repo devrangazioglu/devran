@@ -28,7 +28,11 @@ type Deneme = {
   bas: string;
 };
 
-async function dene(ad: string, url: string): Promise<Deneme> {
+/**
+ * Anahtarlı bir denemede adres gizlenir: yanıt herkese açık bir sayfada
+ * gösterildiği için API anahtarı asla dışarı sızmamalı.
+ */
+async function dene(ad: string, url: string, gorunenUrl?: string): Promise<Deneme> {
   const basladi = Date.now();
   try {
     const controller = new AbortController();
@@ -42,7 +46,7 @@ async function dene(ad: string, url: string): Promise<Deneme> {
     const text = await response.text();
     return {
       ad,
-      url,
+      url: gorunenUrl ?? url,
       durum: response.status,
       ms: Date.now() - basladi,
       boyut: text.length,
@@ -51,7 +55,7 @@ async function dene(ad: string, url: string): Promise<Deneme> {
   } catch (error) {
     return {
       ad,
-      url,
+      url: gorunenUrl ?? url,
       durum: "ağ hatası",
       ms: Date.now() - basladi,
       boyut: 0,
@@ -60,7 +64,7 @@ async function dene(ad: string, url: string): Promise<Deneme> {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const adaylar: [string, string][] = [
     // Şu an kullanılan yol
     ["yahoo-chart-AAPL", "https://query1.finance.yahoo.com/v8/finance/chart/AAPL?interval=1d&range=1mo"],
@@ -109,6 +113,20 @@ export async function GET() {
   const sonuclar: Deneme[] = [];
   for (const [ad, url] of adaylar) {
     sonuclar.push(await dene(ad, url));
+  }
+
+  // Gerçek anahtarla tek bir deneme: "kota doldu" mesajının dakikalık mı yoksa
+  // günlük sınırdan mı geldiğini yalnızca sağlayıcının kendi cümlesi söyler.
+  // Bir kredi harcadığı için isteğe bağlıdır: /api/tani?gercek=1
+  const anahtar = process.env.TWELVEDATA_API_KEY?.trim();
+  if (new URL(request.url).searchParams.get("gercek") === "1" && anahtar) {
+    sonuclar.push(
+      await dene(
+        "twelvedata-GERCEK-ANAHTAR",
+        `https://api.twelvedata.com/time_series?symbol=AAPL&interval=1day&outputsize=5&apikey=${encodeURIComponent(anahtar)}`,
+        "https://api.twelvedata.com/time_series?symbol=AAPL&…&apikey=(gizli)",
+      ),
+    );
   }
 
   return NextResponse.json(

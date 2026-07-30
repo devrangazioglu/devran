@@ -32,6 +32,7 @@ import {
 } from "./types";
 import { paylasilanOku, paylasilanYaz } from "./cache-store";
 import { fetchFxCandles, fetchFxQuotes, parseFxPair } from "./frankfurter";
+import { krediAyir, kotaBlokla, kotaBloklu, PIYASA_PAY } from "./kota";
 import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol, toStooqSymbols } from "./stooq";
 import { fetchTwelveBatch, fetchTwelveCandles, twelveDataEnabled } from "./twelvedata";
 import { fetchChart, fetchQuotes, fetchSparkQuotes, searchSymbols } from "./yahoo";
@@ -100,9 +101,21 @@ export async function getInstrument(market: MarketId, symbol: string): Promise<I
   }
 }
 
+/**
+ * Hazır listelerde gösterilecek enstrümanlar.
+ *
+ * Kripto dışı piyasalarda liste `listSize` ile sınırlanır: ücretsiz katmanın
+ * kotası 46 sembolü kaldırmıyor ve liste tümüyle boş kalıyordu. Sınırın dışında
+ * kalan varlıklar aramadan bulunur ve açıldığında tek tek analiz edilir.
+ */
+export function listeEnstrumanlari(market: MarketId, limit: number): Instrument[] {
+  const boyut = MARKETS[market].listSize;
+  return staticInstruments(market).slice(0, boyut ? Math.min(limit, boyut) : limit);
+}
+
 /** Bir piyasadaki tüm enstrümanlar (kriptoda hacme göre ilk N parite). */
 export async function getInstruments(market: MarketId, limit = 60): Promise<Instrument[]> {
-  if (market !== "kripto") return staticInstruments(market);
+  if (market !== "kripto") return listeEnstrumanlari(market, limit);
 
   try {
     const { tickers } = await fetchCryptoMarkets("USDT");
@@ -224,6 +237,7 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
 
   const toplanan: Quote[] = [];
   let kalan = instruments;
+  let kotaDoluListe = false;
 
   // Önce önbellekteki günlük mumlar: kota harcamadan fiyat verirler.
   // Liste tek anahtarda tutulsaydı, kredi bütçesi yüzünden yarım kalan liste
@@ -281,39 +295,56 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
   // Hisse, endeks ve emtia: anahtarlı sağlayıcı. Son iki mumdan fiyat türetilir,
   // böylece ayrı bir kotasyon isteği harcanmaz.
   if (kalan.length > 0 && twelveDataEnabled()) {
-    try {
-      // Fiyat için iki mum yeterdi ama tam seri de aynı krediye geliyor:
-      // aynı istek hem tabloyu hem grafik/analiz önbelleğini dolduruyor.
-      const seriler = await fetchTwelveBatch(
-        kalan[0].market,
-        kalan.map((i) => i.symbol),
-        "1d",
-        TAM_MUM,
-      );
-      const bySymbol = new Map(kalan.map((i) => [i.symbol, i]));
-      const yeni: Quote[] = [];
-      for (const [symbol, candles] of seriler) {
-        const instrument = bySymbol.get(symbol);
-        if (!instrument || candles.length === 0) continue;
-        const set: CandleSet = {
-          instrument,
-          candles,
-          source: "canli",
-          fetchedAt: Date.now(),
-        };
-        await paylasimliYaz(
-          candleCacheKey(instrument.market, instrument.symbol, "1d"),
-          set,
-          GUNLUK_TTL_MS,
+    // Kaç sembol isteneceğine paylaşımlı sayaç karar verir: her sunucusuz örnek
+    // kendi bütçesini sayarsa toplamda sağlayıcının sınırı aşılıyor ve hepsi
+    // 429 alıyordu (bkz. `kota.ts`).
+    const butce = await krediAyir(Math.min(kalan.length, PIYASA_PAY));
+    const istenecek = kalan.slice(0, butce);
+    // Bütçe bitmesi sağlayıcı hatası DEĞİLDİR. İkisi karıştırılırsa kendi
+    // bütçe reddimiz ortak geri çekilmeyi tetikler ve uygulama kendi kendini
+    // aç bırakır; bu yüzden istek hiç atılmadan sessizce sıradan çıkılır.
+    if (istenecek.length === 0) kotaDoluListe = true;
+
+    if (istenecek.length > 0) {
+      try {
+        // Fiyat için iki mum yeterdi ama tam seri de aynı krediye geliyor:
+        // aynı istek hem tabloyu hem grafik/analiz önbelleğini dolduruyor.
+        const seriler = await fetchTwelveBatch(
+          istenecek[0].market,
+          istenecek.map((i) => i.symbol),
+          "1d",
+          TAM_MUM,
         );
-        const quote = quoteFromCandles(instrument, set);
-        if (quote) yeni.push(quote);
+        const bySymbol = new Map(istenecek.map((i) => [i.symbol, i]));
+        const yeni: Quote[] = [];
+        for (const [symbol, candles] of seriler) {
+          const instrument = bySymbol.get(symbol);
+          if (!instrument || candles.length === 0) continue;
+          const set: CandleSet = {
+            instrument,
+            candles,
+            source: "canli",
+            fetchedAt: Date.now(),
+          };
+          await paylasimliYaz(
+            candleCacheKey(instrument.market, instrument.symbol, "1d"),
+            set,
+            GUNLUK_TTL_MS,
+          );
+          const quote = quoteFromCandles(instrument, set);
+          if (quote) yeni.push(quote);
+        }
+        toplanan.push(...yeni);
+        const gelenler = new Set(yeni.map((q) => q.symbol));
+        kalan = kalan.filter((i) => !gelenler.has(i.symbol));
+      } catch (error) {
+        // Sağlayıcı GERÇEKTEN kotayı reddettiyse tüm örnekler geri çekilsin.
+        if (error instanceof MarketDataError && error.status === 429) {
+          await kotaBlokla();
+          kotaDoluListe = true;
+        }
+        // Anahtar sorunluysa eski kaynaklar denenir.
       }
-      toplanan.push(...yeni);
-      const gelenler = new Set(yeni.map((q) => q.symbol));
-      kalan = kalan.filter((i) => !gelenler.has(i.symbol));
-    } catch {
-      // Anahtar sorunluysa ya da kredi bittiyse eski kaynaklar denenir.
     }
   }
 
@@ -427,9 +458,10 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
 
     // Kota hatası teknik ayrıntı değil, bekleme meselesi: kullanıcıya ne
     // yapması gerektiğini söyleyen bir cümle daha yararlı.
-    if (error instanceof MarketDataError && error.status === 429) {
+    if (kotaDoluListe || (error instanceof MarketDataError && error.status === 429)) {
       throw new MarketDataError(
-        "Ücretsiz veri kotası şu an dolu. Liste birkaç dakika içinde kendiliğinden dolacak.",
+        "Ücretsiz veri kotası şu an dolu. Liste birkaç dakika içinde kendiliğinden dolacak; " +
+          "aradığınız varlığı arama kutusundan bulup hemen analiz edebilirsiniz.",
         429,
       );
     }
@@ -491,8 +523,9 @@ export async function getQuotes(market: MarketId, limit = 60): Promise<QuoteList
       result = demoQuotes(await getInstruments("kripto", limit));
     }
   } else {
-    hedefSayisi = staticInstruments(market).slice(0, limit).length;
-    result = await yahooQuotes(staticInstruments(market).slice(0, limit));
+    const hedefler = listeEnstrumanlari(market, limit);
+    hedefSayisi = hedefler.length;
+    result = await yahooQuotes(hedefler);
   }
 
   // Endeksler listenin başında kalsın, gerisi hacme göre sıralanır.
@@ -556,7 +589,12 @@ export async function getCandles(
     }
   }
 
-  if (twelveDataEnabled()) {
+  // Kota durumu ayrı tutulur: veri gelmediğinde kullanıcıya "kaynak bulunamadı"
+  // yerine gerçek sebebi ("kota dolu, birazdan dolacak") söylemek gerekiyor.
+  let kotaDolu = false;
+  if (twelveDataEnabled()) kotaDolu = (await kotaBloklu()) || (await krediAyir(1)) < 1;
+
+  if (twelveDataEnabled() && !kotaDolu) {
     try {
       const candles = await fetchTwelveCandles(market, symbol, interval, cekilecek);
       const result: CandleSet = { instrument, candles, source: "canli", fetchedAt: Date.now() };
@@ -565,8 +603,11 @@ export async function getCandles(
       await paylasimliYaz(key, result, gunlukVeHaftalik ? GUNLUK_TTL_MS : GUN_ICI_TTL_MS);
       return { ...result, candles: candles.slice(-limit) };
     } catch (error) {
-      // Anahtar yanlışsa ya da kredi bittiyse aşağıdaki kaynaklar denenir.
-      if (error instanceof MarketDataError && error.status === 429) throw error;
+      if (error instanceof MarketDataError && error.status === 429) {
+        await kotaBlokla();
+        throw error;
+      }
+      // Anahtar yanlışsa aşağıdaki kaynaklar denenir.
     }
   }
 
@@ -616,6 +657,12 @@ export async function getCandles(
       };
       writeCache(key, result, 30_000);
       return result;
+    }
+    if (kotaDolu) {
+      throw new MarketDataError(
+        "Ücretsiz veri kotası şu an dolu. Bir dakika sonra tekrar deneyin.",
+        429,
+      );
     }
     // Kullanıcı hangi kaynağın neden düştüğünü görebilsin.
     throw new MarketDataError(

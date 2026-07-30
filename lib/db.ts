@@ -129,6 +129,12 @@ const SCHEMA = `
   );
 
   create index if not exists piyasa_onbellek_biter on piyasa_onbellek (biter);
+
+  create table if not exists piyasa_kota (
+    anahtar text primary key,
+    sayac   integer not null default 0,
+    biter   bigint  not null
+  );
 `;
 
 let schemaReady: Promise<void> | null = null;

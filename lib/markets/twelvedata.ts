@@ -12,7 +12,8 @@
  *
  * Ücretsiz katman dar (günlük kredi ve dakikalık istek sınırı var), bu yüzden:
  *   • tek istekte çok sembol sorulur (`symbol=A,B,C`),
- *   • günlük mumlar uzun süre önbelleklenir (gün içinde zaten değişmez).
+ *   • günlük mumlar uzun süre önbelleklenir (gün içinde zaten değişmez),
+ *   • kaç sembol isteneceğine paylaşımlı kredi sayacı karar verir (`kota.ts`).
  */
 
 import { MarketDataError, type Candle, type Interval, type MarketId } from "./types";
@@ -26,46 +27,6 @@ export function twelveDataKey(): string | null {
 
 export function twelveDataEnabled(): boolean {
   return twelveDataKey() !== null;
-}
-
-/* ────────────────────────── Kredi bütçesi ──────────────────────────
- *
- * Ücretsiz katman dakikada sabit sayıda kredi verir ve her sembol bir kredi
- * harcar. ABD listesinde 46, BIST'te 43 sembol var; hepsini bir anda istemek
- * sınırı ilk saniyede tüketip tüm piyasayı hataya çeviriyordu.
- *
- * Bunun yerine her istekte bütçe kadar YENİ sembol çekilir, gerisi atlanır.
- * Mumlar uzun süre önbelleklendiği için liste birkaç sayfa açılışında dolar
- * ve sonrasında önbellekten gelir. Yarım liste, boş listeden iyidir.
- *
- * Bütçenin tamamı toplu listeye gitmez: kullanıcı listeden bir varlığa
- * tıkladığında o sembolün mumları tek tek isteniyor. Liste bütçeyi tümüyle
- * yerse detay sayfası hep "kota doldu" derdi. Bu yüzden birkaç kredi tekil
- * isteklere ayrılır.
- */
-const KREDI_PENCERESI_MS = 60_000;
-const KREDI_LIMITI = Math.max(1, Number(process.env.TWELVEDATA_CREDITS_PER_MIN ?? 8));
-const TOPLU_PAY = Math.max(1, KREDI_LIMITI - 2);
-
-let pencereBasi = 0;
-let kullanilan = 0;
-
-/** İstenen kadar kredi ayırmayı dener; ayrılabilen sayıyı döndürür. */
-export function krediAyir(adet: number): number {
-  const simdi = Date.now();
-  if (simdi - pencereBasi > KREDI_PENCERESI_MS) {
-    pencereBasi = simdi;
-    kullanilan = 0;
-  }
-  const verilen = Math.min(adet, Math.max(0, KREDI_LIMITI - kullanilan));
-  kullanilan += verilen;
-  return verilen;
-}
-
-/** Testler için bütçeyi sıfırlar. */
-export function krediSifirla(): void {
-  pencereBasi = 0;
-  kullanilan = 0;
 }
 
 /* ────────────────────────── Sembol eşlemesi ────────────────────────── */
@@ -236,12 +197,6 @@ export async function fetchTwelveCandles(
   const periyot = INTERVAL_MAP[interval];
   if (!hedef || !periyot) throw new MarketDataError("Bu sembol/periyot desteklenmiyor.", 400);
 
-  // Bütçe dolduysa isteği hiç atma: sağlayıcıdan 429 almak yerine sırayı
-  // bir sonraki dakikaya bırak.
-  if (krediAyir(1) < 1) {
-    throw new MarketDataError("Dakikalık veri kotası doldu, birazdan tekrar deneyin.", 429);
-  }
-
   const govde = await iste<SeriesGovde>(
     `/time_series?symbol=${encodeURIComponent(hedef)}&interval=${periyot}` +
       `&outputsize=${Math.min(limit, 5000)}${borsaParametresi(market)}`,
@@ -304,13 +259,9 @@ export async function fetchTwelveBatch(
   }
   if (eslesme.size === 0) return new Map();
 
-  // Bütçe kadar sembol istenir; gerisi bu turda atlanır.
-  const tumHedefler = [...eslesme.keys()];
-  const butce = krediAyir(Math.min(tumHedefler.length, TOPLU_PAY));
-  if (butce < 1) {
-    throw new MarketDataError("Dakikalık veri kotası doldu, birazdan tekrar deneyin.", 429);
-  }
-  const hedefler = tumHedefler.slice(0, butce);
+  // Kaç sembol isteneceğine çağıran karar verir (bkz. `kota.ts`): kredi
+  // bütçesi sunucular arasında paylaşıldığı için burada sayılmaz.
+  const hedefler = [...eslesme.keys()];
 
   const PARCA = 8; // tek isteğe sığdırılan sembol sayısı
   const sonuc = new Map<string, Candle[]>();

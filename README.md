@@ -193,11 +193,25 @@ piyasalarda "seans kapalı olabilir" riski eklenir.
   BIST'te 43 sembol olduğu için hepsini bir anda istemek kotayı ilk saniyede tüketiyor ve
   piyasanın tamamını hataya çeviriyordu. Uygulama bunu üç şekilde çözer:
 
-  1. **Bütçe:** her dakika yalnızca bütçe kadar YENİ sembol istenir, gerisi bir sonraki tura
+  1. **Kısa hazır liste:** panel ve piyasa sayfaları her piyasadan yalnızca ilk birkaç
+     enstrümanı gösterir (`MARKETS[...].listSize`: ABD 12, BIST 12, döviz/emtia 20). Listede
+     olmayan varlıklar kaybolmaz — arama kutusundan bulunur ve açıldığında o an analiz edilir
+     (tek sembol = tek kredi). 46 sembollük bir liste kotaya sığmıyordu ve ekran tümüyle boş
+     kalıyordu; 12 sembol iki turda dolar.
+  2. **Paylaşımlı kredi sayacı:** kredi bütçesi veritabanında, atomik olarak tutulur
+     (`piyasa_kota` tablosu, `lib/markets/kota.ts`). Sunucusuz ortamda aynı anda birkaç örnek
+     çalışıyor; her biri kendi belleğinde "8 kredim var" diye sayınca sağlayıcıya sınırın katı
+     kadar istek gidiyor ve hepsi 429 dönüyordu. Sayaç paylaşılınca toplam sınır aşılmaz.
+     Sağlayıcı yine de kotayı reddederse blok da paylaşılır: bir örneğin öğrendiği geri
+     çekilmeyi hepsi uygular. Kendi bütçemizin bitmesi ise sağlayıcı hatası sayılmaz, yoksa
+     uygulama kendi kendini aç bırakırdı.
+  3. **Piyasa başına pay:** tek bir piyasa bütçenin tamamını yiyemez; üç piyasa da her turda
+     ilerler ve birkaç dakikada dolar.
+  4. **Bütçe:** her dakika yalnızca bütçe kadar YENİ sembol istenir, gerisi bir sonraki tura
      bırakılır (`TWELVEDATA_CREDITS_PER_MIN`). Yarım liste, boş listeden iyidir.
-  2. **Tek kredi, iki iş:** liste ayrı bir fiyat isteği atmaz; tam mum serisi çekilir, fiyat
+  5. **Tek kredi, iki iş:** liste ayrı bir fiyat isteği atmaz; tam mum serisi çekilir, fiyat
      son iki mumdan türetilir. Aynı kredi hem tabloyu hem grafiği/analizi doldurur.
-  3. **Paylaşımlı önbellek:** mumlar Postgres'te (`piyasa_onbellek` tablosu) dört saat
+  6. **Paylaşımlı önbellek:** mumlar Postgres'te (`piyasa_onbellek` tablosu) dört saat
      saklanır. Sunucusuz örnekler birbirinin belleğini görmediği ve soğuk başlangıçta bellek
      silindiği için tek başına bellek içi önbellek kotayı boşa harcıyordu; paylaşımlı
      önbellekle bir ziyaretçinin doldurduğu semboller herkese açık hâle gelir.
