@@ -14,7 +14,13 @@ import {
   type Interval,
 } from "./types";
 
-const HOSTS = ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"];
+/**
+ * Sağlayıcı adresleri. `MARKET_API_BASE` tanımlıysa yalnızca o kullanılır;
+ * testlerde ve kapalı ağlarda sahte bir sunucuya yönlendirmeyi sağlar.
+ */
+const HOSTS = process.env.MARKET_API_BASE
+  ? [process.env.MARKET_API_BASE]
+  : ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"];
 
 // Yahoo, tarayıcı benzeri bir User-Agent olmadan bazı isteklere yanıt vermez.
 const HEADERS = {
@@ -25,7 +31,40 @@ const HEADERS = {
 
 let lastGoodHost: string | null = null;
 
-async function request<T>(path: string, timeoutMs = 12_000): Promise<T> {
+/**
+ * Hız sınırına takılınca kısa süre bekleyip yeniden dener.
+ *
+ * Yahoo 429'u ani yük sonrası birkaç yüz milisaniyede bırakabiliyor; tek bir
+ * yavaş isteği beklemek, tüm taramayı hata ile bitirmekten iyidir. Deneme
+ * sayısı bilinçli olarak düşük: sunucusuz ortamda istek süresi sınırlıdır.
+ */
+const RETRY_DELAYS_MS = [400, 1200];
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/* ── Devre kesici ──────────────────────────────────────────────────
+ *
+ * Hız sınırına takıldığımızda yapılabilecek en kötü şey daha çok istek
+ * atmaktır: 60 sembollük bir taramada her biri ayrı ayrı yeniden denenir,
+ * hem sağlayıcı daha da kızar hem de istek dakikalarca sürer. Bir kez 429
+ * gördükten sonra kısa bir süre boyunca ağa hiç çıkmadan aynı hatayı
+ * döndürürüz; bekleme bitince normale dönülür.
+ */
+const COOLDOWN_MS = 30_000;
+let blockedUntil = 0;
+
+const RATE_LIMIT_MESSAGE = "Veri sağlayıcı istek limitine takıldı, birazdan tekrar deneyin.";
+
+/** Testler için: devre kesiciyi sıfırlar. */
+export function resetRateLimitState(): void {
+  blockedUntil = 0;
+}
+
+export function rateLimitedUntil(): number {
+  return blockedUntil;
+}
+
+async function requestOnce<T>(path: string, timeoutMs: number): Promise<T> {
   const hosts = lastGoodHost ? [lastGoodHost, ...HOSTS.filter((h) => h !== lastGoodHost)] : HOSTS;
   let lastError: unknown = null;
 
@@ -43,7 +82,7 @@ async function request<T>(path: string, timeoutMs = 12_000): Promise<T> {
         throw new MarketDataError("Sembol bulunamadı.", 404);
       }
       if (response.status === 429) {
-        throw new MarketDataError("Veri sağlayıcı istek limitine takıldı, birazdan tekrar deneyin.", 429);
+        throw new MarketDataError(RATE_LIMIT_MESSAGE, 429);
       }
       if (!response.ok) throw new MarketDataError(`Veri sağlayıcı yanıtı: ${response.status}`, 502);
 
@@ -61,6 +100,27 @@ async function request<T>(path: string, timeoutMs = 12_000): Promise<T> {
     `Piyasa verisine ulaşılamadı (${lastError instanceof Error ? lastError.message : "bilinmeyen hata"}).`,
     503,
   );
+}
+
+async function request<T>(path: string, timeoutMs = 12_000): Promise<T> {
+  // Bekleme süresi dolmadıysa ağa hiç çıkma.
+  if (Date.now() < blockedUntil) throw new MarketDataError(RATE_LIMIT_MESSAGE, 429);
+
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await requestOnce<T>(path, timeoutMs);
+    } catch (error) {
+      const rateLimited = error instanceof MarketDataError && error.status === 429;
+      if (!rateLimited) throw error;
+      if (attempt >= RETRY_DELAYS_MS.length) {
+        // Yeniden denemeler de yetmedi: bir süre tamamen geri çekil.
+        blockedUntil = Date.now() + COOLDOWN_MS;
+        throw error;
+      }
+      await sleep(RETRY_DELAYS_MS[attempt]);
+      if (Date.now() < blockedUntil) throw error;
+    }
+  }
 }
 
 /* ────────────────────────── Mum verisi ────────────────────────── */
@@ -212,9 +272,92 @@ export type YahooQuote = {
   name: string | null;
 };
 
+/* ── Toplu fiyat: spark ────────────────────────────────────────────
+ *
+ * `/v7/finance/quote` artık oturum çerezi (crumb) istiyor ve çoğu zaman
+ * reddediliyor. Bunun yerine tek istekte çok sembol dönen `spark` uç noktası
+ * kullanılır: 60 sembol için 60 değil 1 istek demektir; hız sınırına
+ * takılmanın başlıca sebebi buydu.
+ */
+
+type SparkResponse = {
+  spark?: {
+    result?: {
+      symbol: string;
+      response?: {
+        meta?: {
+          symbol?: string;
+          currency?: string;
+          regularMarketPrice?: number;
+          previousClose?: number;
+          chartPreviousClose?: number;
+          regularMarketDayHigh?: number;
+          regularMarketDayLow?: number;
+          regularMarketVolume?: number;
+          shortName?: string;
+          longName?: string;
+        };
+        indicators?: { quote?: { close?: (number | null)[] }[] };
+      }[];
+    }[];
+  };
+};
+
+/** Spark yanıtını fiyat listesine çevirir. Ağdan bağımsızdır (test edilebilir). */
+export function parseSpark(body: SparkResponse): YahooQuote[] {
+  const out: YahooQuote[] = [];
+
+  for (const entry of body.spark?.result ?? []) {
+    const meta = entry.response?.[0]?.meta;
+    if (!meta) continue;
+
+    const closes = (entry.response?.[0]?.indicators?.quote?.[0]?.close ?? []).filter(
+      (value): value is number => typeof value === "number",
+    );
+    const price = meta.regularMarketPrice ?? closes[closes.length - 1];
+    if (typeof price !== "number") continue;
+
+    const previousClose = meta.previousClose ?? meta.chartPreviousClose ?? closes[0] ?? price;
+    out.push({
+      symbol: meta.symbol ?? entry.symbol,
+      price,
+      previousClose,
+      changePercent: previousClose === 0 ? 0 : ((price - previousClose) / previousClose) * 100,
+      // Spark gün içi uç değerleri vermiyor; seriden türetilir.
+      high: meta.regularMarketDayHigh ?? (closes.length ? Math.max(...closes) : price),
+      low: meta.regularMarketDayLow ?? (closes.length ? Math.min(...closes) : price),
+      volume: meta.regularMarketVolume ?? 0,
+      currency: meta.currency ?? null,
+      name: meta.longName ?? meta.shortName ?? null,
+    });
+  }
+
+  return out;
+}
+
+/** Tek istekte birçok sembolün fiyatı. Sembol sayısı fazlaysa parçalara böler. */
+export async function fetchSparkQuotes(symbols: string[]): Promise<YahooQuote[]> {
+  if (symbols.length === 0) return [];
+
+  const CHUNK = 40; // uzun URL'ler reddedilebiliyor
+  const chunks: string[][] = [];
+  for (let i = 0; i < symbols.length; i += CHUNK) chunks.push(symbols.slice(i, i + CHUNK));
+
+  const results: YahooQuote[] = [];
+  for (const chunk of chunks) {
+    const body = await request<SparkResponse>(
+      `/v8/finance/spark?symbols=${encodeURIComponent(chunk.join(","))}&range=1d&interval=5m`,
+    );
+    results.push(...parseSpark(body));
+  }
+
+  if (results.length === 0) throw new MarketDataError("Toplu fiyat sorgusu boş döndü.", 502);
+  return results;
+}
+
 /**
- * Toplu fiyat sorgusu. Bu uç nokta zaman zaman oturum çerezi ister; başarısız
- * olursa çağıran taraf mum verisinden fiyat üretmeye düşer (bkz. `provider.ts`).
+ * Eski toplu fiyat uç noktası. Oturum çerezi istediği için çoğu ortamda
+ * çalışmaz; `fetchSparkQuotes` başarısız olursa denenir.
  */
 export async function fetchQuotes(symbols: string[]): Promise<YahooQuote[]> {
   if (symbols.length === 0) return [];

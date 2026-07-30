@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { analyze } from "@/lib/analysis";
 import type { ScanRow } from "@/lib/api-types";
 import { displayTicker } from "@/lib/markets/instruments";
-import { getCandles, getQuotes, mapWithLimit } from "@/lib/markets/provider";
+import { getCandles, getInstruments, getQuotes, mapWithLimit } from "@/lib/markets/provider";
 import {
   isInterval,
   isMarketId,
@@ -21,8 +21,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** Sağlayıcıyı boğmamak için aynı anda en fazla bu kadar istek. */
-const CONCURRENCY = 6;
+/**
+ * Aynı anda en fazla kaç istek. Kripto sağlayıcısı yüksek hacme dayanıklıdır;
+ * Yahoo tarafı çok daha çabuk hız sınırı uygular, bu yüzden daha yavaş gidilir.
+ */
+const CONCURRENCY = { kripto: 6, diger: 3 } as const;
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -93,7 +96,7 @@ export async function GET(request: Request) {
           volume: quote?.volume ?? 0,
         };
       });
-    } else {
+    } else if (marketParam === "kripto") {
       const { quotes, source: quoteSource } = await getQuotes(marketParam, limit);
       source = quoteSource;
       targets = quotes.slice(0, limit).map((quote) => ({
@@ -101,6 +104,17 @@ export async function GET(request: Request) {
         price: quote.price,
         changePercent: quote.changePercent,
         volume: quote.volume,
+      }));
+    } else {
+      // Kripto dışı piyasalarda fiyat listesi ayrıca çekilmez: taramada zaten
+      // her sembolün mumları alınıyor, fiyat ve değişim oradan türetilir.
+      // Aksi hâlde sembol başına iki istek atılır ve sağlayıcı hız sınırına
+      // takılır (60 varlık = 120 istek).
+      targets = (await getInstruments(marketParam, limit)).slice(0, limit).map((instrument) => ({
+        instrument,
+        price: 0,
+        changePercent: 0,
+        volume: 0,
       }));
     }
 
@@ -115,7 +129,10 @@ export async function GET(request: Request) {
       });
     }
 
-    const rows = await mapWithLimit(targets, CONCURRENCY, async (target): Promise<ScanRow | null> => {
+    const concurrency = marketParam === "kripto" && !idsParam ? CONCURRENCY.kripto : CONCURRENCY.diger;
+    // Hepsi başarısız olursa kullanıcıya boş tablo değil sebep gösterilir.
+    let firstFailure: unknown = null;
+    const rows = await mapWithLimit(targets, concurrency, async (target): Promise<ScanRow | null> => {
       const { instrument } = target;
       // Bu piyasada desteklenmeyen periyot için en yakın desteklenene düş.
       const supported = MARKETS[instrument.market].intervals;
@@ -129,6 +146,8 @@ export async function GET(request: Request) {
           250,
         );
         const analysis = analyze(instrument, effective, candles, candleSource);
+        if (candleSource === "demo") source = "demo";
+        const last = candles[candles.length - 1];
         return {
           id: instrument.id,
           market: instrument.market,
@@ -138,7 +157,8 @@ export async function GET(request: Request) {
           currency: instrument.currency,
           price: target.price || analysis.price,
           changePercent: target.changePercent || analysis.changePercent,
-          volume: target.volume,
+          // Fiyat listesi çekilmediğinde hacim son mumdan gelir.
+          volume: target.volume || last.quoteVolume,
           signal: analysis.signal,
           score: analysis.score,
           confidence: analysis.confidence,
@@ -148,13 +168,15 @@ export async function GET(request: Request) {
           trendLabelKey: analysis.trendStrength.labelKey,
           patterns: analysis.patterns.map((p) => p.id),
         };
-      } catch {
-        // Tek bir varlık düşerse tarama devam etsin.
+      } catch (error) {
+        // Tek bir varlık düşerse tarama devam etsin; sebebi yine de sakla.
+        firstFailure ??= error;
         return null;
       }
     });
 
     const clean = rows.filter((row): row is ScanRow => row !== null);
+    if (clean.length === 0 && firstFailure) throw firstFailure;
     clean.sort((a, b) => b.score - a.score);
 
     return NextResponse.json({

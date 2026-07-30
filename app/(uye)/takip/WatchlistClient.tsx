@@ -42,6 +42,7 @@ export default function WatchlistClient({
           ),
         );
       } catch (caught) {
+        setData(null);
         setError(caught instanceof Error ? caught.message : t("common.error"));
       } finally {
         setLoading(false);

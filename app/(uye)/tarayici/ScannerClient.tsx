@@ -58,6 +58,9 @@ export default function ScannerClient({
         ),
       );
     } catch (caught) {
+      // Eski sonuçlar durursa başlık yeni piyasayı, tablo eskisini gösterir;
+      // yanlış piyasanın varlıklarını göstermektense boş kalmak doğrudur.
+      setData(null);
       setError(caught instanceof Error ? caught.message : t("common.error"));
     } finally {
       setLoading(false);

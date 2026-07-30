@@ -17,6 +17,7 @@ import {
   US_INSTRUMENTS,
 } from "../lib/markets/instruments";
 import { normalizeSymbol } from "../lib/markets/provider";
+import { fetchChart, parseSpark, rateLimitedUntil, resetRateLimitState } from "../lib/markets/yahoo";
 import {
   aggregateCandles,
   instrumentId,
@@ -124,6 +125,60 @@ test("mum toplama 4 saatlik mumu doğru üretir", () => {
   assert.equal(aggregateCandles(base, 1).length, base.length);
 });
 
+test("toplu fiyat yanıtı tek istekten çözümlenir", () => {
+  // Sağlayıcının döndüğü biçim; eksik alanlar bilinçli olarak boş bırakıldı.
+  const parsed = parseSpark({
+    spark: {
+      result: [
+        {
+          symbol: "AAPL",
+          response: [
+            {
+              meta: {
+                symbol: "AAPL",
+                currency: "USD",
+                regularMarketPrice: 220,
+                previousClose: 200,
+                regularMarketVolume: 1_000,
+              },
+              indicators: { quote: [{ close: [201, 215, 220] }] },
+            },
+          ],
+        },
+        {
+          // Fiyat alanı yoksa seriden türetilmeli.
+          symbol: "GC=F",
+          response: [
+            {
+              meta: { symbol: "GC=F", currency: "USD" },
+              indicators: { quote: [{ close: [2400, null, 2460] }] },
+            },
+          ],
+        },
+        // Kullanılabilir hiçbir veri yoksa atlanmalı, çökmemeli.
+        { symbol: "BOS", response: [] },
+      ],
+    },
+  });
+
+  assert.equal(parsed.length, 2, "veri taşıyan iki sembol dönmeli");
+
+  const apple = parsed[0];
+  assert.equal(apple.symbol, "AAPL");
+  assert.equal(apple.price, 220);
+  assert.equal(apple.previousClose, 200);
+  assert.equal(Math.round(apple.changePercent), 10);
+  assert.equal(apple.high, 220, "uç değerler seriden gelmeli");
+  assert.equal(apple.low, 201);
+
+  const gold = parsed[1];
+  assert.equal(gold.price, 2460, "fiyat serinin son değeri olmalı");
+  assert.equal(gold.previousClose, 2400, "önceki kapanış serinin ilk değeri olmalı");
+  assert.ok(gold.changePercent > 0);
+
+  assert.deepEqual(parseSpark({}), [], "boş yanıt boş liste vermeli");
+});
+
 test("demo veri deterministik ve tutarlıdır", () => {
   const first = demoCandles("AAPL", "1d", 60);
   const second = demoCandles("AAPL", "1d", 60);
@@ -152,4 +207,38 @@ test("demo veri deterministik ve tutarlıdır", () => {
   assert.ok(demoBasePrice("GC=F") > 1000, "altın fiyatı dört haneli olmalı");
   assert.ok(demoBasePrice("USDTRY=X") > 10);
   assert.ok(demoBasePrice("BILINMEYEN") > 0);
+});
+
+test("hız sınırında sağlayıcıya daha çok istek atılmaz", async () => {
+  // Gerçek ağa çıkmadan devre kesiciyi ölç: sağlayıcı hep 429 dönüyor.
+  const gercekFetch = globalThis.fetch;
+  let istek = 0;
+  globalThis.fetch = (async () => {
+    istek++;
+    return new Response("{}", { status: 429 });
+  }) as typeof fetch;
+
+  try {
+    resetRateLimitState();
+
+    // İlk çağrı yeniden dener (1 + 2 deneme), sonra devreyi açar.
+    await assert.rejects(() => fetchChart("AAPL", "1d", 10), /istek limitine/);
+    const ilkTur = istek;
+    assert.ok(ilkTur <= 6, `ilk turda beklenenden çok istek: ${ilkTur}`);
+    assert.ok(rateLimitedUntil() > Date.now(), "devre kesici açılmalı");
+
+    // Sonraki çağrılar ağa hiç çıkmamalı.
+    for (let i = 0; i < 10; i++) {
+      await assert.rejects(() => fetchChart(`SYM${i}`, "1d", 10), /istek limitine/);
+    }
+    assert.equal(istek, ilkTur, "devre açıkken yeni istek atılmamalı");
+
+    // Bekleme bitince yeniden denenmeli.
+    resetRateLimitState();
+    await assert.rejects(() => fetchChart("AAPL", "1d", 10), /istek limitine/);
+    assert.ok(istek > ilkTur, "bekleme sonrası tekrar denenmeli");
+  } finally {
+    globalThis.fetch = gercekFetch;
+    resetRateLimitState();
+  }
 });

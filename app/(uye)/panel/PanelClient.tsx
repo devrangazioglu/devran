@@ -59,6 +59,8 @@ export default function PanelClient({
     try {
       setMarkets(await getJson<MarketsResponse>(`/api/markets?market=${selected}&limit=40`));
     } catch (error) {
+      // Seçilen piyasa değiştiği için eski liste artık yanlış piyasaya ait.
+      setMarkets(null);
       setMarketError(error instanceof Error ? error.message : t("common.error"));
     } finally {
       setLoadingMarkets(false);
@@ -76,6 +78,7 @@ export default function PanelClient({
           ),
         );
       } catch (error) {
+        setScan(null);
         setScanError(error instanceof Error ? error.message : t("common.error"));
       } finally {
         setLoadingScan(false);

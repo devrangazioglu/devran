@@ -30,7 +30,7 @@ import {
   type MarketId,
   type Quote,
 } from "./types";
-import { fetchChart, fetchQuotes, searchSymbols } from "./yahoo";
+import { fetchChart, fetchQuotes, fetchSparkQuotes, searchSymbols } from "./yahoo";
 
 /* ────────────────────────── Önbellek ────────────────────────── */
 
@@ -112,13 +112,23 @@ export async function getInstruments(market: MarketId, limit = 60): Promise<Inst
 
 export type QuoteList = { quotes: Quote[]; source: DataSource; updatedAt: number };
 
-/** Yahoo tarafındaki enstrümanlar için fiyat listesi. */
+/** Toplu sorgu çalışmadığında sembol başına kaç istek atılacağının üst sınırı. */
+const PER_SYMBOL_FALLBACK_LIMIT = 24;
+
+/**
+ * Yahoo tarafındaki enstrümanlar için fiyat listesi.
+ *
+ * Sıra önemlidir: önce tek istekte çok sembol dönen `spark`, sonra eski toplu
+ * uç nokta, en son sembol başına mum sorgusu. Sonuncusu 60 sembol için 60
+ * istek demek olduğundan hız sınırını hızla tüketir; bu yüzden hem son çare
+ * hem de sayıca sınırlıdır.
+ */
 async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
   const symbols = instruments.map((i) => i.symbol);
   const bySymbol = new Map(instruments.map((i) => [i.symbol, i]));
 
   try {
-    const rows = await fetchQuotes(symbols);
+    const rows = await fetchSparkQuotes(symbols).catch(() => fetchQuotes(symbols));
     const quotes: Quote[] = [];
     for (const row of rows) {
       const instrument = bySymbol.get(row.symbol);
@@ -140,8 +150,9 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     if (quotes.length > 0) return { quotes, source: "canli", updatedAt: Date.now() };
     throw new MarketDataError("Fiyat listesi boş döndü.", 502);
   } catch (error) {
-    // Toplu sorgu çalışmazsa günlük mumlardan fiyat üret (uç nokta oturum isteyebiliyor).
-    const quotes = await mapWithLimit(instruments, 6, async (instrument) => {
+    // Toplu sorguların ikisi de çalışmazsa günlük mumlardan fiyat üretilir.
+    // Sağlayıcıyı boğmamak için hem az eşzamanlılık hem de sembol üst sınırı var.
+    const quotes = await mapWithLimit(instruments.slice(0, PER_SYMBOL_FALLBACK_LIMIT), 3, async (instrument) => {
       try {
         const chart = await fetchChart(instrument.symbol, "1d", 5);
         const candles = chart.candles;
@@ -280,7 +291,9 @@ export async function getCandles(
       candles: chart.candles,
       source: "canli",
     };
-    writeCache(key, result, 60_000);
+    // Hisse/emtia verisi kriptoya göre yavaş değişir; uzun önbellek hem
+    // sayfayı hızlandırır hem de sağlayıcı hız sınırından korur.
+    writeCache(key, result, 180_000);
     return result;
   } catch (error) {
     if (demoEnabled() && (!(error instanceof MarketDataError) || error.status >= 500)) {
