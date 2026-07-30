@@ -112,8 +112,15 @@ export async function getInstruments(market: MarketId, limit = 60): Promise<Inst
 
 export type QuoteList = { quotes: Quote[]; source: DataSource; updatedAt: number };
 
-/** Toplu sorgu çalışmadığında sembol başına kaç istek atılacağının üst sınırı. */
-const PER_SYMBOL_FALLBACK_LIMIT = 24;
+/**
+ * Toplu sorgu çalışmadığında sembol başına kaç istek atılacağının üst sınırı.
+ *
+ * En kalabalık piyasayı (ABD, 46 enstrüman) kapsayacak kadar geniş: aksi hâlde
+ * sağlayıcı sağlıklıyken bile piyasa sayfası sessizce yarım listelenirdi.
+ * İstek fırtınasına karşı asıl koruma bu sınır değil, hız sınırı görülünce
+ * devreye giren geri çekilmedir (bkz. `yahoo.ts`).
+ */
+const PER_SYMBOL_FALLBACK_LIMIT = 60;
 
 /**
  * Yahoo tarafındaki enstrümanlar için fiyat listesi.
@@ -248,7 +255,7 @@ export async function getQuotes(market: MarketId, limit = 60): Promise<QuoteList
     return b.volume - a.volume;
   });
 
-  writeCache(key, result, market === "kripto" ? 20_000 : 60_000);
+  writeCache(key, result, market === "kripto" ? 20_000 : 180_000);
   return result;
 }
 
