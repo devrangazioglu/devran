@@ -188,8 +188,22 @@ piyasalarda "seans kapalı olabilir" riski eklenir.
 - **Yedekler:** Twelve Data yanıt vermezse sırayla Stooq ve Yahoo denenir. İkisi de
   engelliyse hata mesajı hangi kaynağın neden düştüğünü söyler.
 
-  Ücretsiz katmanın günlük kredisi sınırlı olduğundan günlük mumlar bir saat, kur verisi
-  15 dakika önbelleklenir ve toplu sorgu kullanılır (tek istekte sekiz sembol).
+- **Ücretsiz katmanın kotasıyla yaşamak:** Twelve Data'nın ücretsiz katmanı dakikada
+  yaklaşık 8, günde 800 "kredi" verir ve her sembol bir kredi harcar. ABD listesinde 46,
+  BIST'te 43 sembol olduğu için hepsini bir anda istemek kotayı ilk saniyede tüketiyor ve
+  piyasanın tamamını hataya çeviriyordu. Uygulama bunu üç şekilde çözer:
+
+  1. **Bütçe:** her dakika yalnızca bütçe kadar YENİ sembol istenir, gerisi bir sonraki tura
+     bırakılır (`TWELVEDATA_CREDITS_PER_MIN`). Yarım liste, boş listeden iyidir.
+  2. **Tek kredi, iki iş:** liste ayrı bir fiyat isteği atmaz; tam mum serisi çekilir, fiyat
+     son iki mumdan türetilir. Aynı kredi hem tabloyu hem grafiği/analizi doldurur.
+  3. **Paylaşımlı önbellek:** mumlar Postgres'te (`piyasa_onbellek` tablosu) dört saat
+     saklanır. Sunucusuz örnekler birbirinin belleğini görmediği ve soğuk başlangıçta bellek
+     silindiği için tek başına bellek içi önbellek kotayı boşa harcıyordu; paylaşımlı
+     önbellekle bir ziyaretçinin doldurduğu semboller herkese açık hâle gelir.
+
+  Sonuç: piyasa sayfası ilk açılışta kısmi gelir, panel dakikada bir kendiliğinden tazeler ve
+  liste birkaç dakikada tamamlanıp öyle kalır.
 - **Demo veri:** `DEMO_DATA=1` iken sağlayıcıya erişilemezse tohumlanmış (deterministik)
   sentetik seriler üretilir ve arayüzde açıkça "demo veri" olarak işaretlenir.
 

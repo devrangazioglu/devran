@@ -30,6 +30,7 @@ import {
   type MarketId,
   type Quote,
 } from "./types";
+import { paylasilanOku, paylasilanYaz } from "./cache-store";
 import { fetchFxCandles, fetchFxQuotes, parseFxPair } from "./frankfurter";
 import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol, toStooqSymbols } from "./stooq";
 import { fetchTwelveBatch, fetchTwelveCandles, twelveDataEnabled } from "./twelvedata";
@@ -51,7 +52,7 @@ function readCache<T>(key: string): T | null {
 }
 
 function writeCache(key: string, value: unknown, ttlMs: number) {
-  if (cache.size > 400) {
+  if (cache.size > 800) {
     for (const [k, v] of cache) if (v.expires < Date.now()) cache.delete(k);
   }
   cache.set(key, { expires: Date.now() + ttlMs, value });
@@ -128,6 +129,78 @@ function hataOzeti(error: unknown): string {
 
 export type QuoteList = { quotes: Quote[]; source: DataSource; updatedAt: number };
 
+/* ──────────────── Paylaşımlı mum önbelleği ────────────────
+ *
+ * Kripto dışı her piyasa aynı ücretsiz katmandan besleniyor: dakikada birkaç,
+ * günde birkaç yüz sembol. Bu yüzden veri iki yerde birden ekonomik tutulur:
+ *
+ *   • Anahtar periyot başına tek: `candles:piyasa:sembol:periyot`. İstenen mum
+ *     sayısı anahtara girmez, yoksa aynı sembol 250 ve 300 mum için iki kez
+ *     çekilirdi (iki kredi, aynı veri).
+ *   • Fiyat listesi ayrı bir istek atmaz; son iki mumdan türetilir. Böylece bir
+ *     kredi hem tabloyu hem grafiği doldurur.
+ *
+ * Önbellek Postgres'te paylaşılır: sunucusuz örnekler birbirinin belleğini
+ * görmediği ve soğuk başlangıçta bellek silindiği için, tek başına bellek
+ * kotayı boşa harcıyor ve liste hiç dolmuyordu.
+ */
+
+/** Günlük mum gün içinde ancak bir kez değişir; kotayı korumak için uzun tutulur. */
+const GUNLUK_TTL_MS = 4 * 60 * 60_000;
+const GUN_ICI_TTL_MS = 5 * 60_000;
+
+/** Kripto dışı sağlayıcıdan her zaman bu kadar mum istenir (kredi aynı). */
+const TAM_MUM = 300;
+
+function candleCacheKey(market: MarketId, symbol: string, interval: Interval): string {
+  return `candles:${market}:${symbol}:${interval}`;
+}
+
+/** Bellek → paylaşımlı önbellek sırasıyla okur, bulduğunu belleğe de yazar. */
+async function paylasimliOku<T>(keys: string[]): Promise<Map<string, T>> {
+  const out = new Map<string, T>();
+  const eksik: string[] = [];
+
+  for (const key of keys) {
+    const mem = readCache<T>(key);
+    if (mem) out.set(key, mem);
+    else eksik.push(key);
+  }
+  if (eksik.length === 0) return out;
+
+  for (const [key, kayit] of await paylasilanOku<T>(eksik)) {
+    writeCache(key, kayit.deger, Math.max(1_000, kayit.biter - Date.now()));
+    out.set(key, kayit.deger);
+  }
+  return out;
+}
+
+async function paylasimliYaz(key: string, value: unknown, ttlMs: number): Promise<void> {
+  writeCache(key, value, ttlMs);
+  await paylasilanYaz(key, value, ttlMs);
+}
+
+/** Mumlardan fiyat satırı türetir; ayrı bir kotasyon isteği harcamaz. */
+function quoteFromCandles(instrument: Instrument, set: CandleSet): Quote | null {
+  const candles = set.candles;
+  if (candles.length === 0) return null;
+
+  const son = candles[candles.length - 1];
+  const onceki = candles[candles.length - 2] ?? son;
+  return {
+    ...instrument,
+    price: son.close,
+    previousClose: onceki.close,
+    changePercent: onceki.close === 0 ? 0 : ((son.close - onceki.close) / onceki.close) * 100,
+    high: son.high,
+    low: son.low,
+    volume: son.quoteVolume,
+    // Verinin gerçek tazeliği gösterilsin; önbellekten geleni "şimdi" saymak
+    // kullanıcıya yanlış bilgi olurdu.
+    updatedAt: set.fetchedAt ?? Date.now(),
+  };
+}
+
 /**
  * Toplu sorgu çalışmadığında sembol başına kaç istek atılacağının üst sınırı.
  *
@@ -147,11 +220,30 @@ const PER_SYMBOL_FALLBACK_LIMIT = 60;
  * hem de sayıca sınırlıdır.
  */
 async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
-  const symbols = instruments.map((i) => i.symbol);
   const bySymbol = new Map(instruments.map((i) => [i.symbol, i]));
 
   const toplanan: Quote[] = [];
   let kalan = instruments;
+
+  // Önce önbellekteki günlük mumlar: kota harcamadan fiyat verirler.
+  // Liste tek anahtarda tutulsaydı, kredi bütçesi yüzünden yarım kalan liste
+  // olduğu gibi saklanır ve her tazelemede yine aynı ilk semboller istenirdi —
+  // liste hiç dolmazdı. Sembol başına saklayınca dolmuş semboller sıradan
+  // çıkar, bütçe her turda YENİ sembollere harcanır ve liste birkaç turda
+  // tamamlanır; üstelik dolduran ziyaretçi tek kişi olsa bile herkese açılır.
+  const onbellekli = await paylasimliOku<CandleSet>(
+    instruments.map((i) => candleCacheKey(i.market, i.symbol, "1d")),
+  );
+  for (const instrument of instruments) {
+    const set = onbellekli.get(candleCacheKey(instrument.market, instrument.symbol, "1d"));
+    const quote = set ? quoteFromCandles(instrument, set) : null;
+    if (quote) toplanan.push(quote);
+  }
+  if (toplanan.length > 0) {
+    const gelenler = new Set(toplanan.map((q) => q.symbol));
+    kalan = kalan.filter((i) => !gelenler.has(i.symbol));
+    if (kalan.length === 0) return { quotes: toplanan, source: "canli", updatedAt: Date.now() };
+  }
 
   // Dövizler: anahtarsız çalışan tek kaynak. Taban para birimi başına tek istek.
   const fxSemboller = kalan.filter((i) => parseFxPair(i.symbol));
@@ -159,10 +251,11 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     try {
       const satirlar = await fetchFxQuotes(fxSemboller.map((i) => i.symbol));
       const bySymbol = new Map(fxSemboller.map((i) => [i.symbol, i]));
+      const yeni: Quote[] = [];
       for (const satir of satirlar) {
         const instrument = bySymbol.get(satir.symbol);
         if (!instrument) continue;
-        toplanan.push({
+        yeni.push({
           ...instrument,
           price: satir.price,
           previousClose: satir.previousClose,
@@ -177,7 +270,8 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
           updatedAt: Date.now(),
         });
       }
-      const gelenler = new Set(toplanan.map((q) => q.symbol));
+      toplanan.push(...yeni);
+      const gelenler = new Set(yeni.map((q) => q.symbol));
       kalan = kalan.filter((i) => !gelenler.has(i.symbol));
     } catch {
       // Kur kaynağı düşerse aşağıdaki sağlayıcılar denenir.
@@ -188,26 +282,35 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
   // böylece ayrı bir kotasyon isteği harcanmaz.
   if (kalan.length > 0 && twelveDataEnabled()) {
     try {
-      const seriler = await fetchTwelveBatch(kalan[0].market, kalan.map((i) => i.symbol), "1d", 2);
+      // Fiyat için iki mum yeterdi ama tam seri de aynı krediye geliyor:
+      // aynı istek hem tabloyu hem grafik/analiz önbelleğini dolduruyor.
+      const seriler = await fetchTwelveBatch(
+        kalan[0].market,
+        kalan.map((i) => i.symbol),
+        "1d",
+        TAM_MUM,
+      );
       const bySymbol = new Map(kalan.map((i) => [i.symbol, i]));
+      const yeni: Quote[] = [];
       for (const [symbol, candles] of seriler) {
         const instrument = bySymbol.get(symbol);
         if (!instrument || candles.length === 0) continue;
-        const son = candles[candles.length - 1];
-        const onceki = candles[candles.length - 2] ?? son;
-        toplanan.push({
-          ...instrument,
-          price: son.close,
-          previousClose: onceki.close,
-          changePercent:
-            onceki.close === 0 ? 0 : ((son.close - onceki.close) / onceki.close) * 100,
-          high: son.high,
-          low: son.low,
-          volume: son.quoteVolume,
-          updatedAt: Date.now(),
-        });
+        const set: CandleSet = {
+          instrument,
+          candles,
+          source: "canli",
+          fetchedAt: Date.now(),
+        };
+        await paylasimliYaz(
+          candleCacheKey(instrument.market, instrument.symbol, "1d"),
+          set,
+          GUNLUK_TTL_MS,
+        );
+        const quote = quoteFromCandles(instrument, set);
+        if (quote) yeni.push(quote);
       }
-      const gelenler = new Set(toplanan.map((q) => q.symbol));
+      toplanan.push(...yeni);
+      const gelenler = new Set(yeni.map((q) => q.symbol));
       kalan = kalan.filter((i) => !gelenler.has(i.symbol));
     } catch {
       // Anahtar sorunluysa ya da kredi bittiyse eski kaynaklar denenir.
@@ -247,7 +350,9 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
           updatedAt: Date.now(),
         });
       }
-      if (quotes.length > 0) return { quotes, source: "canli", updatedAt: Date.now() };
+      if (quotes.length > 0) {
+        return { quotes: [...toplanan, ...quotes], source: "canli", updatedAt: Date.now() };
+      }
       stooqQuoteHatasi = "sonuç boş";
     } catch (error) {
       // Stooq çalışmazsa aşağıdaki Yahoo yolu denenir.
@@ -256,7 +361,10 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
   }
 
   try {
-    const rows = await fetchSparkQuotes(symbols).catch(() => fetchQuotes(symbols));
+    // Yalnızca eksik semboller sorulur: elde olanı yeniden istemek hem kotayı
+    // harcar hem de listede aynı varlığı iki kez gösterirdi.
+    const eksik = kalan.map((i) => i.symbol);
+    const rows = await fetchSparkQuotes(eksik).catch(() => fetchQuotes(eksik));
     const quotes: Quote[] = [];
     for (const row of rows) {
       const instrument = bySymbol.get(row.symbol);
@@ -275,7 +383,9 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
         updatedAt: Date.now(),
       });
     }
-    if (quotes.length > 0) return { quotes, source: "canli", updatedAt: Date.now() };
+    if (quotes.length > 0) {
+      return { quotes: [...toplanan, ...quotes], source: "canli", updatedAt: Date.now() };
+    }
     throw new MarketDataError("Fiyat listesi boş döndü.", 502);
   } catch (error) {
     // Toplu sorguların ikisi de çalışmazsa günlük mumlardan fiyat üretilir.
@@ -314,6 +424,15 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     if (hepsi.length > 0) return { quotes: hepsi, source: "canli", updatedAt: Date.now() };
 
     if (demoEnabled()) return demoQuotes(instruments);
+
+    // Kota hatası teknik ayrıntı değil, bekleme meselesi: kullanıcıya ne
+    // yapması gerektiğini söyleyen bir cümle daha yararlı.
+    if (error instanceof MarketDataError && error.status === 429) {
+      throw new MarketDataError(
+        "Ücretsiz veri kotası şu an dolu. Liste birkaç dakika içinde kendiliğinden dolacak.",
+        429,
+      );
+    }
     throw new MarketDataError(
       `Fiyat listesi alınamadı (kaynak 1: ${stooqQuoteHatasi ?? "denenmedi"}, kaynak 2: ${hataOzeti(error)}).`,
       error instanceof MarketDataError ? error.status : 503,
@@ -348,6 +467,7 @@ export async function getQuotes(market: MarketId, limit = 60): Promise<QuoteList
   if (cached) return cached;
 
   let result: QuoteList;
+  let hedefSayisi = 0;
 
   if (market === "kripto") {
     try {
@@ -371,6 +491,7 @@ export async function getQuotes(market: MarketId, limit = 60): Promise<QuoteList
       result = demoQuotes(await getInstruments("kripto", limit));
     }
   } else {
+    hedefSayisi = staticInstruments(market).slice(0, limit).length;
     result = await yahooQuotes(staticInstruments(market).slice(0, limit));
   }
 
@@ -381,7 +502,10 @@ export async function getQuotes(market: MarketId, limit = 60): Promise<QuoteList
     return b.volume - a.volume;
   });
 
-  writeCache(key, result, market === "kripto" ? 20_000 : 180_000);
+  // Liste eksikse kısa süre saklanır: kredi bütçesi dakikada yenilendiği için
+  // bir sonraki ziyaret kalan sembolleri çekip listeyi büyütebilsin.
+  const eksikListe = hedefSayisi > 0 && result.quotes.length < hedefSayisi;
+  writeCache(key, result, market === "kripto" ? 20_000 : eksikListe ? 45_000 : 180_000);
   return result;
 }
 
@@ -391,6 +515,8 @@ export type CandleSet = {
   instrument: Instrument;
   candles: Candle[];
   source: DataSource;
+  /** Verinin sağlayıcıdan çekildiği an; önbellekten gelenin yaşı görünsün diye. */
+  fetchedAt?: number;
 };
 
 export async function getCandles(
@@ -406,9 +532,13 @@ export async function getCandles(
     return { instrument, candles, source };
   }
 
-  const key = `candles:${market}:${symbol}:${interval}:${limit}`;
-  const cached = readCache<CandleSet>(key);
-  if (cached) return cached;
+  // Anahtarda mum sayısı yok: 250 ve 300 mumluk iki istek aynı krediyi iki kez
+  // harcıyordu. Her zaman tam seri çekilir, istenen kadarı kesilerek verilir.
+  const key = candleCacheKey(market, symbol, interval);
+  const cached = (await paylasimliOku<CandleSet>([key])).get(key);
+  if (cached) return { ...cached, candles: cached.candles.slice(-limit) };
+
+  const cekilecek = Math.max(limit, TAM_MUM);
 
   // Kaynak sırası ölçüme dayanır (bkz. /tani): anahtar isteyen sağlayıcı bulut
   // sunucusundan çalışıyor, anahtarsız olanlar IP'yi engelliyor. Dövizde
@@ -417,10 +547,10 @@ export async function getCandles(
 
   if (gunlukVeHaftalik && market === "emtia" && parseFxPair(symbol)) {
     try {
-      const candles = await fetchFxCandles(symbol, interval, limit);
-      const result: CandleSet = { instrument, candles, source: "canli" };
-      writeCache(key, result, 900_000);
-      return result;
+      const candles = await fetchFxCandles(symbol, interval, cekilecek);
+      const result: CandleSet = { instrument, candles, source: "canli", fetchedAt: Date.now() };
+      await paylasimliYaz(key, result, GUNLUK_TTL_MS);
+      return { ...result, candles: candles.slice(-limit) };
     } catch {
       // Kur kaynağı düşerse aşağıdaki sağlayıcılar denenir.
     }
@@ -428,12 +558,12 @@ export async function getCandles(
 
   if (twelveDataEnabled()) {
     try {
-      const candles = await fetchTwelveCandles(market, symbol, interval, limit);
-      const result: CandleSet = { instrument, candles, source: "canli" };
+      const candles = await fetchTwelveCandles(market, symbol, interval, cekilecek);
+      const result: CandleSet = { instrument, candles, source: "canli", fetchedAt: Date.now() };
       // Günlük mum gün içinde değişmez; ücretsiz katmanın kredisini korumak
-      // için uzun süre saklanır.
-      writeCache(key, result, gunlukVeHaftalik ? 3_600_000 : 300_000);
-      return result;
+      // için uzun süre ve tüm örneklerle paylaşılarak saklanır.
+      await paylasimliYaz(key, result, gunlukVeHaftalik ? GUNLUK_TTL_MS : GUN_ICI_TTL_MS);
+      return { ...result, candles: candles.slice(-limit) };
     } catch (error) {
       // Anahtar yanlışsa ya da kredi bittiyse aşağıdaki kaynaklar denenir.
       if (error instanceof MarketDataError && error.status === 429) throw error;
@@ -444,10 +574,10 @@ export async function getCandles(
   let stooqHatasi: string | null = null;
   if (stooqSymbols.length > 0 && (interval === "1d" || interval === "1w")) {
     try {
-      const candles = await fetchStooqCandles(stooqSymbols, interval, limit);
-      const result: CandleSet = { instrument, candles, source: "canli" };
-      writeCache(key, result, 180_000);
-      return result;
+      const candles = await fetchStooqCandles(stooqSymbols, interval, cekilecek);
+      const result: CandleSet = { instrument, candles, source: "canli", fetchedAt: Date.now() };
+      await paylasimliYaz(key, result, gunlukVeHaftalik ? GUNLUK_TTL_MS : GUN_ICI_TTL_MS);
+      return { ...result, candles: candles.slice(-limit) };
     } catch (error) {
       // Stooq'ta yoksa Yahoo denenir; sebebi hata mesajında görünsün.
       stooqHatasi = hataOzeti(error);
@@ -459,7 +589,7 @@ export async function getCandles(
   }
 
   try {
-    const chart = await fetchChart(symbol, interval, limit);
+    const chart = await fetchChart(symbol, interval, cekilecek);
     if (chart.candles.length === 0) {
       throw new MarketDataError("Bu sembol ve periyot için veri bulunamadı.", 404);
     }
@@ -471,11 +601,12 @@ export async function getCandles(
       },
       candles: chart.candles,
       source: "canli",
+      fetchedAt: Date.now(),
     };
     // Hisse/emtia verisi kriptoya göre yavaş değişir; uzun önbellek hem
     // sayfayı hızlandırır hem de sağlayıcı hız sınırından korur.
-    writeCache(key, result, 180_000);
-    return result;
+    await paylasimliYaz(key, result, gunlukVeHaftalik ? GUNLUK_TTL_MS : GUN_ICI_TTL_MS);
+    return { ...result, candles: result.candles.slice(-limit) };
   } catch (error) {
     if (demoEnabled() && (!(error instanceof MarketDataError) || error.status >= 500)) {
       const result: CandleSet = {

@@ -19,7 +19,7 @@ import {
 import { parseFxPair, toCandles as fxToCandles } from "../lib/markets/frankfurter";
 import { normalizeSymbol } from "../lib/markets/provider";
 import { fetchStooqCandles, parseCandleCsv, parseQuoteCsv, toStooqSymbol, toStooqSymbols } from "../lib/markets/stooq";
-import { parseSeries, toTwelveSymbol } from "../lib/markets/twelvedata";
+import { krediAyir, krediSifirla, parseSeries, toTwelveSymbol } from "../lib/markets/twelvedata";
 import { fetchChart, parseSpark, rateLimitedUntil, resetRateLimitState } from "../lib/markets/yahoo";
 import {
   aggregateCandles,
@@ -454,4 +454,16 @@ test("anahtarlı sağlayıcının hata yanıtı sessizce yutulmaz", () => {
   } catch (error) {
     assert.equal((error as { status: number }).status, 429);
   }
+});
+
+test("kredi bütçesi dakikalık sınırı aşmaz ve pencere dolunca yenilenir", () => {
+  // Ücretsiz katman dakikada sabit sayıda sembol veriyor (öntanımlı 8).
+  // Sınır aşılırsa sağlayıcı tüm piyasayı hataya çeviriyordu.
+  krediSifirla();
+  assert.equal(krediAyir(5), 5);
+  assert.equal(krediAyir(5), 3, "kalan bütçe kadarı verilmeli, fazlası değil");
+  assert.equal(krediAyir(1), 0, "bütçe bitince sıfır dönmeli");
+
+  krediSifirla();
+  assert.equal(krediAyir(1), 1, "pencere yenilenince yeniden kredi verilmeli");
 });

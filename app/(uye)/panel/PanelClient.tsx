@@ -53,23 +53,25 @@ export default function PanelClient({
     }
   }, [market, period]);
 
-  const loadMarkets = useCallback(async (selected: MarketId) => {
-    setLoadingMarkets(true);
+  // `sessiz`: arka plandaki kendiliğinden tazeleme. Ekranda yükleniyor
+  // göstergesi çıkmaz ve geçici bir hata ekrandaki dolu listeyi silmez.
+  const loadMarkets = useCallback(async (selected: MarketId, sessiz = false) => {
+    if (!sessiz) setLoadingMarkets(true);
     setMarketError(null);
     try {
       setMarkets(await getJson<MarketsResponse>(`/api/markets?market=${selected}&limit=40`));
     } catch (error) {
       // Seçilen piyasa değiştiği için eski liste artık yanlış piyasaya ait.
-      setMarkets(null);
+      if (!sessiz) setMarkets(null);
       setMarketError(error instanceof Error ? error.message : t("common.error"));
     } finally {
-      setLoadingMarkets(false);
+      if (!sessiz) setLoadingMarkets(false);
     }
   }, [t]);
 
   const loadScan = useCallback(
-    async (selected: MarketId, selectedPeriod: Interval) => {
-      setLoadingScan(true);
+    async (selected: MarketId, selectedPeriod: Interval, sessiz = false) => {
+      if (!sessiz) setLoadingScan(true);
       setScanError(null);
       try {
         setScan(
@@ -78,10 +80,10 @@ export default function PanelClient({
           ),
         );
       } catch (error) {
-        setScan(null);
+        if (!sessiz) setScan(null);
         setScanError(error instanceof Error ? error.message : t("common.error"));
       } finally {
-        setLoadingScan(false);
+        if (!sessiz) setLoadingScan(false);
       }
     },
     [t],
@@ -95,6 +97,21 @@ export default function PanelClient({
     if (!MARKETS[market].intervals.includes(period)) return;
     void loadScan(market, period);
   }, [market, period, loadScan]);
+
+  // Kendiliğinden tazeleme.
+  //
+  // Kripto dışı piyasalarda ücretsiz veri kotası dakikada birkaç sembol
+  // veriyor; liste ilk açılışta yarım geliyor ve kullanıcının elle yenilemesi
+  // gerekiyordu. Dakikada bir tazeleyince eksikler kendiliğinden doluyor.
+  // Sekme arka plandayken istek atılmaz: görünmeyen sayfa kota harcamasın.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      void loadMarkets(market, true);
+      if (MARKETS[market].intervals.includes(period)) void loadScan(market, period, true);
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, [market, period, loadMarkets, loadScan]);
 
   const quotes = markets?.quotes ?? [];
   const rising = quotes.filter((q) => q.changePercent > 0).length;

@@ -121,6 +121,14 @@ const SCHEMA = `
     watchlist     jsonb not null default '[]'::jsonb,
     settings      jsonb not null default '{}'::jsonb
   );
+
+  create table if not exists piyasa_onbellek (
+    anahtar text primary key,
+    deger   jsonb  not null,
+    biter   bigint not null
+  );
+
+  create index if not exists piyasa_onbellek_biter on piyasa_onbellek (biter);
 `;
 
 let schemaReady: Promise<void> | null = null;
