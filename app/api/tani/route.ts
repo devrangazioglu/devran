@@ -82,6 +82,26 @@ export async function GET() {
     ["stooq-THYAO-alt1", "https://stooq.com/q/d/l/?s=thyao&i=d"],
     ["stooq-THYAO-alt2", "https://stooq.com/q/d/l/?s=thyao.is&i=d"],
 
+    // Stooq'un başka kapıları (aynı veri, farklı adres/alan adı)
+    ["stooq-pl", "https://stooq.pl/q/d/l/?s=aapl.us&i=d"],
+    ["stooq-toplu-duz", "https://stooq.com/q/l/?s=aapl.us&f=sd2t2ohlcv&h&e=csv"],
+
+    // Anahtar isteyen sağlayıcıların DEMO anahtarları: bu sunucudan
+    // erişilebiliyor mu, onu ölçer. 200 dönen bir satır "ücretsiz anahtar
+    // alırsak çalışır" demektir.
+    [
+      "twelvedata-demo",
+      "https://api.twelvedata.com/time_series?symbol=AAPL&interval=1day&outputsize=30&apikey=demo",
+    ],
+    [
+      "alphavantage-demo",
+      "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo",
+    ],
+    ["finnhub-anahtarsiz", "https://finnhub.io/api/v1/quote?symbol=AAPL"],
+
+    // Döviz için anahtarsız ve bulut dostu bir kaynak (Avrupa Merkez Bankası)
+    ["frankfurter-fx", "https://api.frankfurter.app/latest?from=USD&to=TRY"],
+
     // Karşılaştırma için: kripto tarafı (çalıştığı biliniyor)
     ["binance-BTC", "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT"],
   ];
