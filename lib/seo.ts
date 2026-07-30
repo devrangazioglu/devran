@@ -61,7 +61,7 @@ export function ogLocale(locale: Locale): string {
   return localeMeta(locale).intl.replace("-", "_");
 }
 
-export const SITE_NAME = "Kriptosinyal";
+export const SITE_NAME = "Fibonex";
 
 /* ────────────────────────── Yapılandırılmış veri ────────────────────────── */
 

@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { LogoMark } from "@/components/Logo";
 import { redirect } from "next/navigation";
 
 import { auth, googleAuthEnabled } from "@/auth";
@@ -33,9 +35,9 @@ export default async function LoginPage({
       <div className="auth-card">
         <div className="auth-head">
           <Link href="/" className="logo">
-            <span className="logo-mark">◉</span>
+            <LogoMark />
             <span>
-              Kripto<em>sinyal</em>
+              Fibo<em>nex</em>
             </span>
           </Link>
           <LanguageSwitcher compact />

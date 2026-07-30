@@ -227,7 +227,7 @@ function storeContract(label: string, getStore: () => UserStore) {
 let directory: string;
 
 before(async () => {
-  directory = await mkdtemp(join(tmpdir(), "kriptosinyal-test-"));
+  directory = await mkdtemp(join(tmpdir(), "fibonex-test-"));
   process.env.USERS_FILE = join(directory, "users.json");
 });
 

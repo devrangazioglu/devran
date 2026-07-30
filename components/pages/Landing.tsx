@@ -3,6 +3,7 @@ import Link from "next/link";
 import AssetSearch from "@/components/AssetSearch";
 import Reveal from "@/components/motion/Reveal";
 import SpotlightCard from "@/components/motion/SpotlightCard";
+import { LogoWord } from "@/components/Logo";
 import SiteNav from "@/components/SiteNav";
 import { AssetAvatar, Change } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
@@ -350,10 +351,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
         <div className="container">
           <div className="footer-inner">
             <div className="logo">
-              <span className="logo-mark">◉</span>
-              <span>
-                Kripto<em>sinyal</em>
-              </span>
+              <LogoWord />
             </div>
             <nav className="footer-links">
               {MARKET_IDS.map((id) => (

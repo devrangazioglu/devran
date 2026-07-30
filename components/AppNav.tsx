@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { LogoMark } from "./Logo";
+
 import { auth } from "@/auth";
 import AssetSearch from "./AssetSearch";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -28,9 +30,9 @@ export default async function AppNav() {
     <header className="nav">
       <div className="container container-wide nav-inner">
         <Link href="/panel" className="logo">
-          <span className="logo-mark">◉</span>
+          <LogoMark />
           <span className="only-desktop">
-            Kripto<em>sinyal</em>
+            Fibo<em>nex</em>
           </span>
         </Link>
 

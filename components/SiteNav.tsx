@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { auth } from "@/auth";
 import LanguageSwitcher from "./LanguageSwitcher";
+import { LogoWord } from "./Logo";
 import MobileMenu from "./MobileMenu";
 import { getI18n } from "@/lib/i18n/server";
 import { localeHref } from "@/lib/i18n/routing";
@@ -40,10 +41,7 @@ export default async function SiteNav({ locale: istenen }: { locale?: Locale } =
     <header className="nav">
       <div className="container container-wide nav-inner">
         <Link href={yol("/")} className="logo">
-          <span className="logo-mark">◉</span>
-          <span>
-            Kripto<em>sinyal</em>
-          </span>
+          <LogoWord />
         </Link>
 
         <nav className="nav-links">

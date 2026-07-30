@@ -8,7 +8,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Kriptosinyal — teknik analiz ve al/sat sinyalleri";
+export const alt = "Fibonex — teknik analiz ve al/sat sinyalleri";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -28,15 +28,39 @@ export default function OgGorseli() {
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 34 }}>
-          <span style={{ color: "#8ff0a4" }}>◉</span>
-          <span style={{ letterSpacing: -0.5 }}>Kriptosinyal</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 36 }}>
+          {/* Marka işareti: yükselen ve düşen mum. ImageResponse SVG yerine
+              basit kutularla çizildiği için burada dikdörtgenlerle kuruluyor. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 7, height: 62 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ width: 3, height: 7, background: "#74C98A" }} />
+              <div style={{ width: 17, height: 40, background: "#74C98A" }} />
+              <div style={{ width: 3, height: 12, background: "#74C98A" }} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ width: 3, height: 12, background: "#C62742" }} />
+              <div style={{ width: 17, height: 40, background: "#C62742" }} />
+              <div style={{ width: 3, height: 7, background: "#C62742" }} />
+            </div>
+          </div>
+          <span style={{ letterSpacing: -0.5 }}>Fibonex</span>
         </div>
 
-        <div style={{ fontSize: 68, fontWeight: 700, lineHeight: 1.1, marginTop: 34 }}>
-          Teknik analiz ve
-          <br />
-          al / sat sinyalleri
+        {/* Görselleştirici, birden çok çocuğu olan her kutuda açık bir düzen
+            (display) ister; satır kırmak için <br /> yerine ayrı kutular
+            kullanılıyor. Aksi hâlde görsel hiç üretilmiyor. */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            fontSize: 68,
+            fontWeight: 700,
+            lineHeight: 1.1,
+            marginTop: 34,
+          }}
+        >
+          <div>Teknik analiz ve</div>
+          <div>al / sat sinyalleri</div>
         </div>
 
         <div style={{ fontSize: 30, color: "#8b95a9", marginTop: 30, lineHeight: 1.4 }}>

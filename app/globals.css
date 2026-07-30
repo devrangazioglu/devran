@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────
-   Kriptosinyal — koyu tema tasarım sistemi
+   Fibonex — koyu tema tasarım sistemi
    ───────────────────────────────────────────────────────────── */
 
 :root {
@@ -163,16 +163,15 @@ textarea {
   letter-spacing: -0.03em;
 }
 
+/* İşaretin kendisi SVG olarak geliyor (bkz. components/Logo.tsx); buradaki
+   kutu yalnızca hizalama ve köşe yuvarlaması için. */
 .logo-mark {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: linear-gradient(135deg, var(--accent), #34d399);
-  color: #04120a;
+  overflow: hidden;
   display: grid;
   place-items: center;
-  font-size: 15px;
-  font-weight: 700;
 }
 
 .logo em {

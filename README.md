@@ -1,4 +1,4 @@
-# Kriptosinyal
+# Fibonex
 
 Dört piyasadan **herkese açık** fiyat verisi çekip teknik analiz yapan, sonucu ağırlıklı bir
 skora çevirerek **AL / SAT / BEKLE** sinyali üreten ve bu sinyali **kullanıcının dilinde
