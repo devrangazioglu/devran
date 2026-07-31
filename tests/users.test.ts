@@ -259,3 +259,29 @@ if (process.env.TEST_DATABASE_URL) {
 } else {
   test("Postgres deposu (atlandı — TEST_DATABASE_URL tanımlı değil)", { skip: true }, () => {});
 }
+
+test("boş DATABASE_URL tanımlı sayılmaz", async () => {
+  // Tanımlanmamış bir GitHub secret'ı ya da silinmiş bir ortam değişkeni boş
+  // dize olarak geliyor. Bu "tanımlı" sayılırsa uygulama dosya deposuna
+  // düşmek yerine her sorguda çöker.
+  const { databaseUrl, postgresEnabled } = await import("../lib/db");
+  const onceki = { db: process.env.DATABASE_URL, pg: process.env.POSTGRES_URL };
+
+  try {
+    process.env.DATABASE_URL = "";
+    process.env.POSTGRES_URL = "";
+    assert.equal(databaseUrl(), null);
+    assert.equal(postgresEnabled(), false);
+
+    process.env.DATABASE_URL = "   ";
+    assert.equal(databaseUrl(), null, "yalnızca boşluktan oluşan değer de sayılmaz");
+
+    process.env.DATABASE_URL = "postgres://kullanici@sunucu/veritabani";
+    assert.equal(postgresEnabled(), true);
+  } finally {
+    if (onceki.db === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = onceki.db;
+    if (onceki.pg === undefined) delete process.env.POSTGRES_URL;
+    else process.env.POSTGRES_URL = onceki.pg;
+  }
+});

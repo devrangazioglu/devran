@@ -13,8 +13,17 @@ import { Pool, type PoolClient, type QueryResultRow } from "pg";
 
 import { UserStoreError } from "./users-shared";
 
+/**
+ * Bağlantı dizesi; tanımsız ya da **boş** ise null.
+ *
+ * Boş dize önemsiz görünüyor ama değil: tanımlanmamış bir GitHub secret'ı ya da
+ * silinmiş bir Vercel değişkeni ortama boş dize olarak geliyor. `??` yalnızca
+ * null/undefined yakaladığı için boş dize "tanımlı" sayılıyor, uygulama dosya
+ * deposuna düşmek yerine her sorguda çöküyordu — beslemede tam olarak bu oldu.
+ */
 export function databaseUrl(): string | null {
-  return process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? null;
+  const deger = (process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "").trim();
+  return deger === "" ? null : deger;
 }
 
 export function postgresEnabled(): boolean {

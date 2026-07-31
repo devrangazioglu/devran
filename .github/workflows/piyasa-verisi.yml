@@ -39,6 +39,17 @@ jobs:
 
       - run: npm ci
 
+      # Secret eksikse hata, veri kaynağıyla ilgiliymiş gibi görünmesin.
+      - name: DATABASE_URL secret'ı tanımlı mı?
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL secret'ı tanımlı değil. Settings → Secrets and variables → Actions yolundan Vercel'deki Postgres bağlantı dizesini ekleyin."
+            exit 1
+          fi
+          echo "DATABASE_URL tanımlı (${#DATABASE_URL} karakter)."
+
       - name: Veriyi çek ve veritabanına yaz
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
