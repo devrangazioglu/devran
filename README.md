@@ -30,14 +30,20 @@ yorumlayan** üyelik girişli web uygulaması.
 - 🧮 **Ağırlıklı skor motoru** — her gösterge −1…+1 yön üretir, ağırlıklandırılır ve −100…+100
   arası tek skora indirgenir; skor sinyale çevrilir
 - 🏆 **Top 10 AL** — panelde seçili piyasa ve periyot için en güçlü alış sinyalleri sıralı liste
-- 🗣️ **Çok dilli yorum** — trend, momentum, hacim, volatilite, seviyeler ve riskler paragraf paragraf
+- 🗣️ **Ayrıntılı çok dilli yorum** — on başlık altında paragraf paragraf: genel görünüm,
+  trend, momentum, para akışı, oynaklık, formasyonlar, destek/direnç, üst zaman dilimlerinin
+  uyumu, işlem planı ve “bu senaryoyu ne bozar”. Göstergelerin ne anlama geldiğini de
+  açıklar; deterministiktir, harici bir dil modeli kullanmaz
 - 🕯️ **Formasyon tespiti** — yutan mumlar, çekiç, kayan yıldız, doji, sabah/akşam yıldızı,
   golden/death cross, MACD kesişimi, RSI uyumsuzluğu, Bollinger sıkışması
 - 🎯 **İşlem planı** — ATR ve swing noktalarına göre giriş, zarar durdur, 3 hedef, risk/ödül
 - 🧭 **Destek / direnç** — pivot kümeleme ile seviyeler ve dokunuş sayısına göre güç
 - 🔦 **Sinyal tarayıcı** — piyasa genelinde tarama, filtreleme ve sıralama
 - ⭐ **Takip listesi** — piyasalar arası karışık liste (`kripto:BTCUSDT`, `bist:THYAO.IS`…)
-- 📉 **Bağımlılıksız grafikler** — canvas ile mum grafiği (EMA + Bollinger + hacim), RSI ve MACD
+- 📉 **Bağımlılıksız grafikler** — canvas ile mum grafiği (EMA + Bollinger + hacim), RSI ve MACD.
+  Yakınlaştırma iki eksende ayrı çalışır: **yatay** (kaç mum görünüyor) ve **dikey** (fiyat
+  aralığı). Tekerlek, Shift+tekerlek, iki parmakla sıkıştırma, sürükleyerek kaydırma,
+  düğmeler ve çift tıkla sıfırlama. RSI/MACD panelleri mum grafiğiyle aynı aralığı gösterir
 - ✨ **Hareketli arayüz** — fareyi izleyen arka plan, kaydırdıkça beliren kartlar, ışık efekti;
   `prefers-reduced-motion` ve dokunmatik cihazlarda kapanır
 - 📱 **Ayrı mobil düzen** — dar ekranda tablolar kart listesine dönüşür, çekmece menü ve alt sekme çubuğu

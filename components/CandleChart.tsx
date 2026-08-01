@@ -2,11 +2,23 @@
 
 /**
  * Bağımlılıksız mum grafiği (canvas).
+ *
  * Fiyat paneli + hareketli ortalamalar + Bollinger bantları + hacim şeridi,
  * fare takibiyle (crosshair) OHLC bilgi kutusu.
+ *
+ * Yakınlaştırma iki eksende ayrı çalışır:
+ *   • **Yatay** (zaman) — kaç mumun göründüğünü belirler. Tekerlek, iki
+ *     parmakla yatay sıkıştırma, düğmeler ve sürükleyerek kaydırma.
+ *   • **Dikey** (fiyat) — görünen fiyat aralığını daraltır. Dar aralıklı bir
+ *     bölgede mumlar tek çizgiye dönüştüğü için gerekli; Shift+tekerlek, iki
+ *     parmakla dikey sıkıştırma ve düğmelerle çalışır.
+ *
+ * Görünen pencere yukarıdan yönetilebilir (`gorunum` + `onGorunum`); böylece
+ * RSI ve MACD panelleri aynı zaman aralığını gösterir — grafiklerin farklı
+ * aralıklara bakması yorumu tümüyle yanıltır.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { formatPrice, formatTime } from "@/lib/format";
 
@@ -27,6 +39,9 @@ export type Overlays = {
   bbLower?: (number | null)[];
 };
 
+/** Görünen mum aralığı: `bas` ilk mumun sırası, `adet` kaç mum görüldüğü. */
+export type Gorunum = { bas: number; adet: number };
+
 const COLORS = {
   up: "#4ade80",
   down: "#f87171",
@@ -38,12 +53,26 @@ const COLORS = {
   band: "rgba(139,149,169,0.28)",
 };
 
+/** Ekranda anlamlı kalan en az mum sayısı. */
+const EN_AZ_MUM = 8;
+/** Dikey yakınlaştırmanın sınırı; fazlası mumları ekrandan taşırır. */
+const EN_FAZLA_DIKEY = 20;
+
+const PADDING = { top: 14, right: 66, bottom: 22, left: 8 };
+
+function sinirla(deger: number, alt: number, ust: number): number {
+  return Math.max(alt, Math.min(ust, deger));
+}
+
 export default function CandleChart({
   candles,
   overlays,
   height = 380,
   showBands = true,
   intl = "tr-TR",
+  gorunum = null,
+  onGorunum,
+  etiketler,
 }: {
   candles: ChartCandle[];
   overlays?: Overlays;
@@ -51,11 +80,66 @@ export default function CandleChart({
   showBands?: boolean;
   /** Sayı ve tarih biçimlendirmede kullanılacak Intl etiketi. */
   intl?: string;
+  /** Görünen zaman aralığı; null ise tamamı. */
+  gorunum?: Gorunum | null;
+  onGorunum?: (gorunum: Gorunum | null) => void;
+  /** Düğme ve ipucu metinleri (çeviri arayüzden gelir). */
+  etiketler?: {
+    yatay: string;
+    dikey: string;
+    sifirla: string;
+    yakinlastir: string;
+    uzaklastir: string;
+    ipucu: string;
+  };
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<number | null>(null);
   const [width, setWidth] = useState(900);
+
+  // Dikey yakınlaştırma yalnızca bu grafiği ilgilendirir; yukarı taşınmaz.
+  const [dikey, setDikey] = useState({ olcek: 1, kaydir: 0 });
+
+  const toplam = candles.length;
+  const bas = gorunum ? sinirla(gorunum.bas, 0, Math.max(toplam - EN_AZ_MUM, 0)) : 0;
+  const adet = gorunum ? sinirla(gorunum.adet, EN_AZ_MUM, toplam - bas) : toplam;
+  const gorunen = candles.slice(bas, bas + adet);
+
+  /** Zaman aralığını değiştirir; sınırları burada tek yerde korunur. */
+  const pencereyiAyarla = useCallback(
+    (yeniBas: number, yeniAdet: number) => {
+      if (!onGorunum) return;
+      const kapsam = sinirla(Math.round(yeniAdet), EN_AZ_MUM, toplam);
+      const baslangic = sinirla(Math.round(yeniBas), 0, toplam - kapsam);
+      // Tamamı görünüyorsa "yakınlaştırma yok" durumuna dönülür.
+      onGorunum(kapsam >= toplam ? null : { bas: baslangic, adet: kapsam });
+    },
+    [onGorunum, toplam],
+  );
+
+  const sifirla = useCallback(() => {
+    onGorunum?.(null);
+    setDikey({ olcek: 1, kaydir: 0 });
+  }, [onGorunum]);
+
+  /** Yatay yakınlaştırma; `capa` 0–1 arası, imlecin bulunduğu oran. */
+  const yataySeviye = useCallback(
+    (carpan: number, capa = 0.5) => {
+      const yeniAdet = sinirla(adet * carpan, EN_AZ_MUM, toplam);
+      // İmlecin altındaki mum yerinde kalsın.
+      const merkez = bas + adet * capa;
+      pencereyiAyarla(merkez - yeniAdet * capa, yeniAdet);
+    },
+    [adet, bas, toplam, pencereyiAyarla],
+  );
+
+  const dikeySeviye = useCallback((carpan: number) => {
+    setDikey((onceki) => ({
+      ...onceki,
+      olcek: sinirla(onceki.olcek * carpan, 1, EN_FAZLA_DIKEY),
+    }));
+  }, []);
 
   // Kapsayıcı genişliğini izle.
   useEffect(() => {
@@ -69,9 +153,107 @@ export default function CandleChart({
     return () => observer.disconnect();
   }, []);
 
+  /* ────────────────── Fare tekerleği ve dokunma ────────────────── */
+
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || candles.length === 0) return;
+    if (!canvas) return;
+
+    // React'in onWheel'i edilgen (passive) olduğu için sayfayı kaydırmayı
+    // engelleyemiyor; dinleyici elle, passive:false ile bağlanır.
+    const tekerlek = (event: WheelEvent) => {
+      event.preventDefault();
+      const carpan = event.deltaY < 0 ? 0.85 : 1 / 0.85;
+      if (event.shiftKey || event.ctrlKey) {
+        dikeySeviye(1 / carpan);
+        return;
+      }
+      const rect = canvas.getBoundingClientRect();
+      const plotWidth = rect.width - PADDING.left - PADDING.right;
+      const capa = sinirla((event.clientX - rect.left - PADDING.left) / plotWidth, 0, 1);
+      yataySeviye(carpan, capa);
+    };
+
+    canvas.addEventListener("wheel", tekerlek, { passive: false });
+    return () => canvas.removeEventListener("wheel", tekerlek);
+  }, [yataySeviye, dikeySeviye]);
+
+  // İki parmak: yatay açıklık zamanı, dikey açıklık fiyatı ölçekler.
+  const dokunusRef = useRef<{ dx: number; dy: number } | null>(null);
+  // Tek parmak / fare sürüklemesi: kaydırma.
+  const surukleRef = useRef<{ x: number; y: number; bas: number; kaydir: number } | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const mesafe = (touches: TouchList) => ({
+      dx: Math.abs(touches[0].clientX - touches[1].clientX),
+      dy: Math.abs(touches[0].clientY - touches[1].clientY),
+    });
+
+    const basla = (event: TouchEvent) => {
+      if (event.touches.length === 2) {
+        dokunusRef.current = mesafe(event.touches);
+        event.preventDefault();
+      } else if (event.touches.length === 1) {
+        surukleRef.current = {
+          x: event.touches[0].clientX,
+          y: event.touches[0].clientY,
+          bas,
+          kaydir: dikey.kaydir,
+        };
+      }
+    };
+
+    const hareket = (event: TouchEvent) => {
+      if (event.touches.length === 2 && dokunusRef.current) {
+        event.preventDefault();
+        const simdi = mesafe(event.touches);
+        const onceki = dokunusRef.current;
+        // Yatay açıklık belirgin şekilde değiştiyse zamanı, dikey değiştiyse
+        // fiyatı ölçekle. İkisi birden olabilir (çapraz sıkıştırma).
+        if (onceki.dx > 20 && Math.abs(simdi.dx - onceki.dx) > 6) {
+          yataySeviye(onceki.dx / simdi.dx);
+        }
+        if (onceki.dy > 20 && Math.abs(simdi.dy - onceki.dy) > 6) {
+          dikeySeviye(simdi.dy / onceki.dy);
+        }
+        dokunusRef.current = simdi;
+        return;
+      }
+
+      if (event.touches.length === 1 && surukleRef.current && gorunum) {
+        const rect = canvas.getBoundingClientRect();
+        const plotWidth = rect.width - PADDING.left - PADDING.right;
+        const kaydiMum = ((surukleRef.current.x - event.touches[0].clientX) / plotWidth) * adet;
+        pencereyiAyarla(surukleRef.current.bas + kaydiMum, adet);
+        event.preventDefault();
+      }
+    };
+
+    const bitir = () => {
+      dokunusRef.current = null;
+      surukleRef.current = null;
+    };
+
+    canvas.addEventListener("touchstart", basla, { passive: false });
+    canvas.addEventListener("touchmove", hareket, { passive: false });
+    canvas.addEventListener("touchend", bitir);
+    canvas.addEventListener("touchcancel", bitir);
+    return () => {
+      canvas.removeEventListener("touchstart", basla);
+      canvas.removeEventListener("touchmove", hareket);
+      canvas.removeEventListener("touchend", bitir);
+      canvas.removeEventListener("touchcancel", bitir);
+    };
+  }, [adet, bas, dikey.kaydir, gorunum, yataySeviye, dikeySeviye, pencereyiAyarla]);
+
+  /* ────────────────────────── Çizim ────────────────────────── */
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || gorunen.length === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = width * dpr;
@@ -84,33 +266,49 @@ export default function CandleChart({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
-    const padding = { top: 14, right: 66, bottom: 22, left: 8 };
     const volumeHeight = Math.round(height * 0.16);
-    const plotWidth = width - padding.left - padding.right;
-    const plotHeight = height - padding.top - padding.bottom - volumeHeight - 8;
+    const plotWidth = width - PADDING.left - PADDING.right;
+    const plotHeight = height - PADDING.top - PADDING.bottom - volumeHeight - 8;
 
-    // Fiyat aralığı (bantlar dahil).
+    const dilim = <T,>(values: T[] | undefined) => values?.slice(bas, bas + adet);
+    const bbUpper = dilim(overlays?.bbUpper);
+    const bbLower = dilim(overlays?.bbLower);
+
+    // Fiyat aralığı yalnızca görünen mumlardan hesaplanır: yatay
+    // yakınlaştırma böylece dikeyi de kendiliğinden büyütür.
     let min = Infinity;
     let max = -Infinity;
-    for (const c of candles) {
+    for (const c of gorunen) {
       if (c.low < min) min = c.low;
       if (c.high > max) max = c.high;
     }
-    if (showBands && overlays?.bbUpper && overlays?.bbLower) {
-      for (let i = 0; i < candles.length; i++) {
-        const u = overlays.bbUpper[i];
-        const l = overlays.bbLower[i];
+    if (showBands && bbUpper && bbLower) {
+      for (let i = 0; i < gorunen.length; i++) {
+        const u = bbUpper[i];
+        const l = bbLower[i];
         if (u !== null && u !== undefined && u > max) max = u;
         if (l !== null && l !== undefined && l < min) min = l;
       }
     }
-    const span = max - min || 1;
+    const span = max - min || Math.abs(max) * 0.01 || 1;
     min -= span * 0.04;
     max += span * 0.04;
 
-    const x = (i: number) => padding.left + (i + 0.5) * (plotWidth / candles.length);
+    // Dikey yakınlaştırma: aralığı merkez etrafında daralt, kaydırmayı uygula.
+    const merkez = (min + max) / 2 + dikey.kaydir * (max - min);
+    const yari = (max - min) / 2 / dikey.olcek;
+    min = merkez - yari;
+    max = merkez + yari;
+
+    const x = (i: number) => PADDING.left + (i + 0.5) * (plotWidth / gorunen.length);
     const y = (price: number) =>
-      padding.top + plotHeight - ((price - min) / (max - min)) * plotHeight;
+      PADDING.top + plotHeight - ((price - min) / (max - min)) * plotHeight;
+
+    // Görünür alanın dışına taşan çizimleri kırp (dikey yakınlaştırmada şart).
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, PADDING.top - 6, width - PADDING.right, plotHeight + 12);
+    ctx.clip();
 
     // Izgara ve fiyat ekseni
     ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
@@ -122,28 +320,25 @@ export default function CandleChart({
       ctx.strokeStyle = COLORS.grid;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(padding.left, Math.round(py) + 0.5);
-      ctx.lineTo(width - padding.right, Math.round(py) + 0.5);
+      ctx.moveTo(PADDING.left, Math.round(py) + 0.5);
+      ctx.lineTo(width - PADDING.right, Math.round(py) + 0.5);
       ctx.stroke();
-      ctx.fillStyle = COLORS.text;
-      ctx.textAlign = "left";
-      ctx.fillText(formatPrice(price, intl), width - padding.right + 8, py);
     }
 
     // Bollinger bantları (dolgu)
-    if (showBands && overlays?.bbUpper && overlays?.bbLower) {
+    if (showBands && bbUpper && bbLower) {
       ctx.beginPath();
       let started = false;
-      for (let i = 0; i < candles.length; i++) {
-        const u = overlays.bbUpper[i];
+      for (let i = 0; i < gorunen.length; i++) {
+        const u = bbUpper[i];
         if (u === null || u === undefined) continue;
         if (!started) {
           ctx.moveTo(x(i), y(u));
           started = true;
         } else ctx.lineTo(x(i), y(u));
       }
-      for (let i = candles.length - 1; i >= 0; i--) {
-        const l = overlays.bbLower[i];
+      for (let i = gorunen.length - 1; i >= 0; i--) {
+        const l = bbLower[i];
         if (l === null || l === undefined) continue;
         ctx.lineTo(x(i), y(l));
       }
@@ -156,16 +351,16 @@ export default function CandleChart({
     }
 
     // Mumlar
-    const slot = plotWidth / candles.length;
-    const bodyWidth = Math.max(Math.min(slot * 0.62, 12), 1);
-    for (let i = 0; i < candles.length; i++) {
-      const c = candles[i];
+    const slot = plotWidth / gorunen.length;
+    const bodyWidth = Math.max(Math.min(slot * 0.62, 26), 1);
+    for (let i = 0; i < gorunen.length; i++) {
+      const c = gorunen[i];
       const up = c.close >= c.open;
       const color = up ? COLORS.up : COLORS.down;
       const cx = x(i);
 
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = slot > 6 ? 1.4 : 1;
       ctx.beginPath();
       ctx.moveTo(Math.round(cx) + 0.5, y(c.high));
       ctx.lineTo(Math.round(cx) + 0.5, y(c.low));
@@ -184,7 +379,7 @@ export default function CandleChart({
       ctx.lineWidth = 1.6;
       ctx.beginPath();
       let started = false;
-      for (let i = 0; i < candles.length; i++) {
+      for (let i = 0; i < gorunen.length; i++) {
         const v = values[i];
         if (v === null || v === undefined) continue;
         if (!started) {
@@ -194,15 +389,25 @@ export default function CandleChart({
       }
       ctx.stroke();
     };
-    drawLine(overlays?.ema21, COLORS.ema21);
-    drawLine(overlays?.ema50, COLORS.ema50);
-    drawLine(overlays?.ema200, COLORS.ema200);
+    drawLine(dilim(overlays?.ema21), COLORS.ema21);
+    drawLine(dilim(overlays?.ema50), COLORS.ema50);
+    drawLine(dilim(overlays?.ema200), COLORS.ema200);
+
+    ctx.restore();
+
+    // Fiyat etiketleri kırpma alanının dışında yazılır.
+    ctx.fillStyle = COLORS.text;
+    ctx.textAlign = "left";
+    for (let i = 0; i <= ticks; i++) {
+      const price = min + ((max - min) * i) / ticks;
+      ctx.fillText(formatPrice(price, intl), width - PADDING.right + 8, y(price));
+    }
 
     // Hacim şeridi
-    const volumeTop = padding.top + plotHeight + 8;
-    const maxVolume = Math.max(...candles.map((c) => c.volume), 1);
-    for (let i = 0; i < candles.length; i++) {
-      const c = candles[i];
+    const volumeTop = PADDING.top + plotHeight + 8;
+    const maxVolume = Math.max(...gorunen.map((c) => c.volume), 1);
+    for (let i = 0; i < gorunen.length; i++) {
+      const c = gorunen[i];
       const h = (c.volume / maxVolume) * volumeHeight;
       ctx.fillStyle = c.close >= c.open ? "rgba(74,222,128,0.35)" : "rgba(248,113,113,0.35)";
       ctx.fillRect(x(i) - bodyWidth / 2, volumeTop + volumeHeight - h, bodyWidth, h);
@@ -211,46 +416,80 @@ export default function CandleChart({
     // Zaman ekseni
     ctx.fillStyle = COLORS.text;
     ctx.textAlign = "center";
-    const labelCount = Math.min(6, candles.length);
+    const labelCount = Math.min(6, gorunen.length);
     for (let i = 0; i < labelCount; i++) {
-      const index = Math.round((i * (candles.length - 1)) / (labelCount - 1 || 1));
+      const index = Math.round((i * (gorunen.length - 1)) / (labelCount - 1 || 1));
       // Etiketler kenarlardan taşmasın diye konum sınırlandırılır.
-      const cx = Math.min(Math.max(x(index), padding.left + 44), width - padding.right - 44);
-      ctx.fillText(formatTime(candles[index].openTime, intl), cx, height - 10);
+      const cx = Math.min(Math.max(x(index), PADDING.left + 44), width - PADDING.right - 44);
+      ctx.fillText(formatTime(gorunen[index].openTime, intl), cx, height - 10);
     }
 
     // Crosshair
-    if (hover !== null && hover >= 0 && hover < candles.length) {
+    if (hover !== null && hover >= 0 && hover < gorunen.length) {
       const cx = x(hover);
       ctx.strokeStyle = "rgba(233,237,245,0.25)";
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.moveTo(cx, padding.top);
+      ctx.moveTo(cx, PADDING.top);
       ctx.lineTo(cx, volumeTop + volumeHeight);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      const c = candles[hover];
+      const c = gorunen[hover];
       const cy = y(c.close);
-      ctx.fillStyle = "#e9edf5";
-      ctx.beginPath();
-      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
-      ctx.fill();
+      if (cy > PADDING.top && cy < PADDING.top + plotHeight) {
+        ctx.fillStyle = "#e9edf5";
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
-  }, [candles, overlays, width, height, hover, showBands, intl]);
+  }, [gorunen, overlays, width, height, hover, showBands, intl, bas, adet, dikey]);
 
-  const handleMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  /* ────────────────────────── Fare ────────────────────────── */
+
+  const indeksBul = (clientX: number) => {
     const canvas = canvasRef.current;
-    if (!canvas || candles.length === 0) return;
+    if (!canvas || gorunen.length === 0) return null;
     const rect = canvas.getBoundingClientRect();
-    const padding = { left: 8, right: 66 };
-    const plotWidth = rect.width - padding.left - padding.right;
-    const relative = event.clientX - rect.left - padding.left;
-    const index = Math.floor((relative / plotWidth) * candles.length);
-    setHover(index >= 0 && index < candles.length ? index : null);
+    const plotWidth = rect.width - PADDING.left - PADDING.right;
+    const index = Math.floor(((clientX - rect.left - PADDING.left) / plotWidth) * gorunen.length);
+    return index >= 0 && index < gorunen.length ? index : null;
   };
 
-  const active = hover !== null ? candles[hover] : candles[candles.length - 1];
+  const handleMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    // Sürükleme sırasında imleci takip etmek yerine grafiği kaydır.
+    if (surukleRef.current && event.buttons === 1) {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const plotWidth = rect.width - PADDING.left - PADDING.right;
+      const plotHeight = height - PADDING.top - PADDING.bottom;
+      const kaydiMum = ((surukleRef.current.x - event.clientX) / plotWidth) * adet;
+      if (gorunum) pencereyiAyarla(surukleRef.current.bas + kaydiMum, adet);
+      if (dikey.olcek > 1) {
+        const oran = (event.clientY - surukleRef.current.y) / plotHeight;
+        setDikey((onceki) => ({
+          ...onceki,
+          kaydir: sinirla(surukleRef.current!.kaydir + oran / onceki.olcek, -0.9, 0.9),
+        }));
+      }
+      return;
+    }
+    setHover(indeksBul(event.clientX));
+  };
+
+  const active = hover !== null ? gorunen[hover] : gorunen[gorunen.length - 1];
+  const yakinlasti = Boolean(gorunum) || dikey.olcek > 1;
+
+  const metin = etiketler ?? {
+    yatay: "Zaman",
+    dikey: "Fiyat",
+    sifirla: "Sıfırla",
+    yakinlastir: "Yakınlaştır",
+    uzaklastir: "Uzaklaştır",
+    ipucu: "Tekerlek: zaman · Shift+tekerlek: fiyat · sürükle: kaydır",
+  };
 
   return (
     <div className="chart-shell" ref={wrapRef}>
@@ -280,11 +519,53 @@ export default function CandleChart({
           </span>
         )}
       </div>
+
+      {/* Yakınlaştırma denetimleri: dokunmatik cihazda ve klavyeyle
+          gezinenler için tekerlek/parmak hareketlerinin karşılığı. */}
+      <div className="chart-zoom">
+        <span className="chart-zoom-group" aria-label={metin.yatay}>
+          <b>{metin.yatay}</b>
+          <button onClick={() => yataySeviye(1 / 0.7)} title={`${metin.uzaklastir} · ${metin.yatay}`}>
+            −
+          </button>
+          <button onClick={() => yataySeviye(0.7)} title={`${metin.yakinlastir} · ${metin.yatay}`}>
+            +
+          </button>
+        </span>
+        <span className="chart-zoom-group" aria-label={metin.dikey}>
+          <b>{metin.dikey}</b>
+          <button onClick={() => dikeySeviye(1 / 1.4)} title={`${metin.uzaklastir} · ${metin.dikey}`}>
+            −
+          </button>
+          <button onClick={() => dikeySeviye(1.4)} title={`${metin.yakinlastir} · ${metin.dikey}`}>
+            +
+          </button>
+        </span>
+        {yakinlasti && (
+          <button className="chart-zoom-reset" onClick={sifirla}>
+            ⟲ {metin.sifirla}
+          </button>
+        )}
+        <span className="chart-zoom-hint">{metin.ipucu}</span>
+      </div>
+
       <canvas
         ref={canvasRef}
         onMouseMove={handleMove}
-        onMouseLeave={() => setHover(null)}
-        style={{ display: "block", cursor: "crosshair" }}
+        onMouseLeave={() => {
+          setHover(null);
+          surukleRef.current = null;
+        }}
+        onMouseDown={(event) => {
+          surukleRef.current = { x: event.clientX, y: event.clientY, bas, kaydir: dikey.kaydir };
+        }}
+        onMouseUp={() => {
+          surukleRef.current = null;
+        }}
+        onDoubleClick={sifirla}
+        // pan-y: sayfa dikey kaydırması çalışmaya devam eder, yatay
+        // sürükleme ve iki parmak hareketi grafiğe kalır.
+        style={{ display: "block", cursor: yakinlasti ? "grab" : "crosshair", touchAction: "pan-y" }}
       />
     </div>
   );

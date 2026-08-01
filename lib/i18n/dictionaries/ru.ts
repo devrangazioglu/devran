@@ -282,4 +282,10 @@ export const ru: Partial<Dictionary> = {
   "plans.yearlySave": "{count} месяца бесплатно при годовой оплате",
   "plans.perYear": "/год",
   "plans.perMonthEquivalent": "это {amount} в месяц",
+  "chart.time": "Время",
+  "chart.price": "Цена",
+  "chart.reset": "Сбросить",
+  "chart.zoomIn": "Приблизить",
+  "chart.zoomOut": "Отдалить",
+  "chart.hint": "Колесо: время · Shift+колесо: цена · перетаскивание: сдвиг",
 };

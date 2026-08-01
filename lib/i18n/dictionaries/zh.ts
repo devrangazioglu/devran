@@ -274,4 +274,10 @@ export const zh: Partial<Dictionary> = {
   "plans.yearlySave": "按年付费送 {count} 个月",
   "plans.perYear": "/年",
   "plans.perMonthEquivalent": "相当于每月 {amount}",
+  "chart.time": "时间",
+  "chart.price": "价格",
+  "chart.reset": "重置",
+  "chart.zoomIn": "放大",
+  "chart.zoomOut": "缩小",
+  "chart.hint": "滚轮：时间 · Shift+滚轮：价格 · 拖动：平移",
 };

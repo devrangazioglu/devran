@@ -2284,3 +2284,61 @@ canvas {
   font-size: 12px;
   color: var(--text-dim);
 }
+
+/* ── Grafik yakınlaştırma denetimleri ─────────────────────── */
+
+.chart-zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.chart-zoom-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chart-zoom-group b {
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-inline-end: 2px;
+}
+
+.chart-zoom button {
+  width: 26px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chart-zoom button:hover {
+  border-color: rgba(143, 240, 164, 0.45);
+}
+
+.chart-zoom-reset {
+  width: auto !important;
+  padding: 0 10px;
+  font-size: 12px !important;
+  color: var(--accent) !important;
+}
+
+/* İpucu yalnızca fare olan ekranlarda anlamlı. */
+.chart-zoom-hint {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 900px) {
+  .chart-zoom-hint {
+    display: none;
+  }
+}

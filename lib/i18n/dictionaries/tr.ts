@@ -668,6 +668,116 @@ export const tr = {
 
   "auth.apple": "Apple ile giriş yap",
   "auth.appleRegister": "Apple ile kaydol",
+
+  "chart.time": "Zaman",
+  "chart.price": "Fiyat",
+  "chart.reset": "Sıfırla",
+  "chart.zoomIn": "Yakınlaştır",
+  "chart.zoomOut": "Uzaklaştır",
+  "chart.hint": "Tekerlek: zaman · Shift+tekerlek: fiyat · sürükle: kaydır · çift tık: sıfırla",
+
+  /* ── Yorum: genişletilmiş bölümler ────────────────────── */
+  "commentary.overview.aboveEma200":
+    "Fiyat, uzun vadeli ortalama olan EMA 200'ün ({ema200}) %{distance} üzerinde; ana resimde alıcılar hâlâ üstünlüğü elinde tutuyor.",
+  "commentary.overview.belowEma200":
+    "Fiyat, uzun vadeli ortalama olan EMA 200'ün ({ema200}) %{distance} altında; ana resimde satıcılar üstünlüğü elinde tutuyor.",
+  "commentary.overview.scoreNote":
+    "Skor, 16 göstergenin her birinin −1 ile +1 arasındaki yönünün ağırlıklı ortalamasıdır; +18'in üzeri AL, −18'in altı SAT, arası BEKLE sayılır. Güven yüzdesi ise göstergelerin birbiriyle ne kadar uyumlu olduğunu ölçer: yüksek skor düşük güvenle geldiyse, birkaç gösterge çok güçlü ama çoğunluk kararsız demektir.",
+
+  "commentary.trend.shortUp":
+    "Kısa vadede EMA 9 ({ema9}), EMA 21'in ({ema21}) üzerinde — son mumlarda ivme yukarı",
+  "commentary.trend.shortDown":
+    "Kısa vadede EMA 9 ({ema9}), EMA 21'in ({ema21}) altında — son mumlarda ivme aşağı",
+  "commentary.trend.diUp":
+    "Yön göstergelerinde +DI {plus}, −DI {minus} seviyesinde; yükseliş baskısı önde",
+  "commentary.trend.diDown":
+    "Yön göstergelerinde +DI {plus}, −DI {minus} seviyesinde; düşüş baskısı önde",
+  "commentary.trend.vwapAbove":
+    "Fiyat, hacim ağırlıklı ortalamanın (VWAP {vwap}) üzerinde; gün içi alıcılar ortalama maliyetin kârında",
+  "commentary.trend.vwapBelow":
+    "Fiyat, hacim ağırlıklı ortalamanın (VWAP {vwap}) altında; gün içi alıcılar ortalama maliyetin zararında",
+  "commentary.trend.explain":
+    "Trend göstergeleri yönü söyler, zamanlamayı değil: ADX 25'in üzerindeyken kesişim sinyalleri daha güvenilir, 20'nin altındaysa fiyat büyük olasılıkla yatay bir bantta salınıyordur ve kesişimler sık sık yanıltır.",
+
+  "commentary.momentum.histPositive":
+    "MACD histogramı +{hist} ile pozitif bölgede (iki çizgi arasındaki fark açılıyorsa hareket güçleniyor demektir)",
+  "commentary.momentum.histNegative":
+    "MACD histogramı −{hist} ile negatif bölgede (fark açıldıkça düşüş baskısı güçlenir)",
+  "commentary.momentum.stochAbove":
+    "Stokastik %K {k}, %D {d} çizgisinin üzerinde — kısa vadeli momentum yukarı dönmüş",
+  "commentary.momentum.stochBelow":
+    "Stokastik %K {k}, %D {d} çizgisinin altında — kısa vadeli momentum aşağı dönmüş",
+  "commentary.momentum.cciHigh":
+    "CCI {cci} ile +100'ün üzerinde; fiyat ortalamasının belirgin biçimde üzerinde, güçlü ama olgunlaşmış bir hareket",
+  "commentary.momentum.cciLow":
+    "CCI {cci} ile −100'ün altında; fiyat ortalamasının belirgin biçimde altında, satış baskısı sert",
+  "commentary.momentum.cciMid": "CCI {cci} ile nötr bölgede",
+  "commentary.momentum.williams":
+    "Williams %R {wr} seviyesinde (−20 üstü aşırı alım, −80 altı aşırı satım kabul edilir)",
+  "commentary.momentum.explain":
+    "Momentum göstergeleri hızı ölçer, yönü değil: aşırı alım bölgesi “düşecek” demek değildir, güçlü trendlerde fiyat haftalarca aşırı alımda kalabilir. Bu yüzden momentum tek başına değil, trend ve seviyelerle birlikte okunmalıdır.",
+
+  "commentary.flow.intro": "Para akışı tarafında:",
+  "commentary.flow.mfiHigh":
+    "Money Flow Index {mfi} ile aşırı alım bölgesinde; hacimle desteklenen yükseliş yorgunluk belirtisi veriyor.",
+  "commentary.flow.mfiLow":
+    "Money Flow Index {mfi} ile aşırı satım bölgesinde; satış baskısı hacimle birlikte tükeniyor olabilir.",
+  "commentary.flow.mfiMid": "Money Flow Index {mfi} ile dengeli bölgede.",
+  "commentary.flow.explain":
+    "Hacim, fiyatın arkasındaki niyeti gösterir: yükselen fiyata artan hacim eşlik ediyorsa hareketin arkasında gerçek talep var demektir; hacim düşerken gelen yükseliş ise çoğunlukla kalıcı olmaz.",
+
+  "commentary.vol.aboveBand":
+    "Fiyat Bollinger üst bandının ({upper}) dışında (%B {percentB}); bu bölgede ya güçlü bir atak ya da kısa vadeli bir tepe vardır.",
+  "commentary.vol.belowBand":
+    "Fiyat Bollinger alt bandının ({lower}) dışında (%B {percentB}); sert satış ya da dip arayışı işareti.",
+  "commentary.vol.upperHalf":
+    "Fiyat Bollinger bandının üst yarısında (%B {percentB}); orta bant ({lower}–{upper} aralığının ortası) ilk geri çekilme durağıdır.",
+  "commentary.vol.lowerHalf":
+    "Fiyat Bollinger bandının alt yarısında (%B {percentB}); toparlanma denemelerinde orta bant ilk direnç olur.",
+  "commentary.vol.bandwidth":
+    "Bant genişliği fiyatın %{bandwidth} kadarı — bu değer daraldıkça hareketsizlik, genişledikçe oynaklık artar.",
+
+  "commentary.pattern.intro": "Grafikte {count} formasyon tespit edildi.",
+  "commentary.pattern.bull": "yükseliş yönlü",
+  "commentary.pattern.bear": "düşüş yönlü",
+  "commentary.pattern.neutral": "kararsız",
+  "commentary.pattern.none":
+    "Son mumlarda belirgin bir mum formasyonu ya da kesişim oluşmadı; bu, sinyalin tek tek göstergelerin ortalamasından geldiği anlamına gelir.",
+
+  "commentary.levels.position":
+    "Fiyat, bu iki seviye arasındaki bandın %{position} yüksekliğinde duruyor.",
+  "commentary.levels.second":
+    "Bir sonraki durak noktaları: aşağıda {support}, yukarıda {resistance}.",
+
+  "commentary.timeframes": "Diğer zaman dilimleri — {list}.",
+  "commentary.timeframes.aligned":
+    "Zaman dilimleri aynı yönü gösteriyor; bu, sinyalin en güçlü hâlidir çünkü kısa vadeli gürültü uzun vadeli eğilimle çelişmiyor.",
+  "commentary.timeframes.against":
+    "Üst zaman dilimleri bu sinyalin tersini söylüyor. Kısa periyotta doğru görünen bir işlem, büyük resme karşı açıldığında hedefe ulaşmadan dönebilir.",
+  "commentary.timeframes.mixed":
+    "Zaman dilimleri karışık; böyle durumlarda pozisyonu küçültmek ya da üst periyotta da onay gelmesini beklemek makul bir seçenektir.",
+
+  "commentary.plan.target": "{index}. hedef {price} (%{distance})",
+  "commentary.plan.targets":
+    "Hedefler kademeli olarak {list} biçiminde ölçeklendi; kademeli kâr almak, tek hedefe oynamaya göre planın ortalama sonucunu daha az şansa bağlar.",
+  "commentary.plan.sizing":
+    "Bu planda zarar durdur seviyesine olan mesafe %{riskPercent}. Pozisyon büyüklüğünü, bu mesafe gerçekleştiğinde kaybedeceğiniz tutar hesabınızın kabul ettiğiniz küçük bir oranını (yaygın kabul %1–2) aşmayacak şekilde seçin; teknik analiz yönü tahmin eder, sermayeyi koruyan şey pozisyon büyüklüğüdür.",
+
+  "commentary.counter.bull":
+    "Bu senaryoyu ne bozar: {invalid} seviyesinin altında bir kapanış, alış tarafındaki yapının kırıldığını gösterir ve sinyali geçersiz kılar. Ne doğrular: {confirm} üzerinde hacimli bir kapanış, direncin destek hâline geldiği anlamına gelir.",
+  "commentary.counter.bear":
+    "Bu senaryoyu ne bozar: {invalid} seviyesinin üzerinde bir kapanış, satış tarafındaki yapının kırıldığını gösterir. Ne doğrular: {confirm} altında hacimli bir kapanış, düşüşün devamı için alan açar.",
+  "commentary.counter.wait":
+    "Net bir yön yok: {up} üzerinde kapanış alış tarafını, {down} altında kapanış satış tarafını tetikler. Bu iki seviye arasında kalındığı sürece işlem yapmamak da bir karardır.",
+  "commentary.counter.rsiWatchBull":
+    "RSI'ın 50 seviyesinin altına sarkması, çoğu zaman seviye kırılmadan önce gelen ilk uyarıdır.",
+  "commentary.counter.rsiWatchBear":
+    "RSI'ın 50 seviyesinin üzerine çıkması, düşüş senaryosunun zayıfladığına dair ilk uyarıdır.",
+
+  "risk.lowRiskReward":
+    "Risk/ödül oranı {rr}:1 ile düşük; bu planda kazanma oranı yüksek olsa bile uzun vadede beklenen getiri sınırlı kalır.",
+  "risk.timeframeConflict":
+    "Şu zaman dilimleri ters yönde sinyal veriyor: {list}. Üst periyotla çelişen işlemler daha kısa ömürlü olur.",
 } as const;
 
 export type DictionaryKey = keyof typeof tr;

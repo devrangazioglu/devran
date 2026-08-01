@@ -280,4 +280,10 @@ export const ar: Partial<Dictionary> = {
   "plans.yearlySave": "{count} شهرين مجانًا مع الدفع السنوي",
   "plans.perYear": "/سنة",
   "plans.perMonthEquivalent": "أي {amount} شهريًا",
+  "chart.time": "الزمن",
+  "chart.price": "السعر",
+  "chart.reset": "إعادة الضبط",
+  "chart.zoomIn": "تكبير",
+  "chart.zoomOut": "تصغير",
+  "chart.hint": "العجلة: الزمن · Shift+العجلة: السعر · السحب: التحريك",
 };

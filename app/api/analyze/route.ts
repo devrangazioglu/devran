@@ -105,7 +105,6 @@ export async function GET(request: Request) {
   try {
     const { candles, source, instrument } = await getCandles(marketParam, symbol, interval, 300);
     const analysis = analyze(instrument, interval, candles, source);
-    const commentary = buildCommentary(analysis, locale);
     const series = chartSeries(candles);
 
     // Fiyat listesinden gün içi istatistikler (varsa).
@@ -129,6 +128,11 @@ export async function GET(request: Request) {
         }
       }),
     );
+    const digerPeriyotlar = timeframes.filter((tf) => tf !== null);
+
+    // Yorum en son üretilir: diğer zaman dilimlerinin sonucunu da kullanıyor,
+    // "üst periyot ne diyor" cümlesi ancak onlar hesaplandıktan sonra yazılabilir.
+    const commentary = buildCommentary(analysis, locale, { timeframes: digerPeriyotlar });
 
     const visible = 180;
     const trim = <T,>(list: T[]) => list.slice(-visible);
@@ -151,7 +155,7 @@ export async function GET(request: Request) {
         macdSignal: trim(series.macdSignal),
         macdHistogram: trim(series.macdHistogram),
       },
-      timeframes: timeframes.filter((t) => t !== null),
+      timeframes: digerPeriyotlar,
     });
   } catch (error) {
     // Görülemeyen analiz için ödeme alınmaz.

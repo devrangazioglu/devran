@@ -282,4 +282,10 @@ export const fr: Partial<Dictionary> = {
   "plans.yearlySave": "{count} mois offerts en paiement annuel",
   "plans.perYear": "/an",
   "plans.perMonthEquivalent": "soit {amount} par mois",
+  "chart.time": "Temps",
+  "chart.price": "Prix",
+  "chart.reset": "Réinitialiser",
+  "chart.zoomIn": "Zoom avant",
+  "chart.zoomOut": "Zoom arrière",
+  "chart.hint": "Molette : temps · Maj+molette : prix · glisser : déplacer",
 };

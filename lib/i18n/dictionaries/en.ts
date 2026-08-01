@@ -645,4 +645,113 @@ export const en: Dictionary = {
 
   "auth.apple": "Sign in with Apple",
   "auth.appleRegister": "Sign up with Apple",
+
+  "chart.time": "Time",
+  "chart.price": "Price",
+  "chart.reset": "Reset",
+  "chart.zoomIn": "Zoom in",
+  "chart.zoomOut": "Zoom out",
+  "chart.hint": "Wheel: time · Shift+wheel: price · drag: pan · double-click: reset",
+  /* ── Commentary: extended sections ── */
+  "commentary.overview.aboveEma200":
+    "Price sits {distance}% above the long-term average, EMA 200 ({ema200}); in the big picture buyers still hold the upper hand.",
+  "commentary.overview.belowEma200":
+    "Price sits {distance}% below the long-term average, EMA 200 ({ema200}); in the big picture sellers hold the upper hand.",
+  "commentary.overview.scoreNote":
+    "The score is the weighted average of 16 indicators, each pointing between −1 and +1; above +18 counts as BUY, below −18 as SELL, and anything between as WAIT. Confidence measures how much the indicators agree with each other: a high score with low confidence means a few indicators are very strong while the majority is undecided.",
+
+  "commentary.trend.shortUp":
+    "In the short term EMA 9 ({ema9}) is above EMA 21 ({ema21}) — recent candles lean upward",
+  "commentary.trend.shortDown":
+    "In the short term EMA 9 ({ema9}) is below EMA 21 ({ema21}) — recent candles lean downward",
+  "commentary.trend.diUp":
+    "Directional indicators read +DI {plus} against −DI {minus}; upward pressure leads",
+  "commentary.trend.diDown":
+    "Directional indicators read +DI {plus} against −DI {minus}; downward pressure leads",
+  "commentary.trend.vwapAbove":
+    "Price is above the volume-weighted average (VWAP {vwap}); intraday buyers are in profit on their average cost",
+  "commentary.trend.vwapBelow":
+    "Price is below the volume-weighted average (VWAP {vwap}); intraday buyers are underwater on their average cost",
+  "commentary.trend.explain":
+    "Trend indicators tell you direction, not timing: crossovers are more reliable while ADX is above 25, and below 20 price is most likely ranging, where crossovers whipsaw often.",
+
+  "commentary.momentum.histPositive":
+    "the MACD histogram is positive at +{hist} (a widening gap between the two lines means the move is gaining strength)",
+  "commentary.momentum.histNegative":
+    "the MACD histogram is negative at −{hist} (as the gap widens, selling pressure strengthens)",
+  "commentary.momentum.stochAbove":
+    "Stochastic %K {k} is above %D {d} — short-term momentum has turned up",
+  "commentary.momentum.stochBelow":
+    "Stochastic %K {k} is below %D {d} — short-term momentum has turned down",
+  "commentary.momentum.cciHigh":
+    "CCI at {cci} is above +100; price is well above its average — strong, but a mature move",
+  "commentary.momentum.cciLow":
+    "CCI at {cci} is below −100; price is well below its average and selling is heavy",
+  "commentary.momentum.cciMid": "CCI at {cci} is in neutral territory",
+  "commentary.momentum.williams":
+    "Williams %R is at {wr} (above −20 counts as overbought, below −80 as oversold)",
+  "commentary.momentum.explain":
+    "Momentum measures speed, not direction: overbought does not mean “about to fall” — in strong trends price can stay overbought for weeks. Read momentum together with trend and levels, never on its own.",
+
+  "commentary.flow.intro": "On the money-flow side:",
+  "commentary.flow.mfiHigh":
+    "the Money Flow Index at {mfi} is overbought; a volume-backed rally is showing signs of fatigue.",
+  "commentary.flow.mfiLow":
+    "the Money Flow Index at {mfi} is oversold; selling pressure may be exhausting itself along with volume.",
+  "commentary.flow.mfiMid": "the Money Flow Index at {mfi} is balanced.",
+  "commentary.flow.explain":
+    "Volume shows the intent behind price: when rising prices come with rising volume there is real demand behind the move, whereas a rally on shrinking volume rarely holds.",
+
+  "commentary.vol.aboveBand":
+    "Price is outside the upper Bollinger band ({upper}, %B {percentB}); this area is either a powerful breakout or a short-term top.",
+  "commentary.vol.belowBand":
+    "Price is outside the lower Bollinger band ({lower}, %B {percentB}) — a sign of heavy selling or a bottoming attempt.",
+  "commentary.vol.upperHalf":
+    "Price is in the upper half of the Bollinger band (%B {percentB}); the middle band (the midpoint of the {lower}–{upper} range) is the first stop on a pullback.",
+  "commentary.vol.lowerHalf":
+    "Price is in the lower half of the Bollinger band (%B {percentB}); on recovery attempts the middle band becomes the first resistance.",
+  "commentary.vol.bandwidth":
+    "Band width is {bandwidth}% of price — the narrower it gets the quieter the market, the wider it gets the more volatile.",
+
+  "commentary.pattern.intro": "{count} formation(s) detected on the chart.",
+  "commentary.pattern.bull": "bullish",
+  "commentary.pattern.bear": "bearish",
+  "commentary.pattern.neutral": "undecided",
+  "commentary.pattern.none":
+    "No clear candlestick formation or crossover has appeared in the recent candles, which means this signal comes from the average of the individual indicators.",
+
+  "commentary.levels.position":
+    "Price currently sits {position}% of the way up the band between those two levels.",
+  "commentary.levels.second":
+    "The next stops beyond them: {support} below and {resistance} above.",
+
+  "commentary.timeframes": "Other timeframes — {list}.",
+  "commentary.timeframes.aligned":
+    "The timeframes point the same way, which is the strongest form of this signal: short-term noise is not fighting the longer-term trend.",
+  "commentary.timeframes.against":
+    "The higher timeframes say the opposite. A trade that looks right on a short period can reverse before reaching target when it runs against the bigger picture.",
+  "commentary.timeframes.mixed":
+    "The timeframes disagree; sizing down or waiting for the higher period to confirm is a reasonable response.",
+
+  "commentary.plan.target": "target {index} at {price} ({distance}%)",
+  "commentary.plan.targets":
+    "Targets are scaled as {list}; taking profit in steps makes the average outcome of the plan depend less on luck than aiming for a single target.",
+  "commentary.plan.sizing":
+    "The distance to the stop in this plan is {riskPercent}%. Size the position so that, if that stop is hit, the loss stays within a small share of your account (1–2% is the common rule); technical analysis estimates direction, but position sizing is what protects capital.",
+
+  "commentary.counter.bull":
+    "What breaks this scenario: a close below {invalid} would show the bullish structure has failed and invalidate the signal. What confirms it: a close above {confirm} on strong volume, turning that resistance into support.",
+  "commentary.counter.bear":
+    "What breaks this scenario: a close above {invalid} would show the bearish structure has failed. What confirms it: a close below {confirm} on strong volume, opening room for the decline to continue.",
+  "commentary.counter.wait":
+    "There is no clear direction: a close above {up} triggers the bullish case, a close below {down} the bearish one. While price stays between them, standing aside is also a decision.",
+  "commentary.counter.rsiWatchBull":
+    "RSI slipping back under 50 is usually the first warning, arriving before the level itself breaks.",
+  "commentary.counter.rsiWatchBear":
+    "RSI climbing back above 50 is the first warning that the bearish case is weakening.",
+
+  "risk.lowRiskReward":
+    "The risk/reward ratio is low at {rr}:1; even with a high win rate, the expected return of this plan stays limited.",
+  "risk.timeframeConflict":
+    "These timeframes signal the opposite way: {list}. Trades that fight the higher period tend to be shorter-lived.",
 };

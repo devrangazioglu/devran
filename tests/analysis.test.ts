@@ -163,11 +163,25 @@ test("destek seviyeleri fiyatın altında, dirençler üstündedir", () => {
 
 test("yorum motoru her dilde dolu metin üretir", () => {
   const result = analyze(BTC, "4h", RISING, "canli");
+  // Üst zaman dilimleri de verilir: "diğer periyotlar" ve "karşı senaryo"
+  // paragrafları ancak bu bağlamla üretiliyor.
+  const baglam = {
+    timeframes: [
+      { interval: "1d" as const, signal: "BUY" as const, score: 32 },
+      { interval: "1w" as const, signal: "SELL" as const, score: -21 },
+    ],
+  };
 
   for (const locale of ["tr", "en", "de", "ar"] as const) {
-    const commentary = buildCommentary(result, locale);
+    const commentary = buildCommentary(result, locale, baglam);
     assert.ok(commentary.headline.includes("BTC/USDT"), `başlıkta varlık yok (${locale})`);
-    assert.ok(commentary.paragraphs.length >= 5, `paragraf eksik (${locale})`);
+    // Yorum artık on başlık altında yazılıyor; sayı düşerse bir bölüm sessizce
+    // kaybolmuş demektir.
+    assert.ok(commentary.paragraphs.length >= 9, `paragraf eksik (${locale})`);
+    assert.ok(
+      commentary.paragraphs.join(" ").length > 1200,
+      `yorum fazla kısa (${locale}): ${commentary.paragraphs.join(" ").length} karakter`,
+    );
     assert.ok(commentary.risks.length >= 1);
 
     for (const text of [...commentary.paragraphs, ...commentary.highlights, ...commentary.risks]) {
@@ -183,6 +197,16 @@ test("yorum motoru her dilde dolu metin üretir", () => {
       );
     }
   }
+});
+
+test("ters yöndeki üst zaman dilimi risk olarak yazılır", () => {
+  const yorum = buildCommentary(analyze(BTC, "4h", RISING, "canli"), "tr", {
+    timeframes: [{ interval: "1w", signal: "STRONG_SELL", score: -60 }],
+  });
+  assert.ok(
+    yorum.risks.some((risk) => risk.includes("ters yönde")),
+    `çelişki uyarısı yok: ${JSON.stringify(yorum.risks)}`,
+  );
 });
 
 test("hisse analizinde seans uyarısı, demo veride demo uyarısı verilir", () => {

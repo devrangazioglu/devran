@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import CandleChart from "@/components/CandleChart";
+import CandleChart, { type Gorunum } from "@/components/CandleChart";
 import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
 import IndicatorChart from "@/components/IndicatorChart";
@@ -56,6 +56,8 @@ export default function AssetClient({
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [watched, setWatched] = useState(inWatchlist);
+  // Grafiklerin ortak zaman penceresi (yakınlaştırma); null = tamamı.
+  const [gorunum, setGorunum] = useState<Gorunum | null>(null);
   const [savingWatch, setSavingWatch] = useState(false);
 
   const load = useCallback(
@@ -82,6 +84,8 @@ export default function AssetClient({
 
   useEffect(() => {
     void load(period);
+    // Periyot değişince eski yakınlaştırma yeni seriye uymaz.
+    setGorunum(null);
   }, [period, load]);
 
   async function toggleWatch() {
@@ -271,6 +275,16 @@ export default function AssetClient({
               bbLower: data.series.bbLower,
             }}
             intl={intl}
+            gorunum={gorunum}
+            onGorunum={setGorunum}
+            etiketler={{
+              yatay: t("chart.time"),
+              dikey: t("chart.price"),
+              sifirla: t("chart.reset"),
+              yakinlastir: t("chart.zoomIn"),
+              uzaklastir: t("chart.zoomOut"),
+              ipucu: t("chart.hint"),
+            }}
           />
 
           <div className="grid-2">
@@ -280,6 +294,7 @@ export default function AssetClient({
               guides={[30, 50, 70]}
               min={0}
               max={100}
+              gorunum={gorunum}
             />
             <IndicatorChart
               title="MACD (12, 26, 9)"
@@ -289,6 +304,7 @@ export default function AssetClient({
               ]}
               histogram={data.series.macdHistogram}
               guides={[0]}
+              gorunum={gorunum}
             />
           </div>
 

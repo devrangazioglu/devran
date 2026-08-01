@@ -327,4 +327,10 @@ export const es: Partial<Dictionary> = {
   "plans.yearlySave": "{count} meses gratis con pago anual",
   "plans.perYear": "/año",
   "plans.perMonthEquivalent": "equivale a {amount} al mes",
+  "chart.time": "Tiempo",
+  "chart.price": "Precio",
+  "chart.reset": "Restablecer",
+  "chart.zoomIn": "Acercar",
+  "chart.zoomOut": "Alejar",
+  "chart.hint": "Rueda: tiempo · Shift+rueda: precio · arrastrar: desplazar",
 };
