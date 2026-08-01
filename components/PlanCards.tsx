@@ -13,32 +13,44 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useI18n } from "./I18nProvider";
-import { PLAN_IDS, PLANS, type PlanId } from "@/lib/plans";
+import {
+  PLAN_IDS,
+  PLANS,
+  planUcreti,
+  YILLIK_BEDAVA_AY,
+  yillikAylikKarsiligi,
+  type Faturalama,
+  type PlanId,
+} from "@/lib/plans";
 
 export default function PlanCards({
   mevcut = null,
+  mevcutFaturalama = null,
   uyeModu = false,
   kayitHref = "/kayit",
 }: {
   /** Kullanıcının şu anki planı; bilinmiyorsa null. */
   mevcut?: PlanId | null;
+  /** Kullanıcının şu anki faturalama dönemi. */
+  mevcutFaturalama?: Faturalama | null;
   /** Üye alanında kartlar plan değiştirir; tanıtımda kayda yönlendirir. */
   uyeModu?: boolean;
   kayitHref?: string;
 }) {
   const { t, intl } = useI18n();
   const router = useRouter();
+  const [faturalama, setFaturalama] = useState<Faturalama>(mevcutFaturalama ?? "aylik");
   const [bekleyen, setBekleyen] = useState<PlanId | null>(null);
   const [mesaj, setMesaj] = useState<{ tur: "ok" | "hata"; metin: string } | null>(null);
 
-  // Ücretsiz planda da rakam gösterilir: başlıkta "Ücretsiz" yazarken fiyat
-  // satırında da "Ücretsiz" yazmak kartı iki kez aynı şeyi söyler hâle getirir.
-  const fiyat = (ucret: number) =>
+  // Fiyatlar tam sayı: küsurat okumayı zorlaştırıyor, indirimi de gizliyor.
+  const para = (tutar: number, kesir = 0) =>
     new Intl.NumberFormat(intl, {
       style: "currency",
       currency: "USD",
-      minimumFractionDigits: ucret === 0 ? 0 : 2,
-    }).format(ucret);
+      minimumFractionDigits: kesir,
+      maximumFractionDigits: kesir,
+    }).format(tutar);
 
   async function planSec(id: PlanId) {
     setBekleyen(id);
@@ -47,7 +59,7 @@ export default function PlanCards({
       const response = await fetch("/api/abonelik", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ plan: id }),
+        body: JSON.stringify({ plan: id, faturalama }),
       });
       const body = (await response.json().catch(() => null)) as
         | { mesaj?: string; error?: string }
@@ -68,6 +80,25 @@ export default function PlanCards({
 
   return (
     <>
+      {/* Aylık / yıllık anahtarı */}
+      <div className="fatura-anahtari">
+        <div className="segmented">
+          <button
+            className={faturalama === "aylik" ? "active" : ""}
+            onClick={() => setFaturalama("aylik")}
+          >
+            {t("plans.monthly")}
+          </button>
+          <button
+            className={faturalama === "yillik" ? "active" : ""}
+            onClick={() => setFaturalama("yillik")}
+          >
+            {t("plans.yearly")}
+          </button>
+        </div>
+        <span className="fatura-rozet">{t("plans.yearlySave", { count: YILLIK_BEDAVA_AY })}</span>
+      </div>
+
       {mesaj && (
         <div className={mesaj.tur === "ok" ? "notice" : "notice notice-error"}>{mesaj.metin}</div>
       )}
@@ -75,8 +106,11 @@ export default function PlanCards({
       <div className="plan-grid">
         {PLAN_IDS.map((id) => {
           const plan = PLANS[id];
-          const secili = mevcut === id;
+          // "Mevcut plan" yalnızca aynı faturalama döneminde geçerli: yıllığa
+          // geçmek isteyen kullanıcı düğmeyi kapalı bulmamalı.
+          const secili = mevcut === id && (mevcutFaturalama ?? "aylik") === faturalama;
           const oneCikan = id === "premium";
+          const ucret = planUcreti(plan, faturalama);
 
           return (
             <div key={id} className={`plan-card${oneCikan ? " plan-card-featured" : ""}`}>
@@ -84,8 +118,15 @@ export default function PlanCards({
 
               <h3>{t(`plan.${id}` as "plan.basic")}</h3>
               <p className="plan-price">
-                <b>{fiyat(plan.ucret)}</b>
-                <span>{t("plans.perMonth")}</span>
+                <b>{para(ucret)}</b>
+                <span>{faturalama === "yillik" ? t("plans.perYear") : t("plans.perMonth")}</span>
+              </p>
+              {/* Yıllıkta aya düşen tutar: karşılaştırmayı kullanıcıya
+                  yaptırmak yerine yazıyoruz. */}
+              <p className="plan-price-note">
+                {faturalama === "yillik" && ucret > 0
+                  ? t("plans.perMonthEquivalent", { amount: para(yillikAylikKarsiligi(plan), 2) })
+                  : " "}
               </p>
 
               <ul className="plan-list">

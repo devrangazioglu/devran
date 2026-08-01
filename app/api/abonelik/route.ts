@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { abonelikDurumu, krediOzeti, planDegistir } from "@/lib/credits";
 import { odemeAcik, odemeTestModu } from "@/lib/odeme";
-import { isPlanId, plan } from "@/lib/plans";
+import { isFaturalama, isPlanId, plan } from "@/lib/plans";
 import { UserStoreError } from "@/lib/users";
 
 export const runtime = "nodejs";
@@ -33,11 +33,14 @@ export async function POST(request: Request) {
   const email = session?.user?.email;
   if (!email) return NextResponse.json({ error: "Giriş gerekli." }, { status: 401 });
 
-  const body = (await request.json().catch(() => null)) as { plan?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as
+    | { plan?: unknown; faturalama?: unknown }
+    | null;
   if (!isPlanId(body?.plan)) {
     return NextResponse.json({ error: "Geçersiz plan." }, { status: 400 });
   }
   const secilen = body.plan;
+  const faturalama = isFaturalama(body.faturalama) ? body.faturalama : "aylik";
 
   if (secilen !== "ucretsiz" && !odemeAcik() && !odemeTestModu()) {
     return NextResponse.json(
@@ -52,7 +55,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const durum = await planDegistir(email, secilen);
+    const durum = await planDegistir(email, secilen, faturalama);
     return NextResponse.json({
       ozet: krediOzeti(durum),
       odemeAcik: odemeAcik() || odemeTestModu(),

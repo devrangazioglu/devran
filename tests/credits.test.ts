@@ -20,7 +20,13 @@ import {
   krediIade,
   planDegistir,
 } from "../lib/credits";
-import { DONEM_MS, PLANS, TEKRAR_UCRETSIZ_MS } from "../lib/plans";
+import {
+  DONEM_MS,
+  PLANS,
+  planUcreti,
+  TEKRAR_UCRETSIZ_MS,
+  YILLIK_BEDAVA_AY,
+} from "../lib/plans";
 import { fileStore } from "../lib/users-file";
 import { buildUser, normalizeSubscription } from "../lib/users-shared";
 
@@ -148,8 +154,29 @@ test("plan değişimi hakkı ve dönemi yeniler", async () => {
 
   const durum = await planDegistir(email, "premium");
   assert.equal(durum.plan.id, "premium");
+  assert.equal(durum.faturalama, "aylik", "belirtilmezse aylık");
   assert.equal(durum.toplam, PLANS.premium.aylikKredi);
   assert.equal(durum.kalan, PLANS.premium.aylikKredi, "yükseltmede kredi baştan başlar");
+});
+
+test("yıllık faturalama kredi hakkını değiştirmez, fiyatı değiştirir", async () => {
+  const email = await yeniKullanici();
+  const durum = await planDegistir(email, "basic", "yillik");
+
+  assert.equal(durum.faturalama, "yillik");
+  assert.equal(durum.toplam, PLANS.basic.aylikKredi, "kredi aylık hak; yıllık ödemek çoğaltmaz");
+  assert.equal(planUcreti(durum.plan, "yillik"), PLANS.basic.yillikUcret);
+
+  // Yıllık fiyat, aylığın on katı olmalı: iki ay bedava sözü buradan geliyor.
+  for (const id of ["basic", "premium", "ultimate"] as const) {
+    assert.equal(
+      PLANS[id].yillikUcret,
+      PLANS[id].ucret * (12 - YILLIK_BEDAVA_AY),
+      `${id} yıllık fiyatı ${YILLIK_BEDAVA_AY} ay bedava ile uyuşmuyor`,
+    );
+    assert.equal(PLANS[id].ucret % 1, 0, "aylık fiyat tam sayı olmalı");
+    assert.equal(PLANS[id].yillikUcret % 1, 0, "yıllık fiyat tam sayı olmalı");
+  }
 });
 
 test("kullanıcı kaydı yoksa defter tutulmaz ama istek engellenmez", async () => {

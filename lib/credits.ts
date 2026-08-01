@@ -23,7 +23,9 @@ import {
   ANALIZ_KREDISI,
   DONEM_MS,
   plan,
+  planUcreti,
   TEKRAR_UCRETSIZ_MS,
+  type Faturalama,
   type Plan,
   type PlanId,
 } from "./plans";
@@ -40,6 +42,8 @@ const EN_FAZLA_ANAHTAR = 120;
 
 export type KrediDurumu = {
   plan: Plan;
+  /** Aylık mı yıllık mı ödeniyor. */
+  faturalama: Faturalama;
   /** Dönem başına düşen kredi. */
   toplam: number;
   harcanan: number;
@@ -49,15 +53,13 @@ export type KrediDurumu = {
   donemSonu: number;
 };
 
-/**
- * `durum: null`, defterin tutulamadığı anlamına gelir (kullanıcı kaydı yok ya
- * da depo yazılamıyor). Bu durumda **kısıtlama uygulanmaz**: altyapı sorunu
- * yüzünden kimse ödediği hizmeti kaybetmemeli.
- */
 /** Arayüze gönderilen kısa özet (API yanıtlarının `kredi` alanı). */
 export type KrediOzeti = {
   plan: PlanId;
   planAd: string;
+  faturalama: Faturalama;
+  /** Seçilen döneme göre ödenen tutar (USD). */
+  ucret: number;
   kalan: number;
   toplam: number;
   /** Kredinin yenileneceği an (ms). */
@@ -69,12 +71,19 @@ export function krediOzeti(durum: KrediDurumu | null): KrediOzeti | null {
   return {
     plan: durum.plan.id,
     planAd: durum.plan.ad,
+    faturalama: durum.faturalama,
+    ucret: planUcreti(durum.plan, durum.faturalama),
     kalan: durum.kalan,
     toplam: durum.toplam,
     donemSonu: durum.donemSonu,
   };
 }
 
+/**
+ * `durum: null`, defterin tutulamadığı anlamına gelir (kullanıcı kaydı yok ya
+ * da depo yazılamıyor). Bu durumda **kısıtlama uygulanmaz**: altyapı sorunu
+ * yüzünden kimse ödediği hizmeti kaybetmemeli.
+ */
 export type HarcamaSonucu =
   | { ok: true; ucretsiz: boolean; durum: KrediDurumu | null }
   | { ok: false; sebep: "yetersiz"; durum: KrediDurumu };
@@ -116,6 +125,7 @@ export function durumOlustur(abonelik: Subscription): KrediDurumu {
   const secili = plan(abonelik.plan);
   return {
     plan: secili,
+    faturalama: abonelik.faturalama,
     toplam: secili.aylikKredi,
     harcanan: abonelik.harcanan,
     kalan: Math.max(secili.aylikKredi - abonelik.harcanan, 0),
@@ -236,10 +246,20 @@ export async function krediIade(
  * `planDegistir`). Yükseltmede dönem baştan başlar: kullanıcı parasını
  * verdiği anda tam krediyle başlamalı, ayın kalanıyla değil.
  */
-export async function planDegistir(email: string, yeni: PlanId): Promise<KrediDurumu> {
+export async function planDegistir(
+  email: string,
+  yeni: PlanId,
+  faturalama: Faturalama = "aylik",
+): Promise<KrediDurumu> {
   let durum: KrediDurumu | null = null;
   await store().update(email, (user) => {
-    user.abonelik = { plan: yeni, donemBasi: Date.now(), harcanan: 0, sonAnalizler: {} };
+    user.abonelik = {
+      plan: yeni,
+      faturalama,
+      donemBasi: Date.now(),
+      harcanan: 0,
+      sonAnalizler: {},
+    };
     durum = durumOlustur(user.abonelik);
   });
   // Burada hata yutulmaz: plan değişimi kullanıcının açıkça istediği bir işlem,

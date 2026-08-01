@@ -277,4 +277,9 @@ export const fr: Partial<Dictionary> = {
   "home.stat.languages": "Langues",
   "auth.apple": "Se connecter avec Apple",
   "auth.appleRegister": "S\'inscrire avec Apple",
+  "plans.monthly": "Mensuel",
+  "plans.yearly": "Annuel",
+  "plans.yearlySave": "{count} mois offerts en paiement annuel",
+  "plans.perYear": "/an",
+  "plans.perMonthEquivalent": "soit {amount} par mois",
 };

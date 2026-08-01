@@ -269,4 +269,9 @@ export const zh: Partial<Dictionary> = {
   "home.stat.languages": "界面语言",
   "auth.apple": "使用 Apple 登录",
   "auth.appleRegister": "使用 Apple 注册",
+  "plans.monthly": "按月",
+  "plans.yearly": "按年",
+  "plans.yearlySave": "按年付费送 {count} 个月",
+  "plans.perYear": "/年",
+  "plans.perMonthEquivalent": "相当于每月 {amount}",
 };

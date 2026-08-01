@@ -37,6 +37,9 @@ export default async function AbonelikSayfasi() {
             <div>
               <span className="card-label">{t("sub.currentPlan")}</span>
               <strong className="credit-plan">{t(`plan.${durum.plan.id}` as "plan.basic")}</strong>
+              <span className="muted" style={{ fontSize: 13 }}>
+                {durum.faturalama === "yillik" ? t("plans.yearly") : t("plans.monthly")}
+              </span>
             </div>
             <div className="credit-numbers">
               <b>{durum.kalan}</b>
@@ -67,7 +70,11 @@ export default async function AbonelikSayfasi() {
       )}
 
       <div style={{ marginTop: 22 }}>
-        <PlanCards mevcut={durum?.plan.id ?? null} uyeModu />
+        <PlanCards
+          mevcut={durum?.plan.id ?? null}
+          mevcutFaturalama={durum?.faturalama ?? null}
+          uyeModu
+        />
       </div>
 
       <div className="card" style={{ marginTop: 22 }}>

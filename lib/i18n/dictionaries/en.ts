@@ -582,6 +582,11 @@ export const en: Dictionary = {
   "plans.sub":
     "One credit per analysis; browsing lists, market pages and search costs nothing.",
   "plans.free": "Free",
+  "plans.monthly": "Monthly",
+  "plans.yearly": "Yearly",
+  "plans.yearlySave": "{count} months free on yearly billing",
+  "plans.perYear": "/yr",
+  "plans.perMonthEquivalent": "works out to {amount} a month",
   "plans.perMonth": "/mo",
   "plans.creditLine": "analysis credits / month",
   "plans.scanLine": "Up to {count} assets per scan",

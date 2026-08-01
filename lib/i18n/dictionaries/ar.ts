@@ -275,4 +275,9 @@ export const ar: Partial<Dictionary> = {
   "home.stat.languages": "اللغات",
   "auth.apple": "تسجيل الدخول عبر Apple",
   "auth.appleRegister": "إنشاء حساب عبر Apple",
+  "plans.monthly": "شهري",
+  "plans.yearly": "سنوي",
+  "plans.yearlySave": "{count} شهرين مجانًا مع الدفع السنوي",
+  "plans.perYear": "/سنة",
+  "plans.perMonthEquivalent": "أي {amount} شهريًا",
 };

@@ -91,12 +91,16 @@ emir gönderilmez, hesabınıza erişilmez.
 
 Dört plan var (`lib/plans.ts` tek kaynaktır; fiyatlar aylık, ABD doları):
 
-| Plan | Ücret | Aylık kredi | Taramada varlık | Takip listesi | Periyotlar |
-|---|---|---|---|---|---|
-| Ücretsiz | 0 | 90 | 10 | 10 | 1s, 4s, 1g, 1h |
-| Basic | 9,99 | 600 | 30 | 50 | 15dk ve üzeri |
-| Premium | 29,99 | 2500 | 60 | 200 | 1dk dahil tümü |
-| Ultimate | 59,99 | 7500 | 100 | 500 | 1dk dahil tümü |
+| Plan | Aylık | Yıllık | Aylık kredi | Taramada varlık | Takip listesi | Periyotlar |
+|---|---|---|---|---|---|---|
+| Ücretsiz | 0 | 0 | 90 | 10 | 10 | 1s, 4s, 1g, 1h |
+| Basic | 10 | 100 | 600 | 30 | 50 | 15dk ve üzeri |
+| Premium | 30 | 300 | 2500 | 60 | 200 | 1dk dahil tümü |
+| Ultimate | 60 | 600 | 7500 | 100 | 500 | 1dk dahil tümü |
+
+Yıllık fiyat, aylığın **on katı**: yıllık ödeyene iki ay bedava
+(`YILLIK_BEDAVA_AY`). Faturalama dönemi kredi hakkını değiştirmez — kredi her
+planda **aylıktır** ve her ay yenilenir; yıllık ödemek aynı hakkı ucuza almaktır.
 
 Kredi kuralları:
 

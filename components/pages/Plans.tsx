@@ -14,7 +14,7 @@ import { breadcrumbJsonLd, faqJsonLd, planJsonLd } from "@/lib/seo";
 /**
  * Herkese açık planlar sayfası.
  *
- * Fiyatın yanında kredinin ne olduğu da anlatılır: "9,99 dolar" tek başına
+ * Fiyatın yanında kredinin ne olduğu da anlatılır: "10 dolar" tek başına
  * bir şey söylemiyor, "600 analiz" söylüyor.
  */
 export default async function Plans({ locale: istenen }: { locale?: Locale } = {}) {
@@ -31,7 +31,12 @@ export default async function Plans({ locale: istenen }: { locale?: Locale } = {
     planJsonLd(
       t("plans.title"),
       t("plans.sub"),
-      PLAN_IDS.map((id) => ({ ad: PLANS[id].ad, ucret: PLANS[id].ucret })),
+      // Hem aylık hem yıllık fiyat bildirilir; arama sonucundaki aralık
+      // sayfadakiyle birebir aynı olsun.
+      PLAN_IDS.flatMap((id) => [
+        { ad: `${PLANS[id].ad} — ${t("plans.monthly")}`, ucret: PLANS[id].ucret },
+        { ad: `${PLANS[id].ad} — ${t("plans.yearly")}`, ucret: PLANS[id].yillikUcret },
+      ]),
       locale,
     ),
     faqJsonLd(sss),

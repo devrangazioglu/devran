@@ -22,12 +22,32 @@ import type { Interval } from "./markets/types";
 
 export type PlanId = "ucretsiz" | "basic" | "premium" | "ultimate";
 
+/**
+ * Faturalama dönemi.
+ *
+ * Yıllık ödeyene iki ay bedava: hem yuvarlak bir rakam çıkıyor (10 → 100)
+ * hem de anlatması kolay. Kredi hakkı ikisinde de aynı ve **her ay** yenilenir;
+ * yıllık ödemek bir yıllık krediyi peşin vermek değil, aylık hakkı ucuza almak.
+ */
+export type Faturalama = "aylik" | "yillik";
+
+export const FATURALAMA_SECENEKLERI: Faturalama[] = ["aylik", "yillik"];
+
+export function isFaturalama(value: unknown): value is Faturalama {
+  return value === "aylik" || value === "yillik";
+}
+
+/** Yıllık ödemede ücretsiz gelen ay sayısı (fiyatlar buna göre türetilir). */
+export const YILLIK_BEDAVA_AY = 2;
+
 export type Plan = {
   id: PlanId;
   /** Arayüzde görünen ad. */
   ad: string;
-  /** Aylık ücret (USD); ücretsiz planda 0. */
+  /** Aylık ödemede aylık ücret (USD); ücretsiz planda 0. */
   ucret: number;
+  /** Yıllık ödemede tek seferde ödenen ücret (USD). */
+  yillikUcret: number;
   /** Her ay yenilenen analiz kredisi. */
   aylikKredi: number;
   /** Tarayıcının tek çalıştırmada bakabileceği en fazla varlık. */
@@ -55,6 +75,7 @@ export const PLANS: Record<PlanId, Plan> = {
     id: "ucretsiz",
     ad: "Ücretsiz",
     ucret: 0,
+    yillikUcret: 0,
     // Denemeye yetecek kadar: günde üç analiz.
     aylikKredi: 90,
     taramaSiniri: 10,
@@ -64,7 +85,8 @@ export const PLANS: Record<PlanId, Plan> = {
   basic: {
     id: "basic",
     ad: "Basic",
-    ucret: 9.99,
+    ucret: 10,
+    yillikUcret: 100,
     aylikKredi: 600,
     taramaSiniri: 30,
     takipSiniri: 50,
@@ -73,7 +95,8 @@ export const PLANS: Record<PlanId, Plan> = {
   premium: {
     id: "premium",
     ad: "Premium",
-    ucret: 29.99,
+    ucret: 30,
+    yillikUcret: 300,
     aylikKredi: 2500,
     taramaSiniri: 60,
     takipSiniri: 200,
@@ -83,7 +106,8 @@ export const PLANS: Record<PlanId, Plan> = {
   ultimate: {
     id: "ultimate",
     ad: "Ultimate",
-    ucret: 59.99,
+    ucret: 60,
+    yillikUcret: 600,
     aylikKredi: 7500,
     taramaSiniri: 100,
     takipSiniri: 500,
@@ -103,6 +127,16 @@ export function isPlanId(value: unknown): value is PlanId {
 
 export function plan(id: PlanId | string | undefined): Plan {
   return isPlanId(id) ? PLANS[id] : PLANS.ucretsiz;
+}
+
+/** Seçilen faturalama dönemine göre ödenecek tutar. */
+export function planUcreti(secilen: Plan, faturalama: Faturalama): number {
+  return faturalama === "yillik" ? secilen.yillikUcret : secilen.ucret;
+}
+
+/** Yıllık ödemede aya düşen tutar (karttaki "ayda ~X" satırı için). */
+export function yillikAylikKarsiligi(secilen: Plan): number {
+  return secilen.yillikUcret / 12;
 }
 
 /** Bir analizin maliyeti. Şimdilik sabit; ileride varlık türüne göre değişebilir. */

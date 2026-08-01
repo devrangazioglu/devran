@@ -8,7 +8,7 @@
 import { randomUUID, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
-import { isPlanId, type PlanId } from "./plans";
+import { isFaturalama, isPlanId, type Faturalama, type PlanId } from "./plans";
 
 const scrypt = promisify(scryptCallback) as (
   password: string,
@@ -36,6 +36,8 @@ export type UserSettings = {
  */
 export type Subscription = {
   plan: PlanId;
+  /** Aylık mı yıllık mı ödeniyor. Kredi hakkını değiştirmez, fiyatı değiştirir. */
+  faturalama: Faturalama;
   /** Bu kredi döneminin başlangıcı (ms). */
   donemBasi: number;
   /** Dönem içinde harcanan kredi. */
@@ -164,7 +166,7 @@ export function buildUser(input: {
 /* ────────────────────── Abonelik ────────────────────── */
 
 export function yeniAbonelik(now = Date.now()): Subscription {
-  return { plan: "ucretsiz", donemBasi: now, harcanan: 0, sonAnalizler: {} };
+  return { plan: "ucretsiz", faturalama: "aylik", donemBasi: now, harcanan: 0, sonAnalizler: {} };
 }
 
 /**
@@ -183,6 +185,7 @@ export function normalizeSubscription(raw: unknown, now = Date.now()): Subscript
   }
   return {
     plan: isPlanId(value.plan) ? value.plan : "ucretsiz",
+    faturalama: isFaturalama(value.faturalama) ? value.faturalama : "aylik",
     donemBasi:
       typeof value.donemBasi === "number" && Number.isFinite(value.donemBasi)
         ? value.donemBasi
