@@ -120,13 +120,29 @@ export async function GET(request: Request) {
   // Bir kredi harcadığı için isteğe bağlıdır: /api/tani?gercek=1
   const anahtar = process.env.TWELVEDATA_API_KEY?.trim();
   if (new URL(request.url).searchParams.get("gercek") === "1" && anahtar) {
-    sonuclar.push(
-      await dene(
-        "twelvedata-GERCEK-ANAHTAR",
+    // İki ayrı soru: kota durumu (ABD) ve Borsa İstanbul kapsamı. BIST bazı
+    // planlarda yok; "veri gelmiyor" ile "bu borsa planında yok" farklı
+    // şeyler ve yalnızca sağlayıcının kendi yanıtı ayırt ediyor.
+    const gercekDenemeler: [string, string, string][] = [
+      [
+        "twelvedata-ABD (gerçek anahtar)",
         `https://api.twelvedata.com/time_series?symbol=AAPL&interval=1day&outputsize=5&apikey=${encodeURIComponent(anahtar)}`,
         "https://api.twelvedata.com/time_series?symbol=AAPL&…&apikey=(gizli)",
-      ),
-    );
+      ],
+      [
+        "twelvedata-BIST (gerçek anahtar)",
+        `https://api.twelvedata.com/time_series?symbol=THYAO&exchange=BIST&interval=1day&outputsize=5&apikey=${encodeURIComponent(anahtar)}`,
+        "https://api.twelvedata.com/time_series?symbol=THYAO&exchange=BIST&…&apikey=(gizli)",
+      ],
+      [
+        "twelvedata-kota durumu",
+        `https://api.twelvedata.com/api_usage?apikey=${encodeURIComponent(anahtar)}`,
+        "https://api.twelvedata.com/api_usage?apikey=(gizli)",
+      ],
+    ];
+    for (const [ad, url, gorunen] of gercekDenemeler) {
+      sonuclar.push(await dene(ad, url, gorunen));
+    }
   }
 
   return NextResponse.json(
