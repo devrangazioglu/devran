@@ -244,6 +244,11 @@ Site zaten önce oraya baktığı için hiçbir sağlayıcıya gitmiyor: ABD, BI
 emtia listelerinin tamamı, taramalar ve analizler **sıfır** sağlayıcı isteğiyle
 geliyor — ölçüldü.
 
+**Veri kaynağı çalışıyor mu?** Kurulumdan bağımsız ölçmek için: **Actions → Veri
+kaynağı testi → Run workflow**. Veritabanı ya da secret gerektirmez, hiçbir yere
+yazmaz; altı sembol çekip sonucu basar. Beslemenin iki ayağı (veriyi alabilmek ve
+yazabilmek) böylece ayrı ayrı doğrulanabilir.
+
 **Kurulum (bir kez):**
 
 1. GitHub deposunda **Settings → Secrets and variables → Actions → New repository

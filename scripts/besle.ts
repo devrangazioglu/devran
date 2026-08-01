@@ -17,6 +17,10 @@
  * Çalıştırma:
  *   DATABASE_URL=... npm run besle              # tüm piyasalar
  *   DATABASE_URL=... npm run besle -- abd bist  # seçili piyasalar
+ *   npm run besle -- --dene                     # yalnızca kaynağı ölç, yazma
+ *
+ * `--dene`: veritabanı gerekmez. Birkaç sembol çekip sonucu basar; "bu makineden
+ * veri alınabiliyor mu?" sorusunu kurulumun geri kalanından bağımsız yanıtlar.
  */
 
 import { closePool, ensureSchema, postgresEnabled, query } from "../lib/db";
@@ -225,7 +229,58 @@ async function piyasayiBesle(market: MarketId): Promise<Sonuc> {
   return { market, basarili, toplam: instruments.length, hatalar };
 }
 
+/**
+ * Kaynak ölçümü: veritabanına dokunmadan birkaç sembol çeker ve sonucu basar.
+ *
+ * Beslemenin iki ayağı var — veriyi alabilmek ve yazabilmek. Biri çalışmayınca
+ * diğeri hakkında da hüküm vermek kolay ama yanlış; bu mod ilkini tek başına
+ * ölçer.
+ */
+async function kaynagiDene(): Promise<void> {
+  const ornekler: { market: MarketId; symbol: string }[] = [
+    { market: "abd", symbol: "AAPL" },
+    { market: "abd", symbol: "^GSPC" },
+    { market: "bist", symbol: "THYAO.IS" },
+    { market: "bist", symbol: "GARAN.IS" },
+    { market: "emtia", symbol: "GC=F" },
+    { market: "emtia", symbol: "USDTRY=X" },
+  ];
+
+  console.log(`Kaynak: ${BASE}\n`);
+  let basarili = 0;
+
+  for (const ornek of ornekler) {
+    try {
+      const { candles, currency } = await mumlariCek(ornek.symbol, "1d", "6mo");
+      const son = candles[candles.length - 1];
+      const tarih = new Date(son.openTime).toISOString().slice(0, 10);
+      console.log(
+        `✓ ${ornek.symbol.padEnd(10)} ${String(candles.length).padStart(3)} mum · ` +
+          `son ${tarih} · kapanış ${son.close.toFixed(2)} ${currency ?? ""}`,
+      );
+      basarili++;
+    } catch (error) {
+      console.log(`✗ ${ornek.symbol.padEnd(10)} ${error instanceof Error ? error.message : "bilinmeyen"}`);
+    }
+    await bekle(TUR_ARASI_MS);
+  }
+
+  console.log(`\n${basarili}/${ornekler.length} sembol alınabildi.`);
+  if (basarili === 0) {
+    console.error("Bu makineden veri alınamıyor; kaynağı değiştirmek gerekiyor.");
+    process.exit(1);
+  }
+  if (basarili < ornekler.length) {
+    console.log("Bazı semboller alınamadı; ayrıntı için yukarıdaki satırlara bakın.");
+  }
+}
+
 async function main(): Promise<void> {
+  if (process.argv.includes("--dene")) {
+    await kaynagiDene();
+    return;
+  }
+
   if (!postgresEnabled()) {
     console.error("DATABASE_URL tanımlı değil; yazacak yer yok.");
     process.exit(1);
