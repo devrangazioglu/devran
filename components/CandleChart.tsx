@@ -58,6 +58,22 @@ const EN_AZ_MUM = 8;
 /** Dikey yakınlaştırmanın sınırı; fazlası mumları ekrandan taşırır. */
 const EN_FAZLA_DIKEY = 20;
 
+/**
+ * Tek bir tam tekerlek çentiğinin (100 piksel) değiştirdiği oran.
+ *
+ * Küçük tutuldu: yakınlaştırma "hassas" olduğunda kullanıcı istediği aralığı
+ * yakalayamıyor, her hareket ya çok az ya çok fazla geliyordu. %8 ile bir
+ * çentik gözle takip edilebilir, üst üste çevirmek hızlıca yaklaştırıyor.
+ */
+const TEKERLEK_ADIMI = 0.08;
+
+/** Düğmelerin adımı: bir tıkta görünen aralık bu oranda değişir. */
+const DUGME_YATAY = 0.8;
+const DUGME_DIKEY = 1.25;
+
+/** İki parmak hareketinin sönümü; ham oran uygulanırsa zoom fırlıyor. */
+const PARMAK_SONUM = 0.45;
+
 const PADDING = { top: 14, right: 66, bottom: 22, left: 8 };
 
 function sinirla(deger: number, alt: number, ust: number): number {
@@ -163,7 +179,18 @@ export default function CandleChart({
     // engelleyemiyor; dinleyici elle, passive:false ile bağlanır.
     const tekerlek = (event: WheelEvent) => {
       event.preventDefault();
-      const carpan = event.deltaY < 0 ? 0.85 : 1 / 0.85;
+
+      // Adım, tekerleğin gerçekten ne kadar çevrildiğiyle orantılı olmalı.
+      // Sabit oran kullanıldığında dokunmatik yüzeyler sorun oluyordu: tek bir
+      // kaydırmada onlarca küçük olay gönderdikleri için grafik bir anda
+      // sonuna kadar yakınlaşıyordu. Delta önce piksele çevrilir (satır/sayfa
+      // kipi tarayıcıya göre değişir), sonra bir üst sınırla ölçeklenir.
+      const piksel =
+        event.deltaMode === 1 ? event.deltaY * 16 : event.deltaMode === 2 ? event.deltaY * 400 : event.deltaY;
+      const adim = Math.min(Math.abs(piksel) / 100, 1) * TEKERLEK_ADIMI;
+      if (adim < 0.001) return;
+      const carpan = piksel < 0 ? 1 - adim : 1 + adim;
+
       if (event.shiftKey || event.ctrlKey) {
         dikeySeviye(1 / carpan);
         return;
@@ -213,11 +240,14 @@ export default function CandleChart({
         const onceki = dokunusRef.current;
         // Yatay açıklık belirgin şekilde değiştiyse zamanı, dikey değiştiyse
         // fiyatı ölçekle. İkisi birden olabilir (çapraz sıkıştırma).
-        if (onceki.dx > 20 && Math.abs(simdi.dx - onceki.dx) > 6) {
-          yataySeviye(onceki.dx / simdi.dx);
+        // Oran doğrudan uygulanmaz: parmak hareketi çok sık olay ürettiği için
+        // sönümlenir, yoksa küçük bir sıkıştırma grafiği uca götürüyor.
+        const sonumle = (oran: number) => 1 + (oran - 1) * PARMAK_SONUM;
+        if (onceki.dx > 30 && Math.abs(simdi.dx - onceki.dx) > 8) {
+          yataySeviye(sonumle(onceki.dx / simdi.dx));
         }
-        if (onceki.dy > 20 && Math.abs(simdi.dy - onceki.dy) > 6) {
-          dikeySeviye(simdi.dy / onceki.dy);
+        if (onceki.dy > 30 && Math.abs(simdi.dy - onceki.dy) > 8) {
+          dikeySeviye(sonumle(simdi.dy / onceki.dy));
         }
         dokunusRef.current = simdi;
         return;
@@ -525,19 +555,19 @@ export default function CandleChart({
       <div className="chart-zoom">
         <span className="chart-zoom-group" aria-label={metin.yatay}>
           <b>{metin.yatay}</b>
-          <button onClick={() => yataySeviye(1 / 0.7)} title={`${metin.uzaklastir} · ${metin.yatay}`}>
+          <button onClick={() => yataySeviye(1 / DUGME_YATAY)} title={`${metin.uzaklastir} · ${metin.yatay}`}>
             −
           </button>
-          <button onClick={() => yataySeviye(0.7)} title={`${metin.yakinlastir} · ${metin.yatay}`}>
+          <button onClick={() => yataySeviye(DUGME_YATAY)} title={`${metin.yakinlastir} · ${metin.yatay}`}>
             +
           </button>
         </span>
         <span className="chart-zoom-group" aria-label={metin.dikey}>
           <b>{metin.dikey}</b>
-          <button onClick={() => dikeySeviye(1 / 1.4)} title={`${metin.uzaklastir} · ${metin.dikey}`}>
+          <button onClick={() => dikeySeviye(1 / DUGME_DIKEY)} title={`${metin.uzaklastir} · ${metin.dikey}`}>
             −
           </button>
-          <button onClick={() => dikeySeviye(1.4)} title={`${metin.yakinlastir} · ${metin.dikey}`}>
+          <button onClick={() => dikeySeviye(DUGME_DIKEY)} title={`${metin.yakinlastir} · ${metin.dikey}`}>
             +
           </button>
         </span>
