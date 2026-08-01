@@ -47,10 +47,28 @@ export function intervalMinutes(interval: Interval): number {
 
 export type MarketId = "kripto" | "abd" | "bist" | "emtia";
 
+/** Uygulamanın tanıdığı tüm piyasalar (kapalı olanlar dâhil). */
 export const MARKET_IDS: MarketId[] = ["kripto", "abd", "bist", "emtia"];
+
+/**
+ * Şu an açık olan piyasalar.
+ *
+ * ABD borsası, Borsa İstanbul ve döviz/emtia tarafı **geçici olarak** kapalı:
+ * bu üç piyasanın verisi ücretsiz katmanda sembol başına kredi harcayan bir
+ * sağlayıcıdan geliyor ve kota listeleri doldurmaya yetmiyordu; kullanıcı boş
+ * ya da yarı dolu tablo görüyordu. Kod ve enstrüman listeleri yerinde duruyor,
+ * yalnızca arayüz ve uç noktalar kapatıldı — sağlam bir veri kaynağı
+ * bağlandığında bu listeye eklemek yetiyor.
+ */
+export const AKTIF_MARKET_IDS: MarketId[] = ["kripto"];
 
 export function isMarketId(value: string): value is MarketId {
   return (MARKET_IDS as string[]).includes(value);
+}
+
+/** Piyasa şu an kullanıcıya açık mı? */
+export function marketAktif(value: string): value is MarketId {
+  return (AKTIF_MARKET_IDS as string[]).includes(value);
 }
 
 export type MarketMeta = {
@@ -118,8 +136,9 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
   },
 };
 
+/** Yalnızca açık piyasaları çözer; kapalı bir piyasanın adresi 404 olur. */
 export function marketBySlug(slug: string): MarketMeta | null {
-  return Object.values(MARKETS).find((m) => m.slug === slug) ?? null;
+  return AKTIF_MARKET_IDS.map((id) => MARKETS[id]).find((m) => m.slug === slug) ?? null;
 }
 
 /* ────────────────────────── Enstrümanlar ────────────────────────── */

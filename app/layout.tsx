@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "Kripto, Amerikan borsası, Borsa İstanbul, döviz ve emtia verisiyle 16 teknik göstergeyi hesaplayıp AL / SAT / BEKLE sinyali üreten ve sonucu yorumlayan analiz platformu.",
+    "Bitcoin, Ethereum ve yüzlerce altcoin için 16 teknik göstergeyi hesaplayıp AL / SAT / BEKLE sinyali üreten ve sonucu sade bir dille yorumlayan analiz platformu.",
   applicationName: SITE_NAME,
   robots: {
     index: true,

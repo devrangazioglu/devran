@@ -4,14 +4,14 @@ import { notFound } from "next/navigation";
 import MarketView from "@/components/pages/MarketView";
 import { isLocale, makeT, type Locale } from "@/lib/i18n";
 import { PREFIXED_LOCALES } from "@/lib/i18n/routing";
-import { marketBySlug, MARKETS, MARKET_IDS } from "@/lib/markets/types";
+import { marketBySlug, MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
 import { dilAlternatifleri, ogLocale, SITE_NAME } from "@/lib/seo";
 
 export const revalidate = 60;
 
 export function generateStaticParams() {
   return PREFIXED_LOCALES.flatMap((dil) =>
-    MARKET_IDS.map((id) => ({ dil, slug: MARKETS[id].slug })),
+    AKTIF_MARKET_IDS.map((id) => ({ dil, slug: MARKETS[id].slug })),
   );
 }
 

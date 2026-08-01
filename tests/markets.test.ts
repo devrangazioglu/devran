@@ -24,8 +24,10 @@ import { batchHatasi, parseSeries, toTwelveSymbol } from "../lib/markets/twelved
 import { fetchChart, parseSpark, rateLimitedUntil, resetRateLimitState } from "../lib/markets/yahoo";
 import {
   aggregateCandles,
+  AKTIF_MARKET_IDS,
   instrumentId,
   isMarketId,
+  marketAktif,
   marketBySlug,
   MARKETS,
   MARKET_IDS,
@@ -38,12 +40,22 @@ test("dört piyasa tanımlı ve her birinin sayfa yolu tekil", () => {
   const slugs = MARKET_IDS.map((id) => MARKETS[id].slug);
   assert.equal(new Set(slugs).size, slugs.length);
   for (const id of MARKET_IDS) {
-    assert.equal(marketBySlug(MARKETS[id].slug)?.id, id);
     assert.ok(MARKETS[id].intervals.length >= 2);
   }
-  assert.equal(marketBySlug("yok"), null);
   assert.equal(isMarketId("kripto"), true);
   assert.equal(isMarketId("forex"), false);
+});
+
+test("yalnızca açık piyasalar çözümlenir", () => {
+  // Kapalı piyasanın adresi 404 olmalı: slug çözülürse sayfa açılır ve
+  // kullanıcı veri gelmeyen bir liste görür.
+  for (const id of MARKET_IDS) {
+    const acik = AKTIF_MARKET_IDS.includes(id);
+    assert.equal(marketAktif(id), acik);
+    assert.equal(marketBySlug(MARKETS[id].slug)?.id ?? null, acik ? id : null);
+  }
+  assert.ok(AKTIF_MARKET_IDS.includes("kripto"));
+  assert.equal(marketBySlug("yok"), null);
 });
 
 test("enstrüman kimlikleri çözümlenebilir", () => {

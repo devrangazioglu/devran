@@ -128,8 +128,14 @@ const SCHEMA = `
     password_hash text,
     created_at    bigint not null,
     watchlist     jsonb not null default '[]'::jsonb,
-    settings      jsonb not null default '{}'::jsonb
+    settings      jsonb not null default '{}'::jsonb,
+    abonelik      jsonb not null default '{}'::jsonb
   );
+
+  -- Kredi sisteminden önce oluşmuş tablolarda sütun eksik olur: yukarıdaki
+  -- "create table if not exists" var olan tabloyu değiştirmez, göç ayrı yazılır.
+  -- Boş nesne "ücretsiz plan, dönem bugün başlıyor" demek (normalizeSubscription).
+  alter table users add column if not exists abonelik jsonb not null default '{}'::jsonb;
 
   create table if not exists piyasa_onbellek (
     anahtar text primary key,

@@ -10,6 +10,7 @@ import {
   buildUser,
   normalizeEmail,
   normalizeSettings,
+  normalizeSubscription,
   normalizeWatchlist,
   toPublicUser,
   type PublicUser,
@@ -25,6 +26,7 @@ type Row = {
   created_at: string | number;
   watchlist: unknown;
   settings: unknown;
+  abonelik: unknown;
 };
 
 function toUser(row: Row): User {
@@ -37,10 +39,11 @@ function toUser(row: Row): User {
     createdAt: Number(row.created_at),
     watchlist: normalizeWatchlist(row.watchlist),
     settings: normalizeSettings(row.settings),
+    abonelik: normalizeSubscription(row.abonelik),
   };
 }
 
-const SELECT = `select id, email, name, password_hash, created_at, watchlist, settings from users`;
+const SELECT = `select id, email, name, password_hash, created_at, watchlist, settings, abonelik from users`;
 
 export const postgresStore: UserStore = {
   name: "Postgres",
@@ -62,8 +65,8 @@ export const postgresStore: UserStore = {
   async insert(user) {
     await ensureSchema();
     const rows = await query<{ id: string }>(
-      `insert into users (id, email, name, password_hash, created_at, watchlist, settings)
-       values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb)
+      `insert into users (id, email, name, password_hash, created_at, watchlist, settings, abonelik)
+       values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)
        on conflict (email) do nothing
        returning id`,
       [
@@ -74,6 +77,7 @@ export const postgresStore: UserStore = {
         user.createdAt,
         JSON.stringify(user.watchlist),
         JSON.stringify(user.settings),
+        JSON.stringify(user.abonelik),
       ],
     );
     // Satır dönmediyse e-posta zaten kayıtlı.
@@ -110,12 +114,15 @@ export const postgresStore: UserStore = {
       mutate(user);
 
       await client.query(
-        `update users set name = $2, watchlist = $3::jsonb, settings = $4::jsonb where email = $1`,
+        `update users
+            set name = $2, watchlist = $3::jsonb, settings = $4::jsonb, abonelik = $5::jsonb
+          where email = $1`,
         [
           normalized,
           user.name,
           JSON.stringify(user.watchlist),
           JSON.stringify(user.settings),
+          JSON.stringify(user.abonelik),
         ],
       );
       return toPublicUser(user) as PublicUser;

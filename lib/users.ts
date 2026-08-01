@@ -13,6 +13,7 @@
  */
 
 import { postgresEnabled } from "./db";
+import { marketAktif } from "./markets/types";
 import { fileStore } from "./users-file";
 import { postgresStore } from "./users-postgres";
 import {
@@ -109,26 +110,55 @@ export async function authenticate(
 
 /* ────────────────────── Takip listesi & ayarlar ────────────────────── */
 
+/**
+ * Kullanıcının takip listesi — yalnızca **açık** piyasalardaki varlıklar.
+ *
+ * Kapalı piyasaların kayıtları silinmez, yalnızca gizlenir: piyasa yeniden
+ * açıldığında kullanıcının eski listesi olduğu gibi geri gelir.
+ */
 export async function getWatchlist(email: string): Promise<string[]> {
   const user = await findUserByEmail(email);
-  return user?.watchlist ?? [...DEFAULT_WATCHLIST];
+  return (user?.watchlist ?? [...DEFAULT_WATCHLIST]).filter((id) =>
+    marketAktif(id.split(":")[0]),
+  );
 }
 
+/**
+ * Varlığı takip listesine ekler ya da çıkarır.
+ *
+ * `limit` planın takip hakkıdır. Sınır yalnızca **eklerken** işler ve yalnızca
+ * görünür (açık piyasadaki) varlıklar sayılır; kapalı piyasadan kalan eski
+ * kayıtlar kullanıcının hakkını yemez.
+ */
 export async function toggleWatchlist(
   email: string,
   symbol: string,
-): Promise<{ watchlist: string[]; added: boolean } | null> {
+  limit = Number.POSITIVE_INFINITY,
+): Promise<{ watchlist: string[]; added: boolean; limitAsildi: boolean } | null> {
   let added = false;
+  let limitAsildi = false;
+
   const user = await store().update(email, (current) => {
     const index = current.watchlist.indexOf(symbol);
     if (index >= 0) {
       current.watchlist.splice(index, 1);
-    } else {
-      current.watchlist.push(symbol);
-      added = true;
+      return;
     }
+    const gorunur = current.watchlist.filter((id) => marketAktif(id.split(":")[0]));
+    if (gorunur.length >= limit) {
+      limitAsildi = true;
+      return;
+    }
+    current.watchlist.push(symbol);
+    added = true;
   });
-  return user ? { watchlist: user.watchlist, added } : null;
+
+  if (!user) return null;
+  return {
+    watchlist: user.watchlist.filter((id) => marketAktif(id.split(":")[0])),
+    added,
+    limitAsildi,
+  };
 }
 
 export async function saveSettings(

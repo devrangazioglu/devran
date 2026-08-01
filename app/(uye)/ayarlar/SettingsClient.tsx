@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { formatDate } from "@/lib/format";
-import { INTERVALS, MARKETS, MARKET_IDS } from "@/lib/markets/types";
+import { INTERVALS, MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
 import type { UserSettings } from "@/lib/users";
 
 export default function SettingsClient({
@@ -67,21 +67,24 @@ export default function SettingsClient({
         <div className="card">
           <div className="card-title">{t("settings.prefs")}</div>
           <form onSubmit={save}>
-            <div className="field">
-              <label htmlFor="market">{t("settings.defaultMarket")}</label>
-              <select
-                id="market"
-                className="select"
-                value={form.defaultMarket}
-                onChange={(e) => setForm({ ...form, defaultMarket: e.target.value })}
-              >
-                {MARKET_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {t(`market.${id}` as "market.kripto")}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Tek piyasa açıkken seçilecek bir şey yok. */}
+            {AKTIF_MARKET_IDS.length > 1 && (
+              <div className="field">
+                <label htmlFor="market">{t("settings.defaultMarket")}</label>
+                <select
+                  id="market"
+                  className="select"
+                  value={form.defaultMarket}
+                  onChange={(e) => setForm({ ...form, defaultMarket: e.target.value })}
+                >
+                  {AKTIF_MARKET_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {t(`market.${id}` as "market.kripto")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="field">
               <label htmlFor="interval">{t("settings.defaultInterval")}</label>
@@ -93,7 +96,7 @@ export default function SettingsClient({
               >
                 {INTERVALS.filter((item) =>
                   MARKETS[
-                    (MARKET_IDS.includes(form.defaultMarket as never)
+                    (AKTIF_MARKET_IDS.includes(form.defaultMarket as never)
                       ? form.defaultMarket
                       : "kripto") as "kripto"
                   ].intervals.includes(item.value),

@@ -21,6 +21,7 @@ import {
   demoEnabled,
   foldText,
   instrumentId,
+  marketAktif,
   MarketDataError,
   MARKETS,
   type Candle,
@@ -729,6 +730,9 @@ export async function searchInstruments(query: string, limit = 12): Promise<Inst
   const results: Instrument[] = [];
   const seen = new Set<string>();
   const push = (instrument: Instrument) => {
+    // Kapalı piyasaların varlıkları aramada da çıkmamalı; çıkarsa kullanıcı
+    // açılmayan bir sayfaya tıklar.
+    if (!marketAktif(instrument.market)) return;
     if (seen.has(instrument.id) || results.length >= limit) return;
     seen.add(instrument.id);
     results.push(instrument);

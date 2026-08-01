@@ -13,6 +13,7 @@ import { dirname, resolve } from "node:path";
 import {
   normalizeEmail,
   normalizeSettings,
+  normalizeSubscription,
   normalizeWatchlist,
   toPublicUser,
   UserStoreError,
@@ -46,6 +47,7 @@ function hydrate(raw: unknown): User[] {
       createdAt: Number(item.createdAt ?? Date.now()),
       watchlist: normalizeWatchlist(item.watchlist),
       settings: normalizeSettings(item.settings),
+      abonelik: normalizeSubscription(item.abonelik),
     }));
 }
 

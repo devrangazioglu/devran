@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
 import { AssetAvatar, Change, MarketBadge, Score, SignalBadge } from "@/components/ui";
 import { isBuySignal, isSellSignal } from "@/lib/analysis";
 import { patternName } from "@/lib/analysis-text";
 import { getJson, type ScanResponse, type ScanRow } from "@/lib/api-types";
 import { formatCompact, formatNumber, formatPrice, formatRelative } from "@/lib/format";
-import { MARKETS, MARKET_IDS, type Interval, type MarketId } from "@/lib/markets/types";
+import { MARKETS, AKTIF_MARKET_IDS, type Interval, type MarketId } from "@/lib/markets/types";
 
 type Filter = "all" | "buy" | "sell" | "watch";
 type SortKey = "score" | "confidence" | "change" | "volume" | "rsi";
@@ -20,17 +21,23 @@ export default function ScannerClient({
   defaultLimit,
   onlyStrong,
   watchlist,
+  planPeriyotlar,
+  planTaramaSiniri,
 }: {
   defaultMarket: string;
   defaultInterval: string;
   defaultLimit: number;
   onlyStrong: boolean;
   watchlist: string[];
+  /** Planın açtığı periyotlar; defter okunamıyorsa null (kısıtlama yok). */
+  planPeriyotlar: Interval[] | null;
+  /** Tek taramada bakılabilecek en fazla varlık; null ise sınırsız. */
+  planTaramaSiniri: number | null;
 }) {
   const { t, intl } = useI18n();
 
   const [market, setMarket] = useState<MarketId>(
-    (MARKET_IDS.includes(defaultMarket as MarketId) ? defaultMarket : "kripto") as MarketId,
+    (AKTIF_MARKET_IDS.includes(defaultMarket as MarketId) ? defaultMarket : "kripto") as MarketId,
   );
   const [period, setPeriod] = useState<Interval>(defaultInterval as Interval);
   const [limit, setLimit] = useState(defaultLimit);
@@ -38,8 +45,19 @@ export default function ScannerClient({
   const [strongOnly, setStrongOnly] = useState(onlyStrong);
   const [sort, setSort] = useState<SortKey>("score");
   const [data, setData] = useState<ScanResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
+
+  // Planın kapalı bıraktığı periyot arayüzde de kilitli görünür: tıklanabilir
+  // ama çalışmayan bir düğme, kullanıcıya hata ekranından başka bir şey vermez.
+  const periyotAcik = (value: Interval) => !planPeriyotlar || planPeriyotlar.includes(value);
+
+  useEffect(() => {
+    if (!periyotAcik(period) && planPeriyotlar?.length) {
+      setPeriod(planPeriyotlar.includes("4h") ? "4h" : planPeriyotlar[planPeriyotlar.length - 1]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, planPeriyotlar]);
 
   useEffect(() => {
     if (!MARKETS[market].intervals.includes(period)) {
@@ -61,7 +79,7 @@ export default function ScannerClient({
       // Eski sonuçlar durursa başlık yeni piyasayı, tablo eskisini gösterir;
       // yanlış piyasanın varlıklarını göstermektense boş kalmak doğrudur.
       setData(null);
-      setError(caught instanceof Error ? caught.message : t("common.error"));
+      setError(caught ?? new Error(t("common.error")));
     } finally {
       setLoading(false);
     }
@@ -113,30 +131,36 @@ export default function ScannerClient({
           </p>
         </div>
         <div className="toolbar">
-          <div className="segmented">
-            {MARKET_IDS.map((id) => (
-              <button key={id} className={id === market ? "active" : ""} onClick={() => setMarket(id)}>
-                {t(`market.${id}` as "market.kripto")}
-              </button>
-            ))}
-          </div>
+          {AKTIF_MARKET_IDS.length > 1 && (
+            <div className="segmented">
+              {AKTIF_MARKET_IDS.map((id) => (
+                <button key={id} className={id === market ? "active" : ""} onClick={() => setMarket(id)}>
+                  {t(`market.${id}` as "market.kripto")}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="segmented">
             {MARKETS[market].intervals.map((value) => (
               <button
                 key={value}
                 className={value === period ? "active" : ""}
                 onClick={() => setPeriod(value)}
+                disabled={!periyotAcik(value)}
+                title={periyotAcik(value) ? undefined : t("credit.periodLocked")}
               >
-                {value}
+                {periyotAcik(value) ? value : `🔒 ${value}`}
               </button>
             ))}
           </div>
           <select className="select" value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
-            {[10, 20, 30, 40, 60].map((value) => (
-              <option key={value} value={value}>
-                {t("scan.assetCount", { count: value })}
-              </option>
-            ))}
+            {[10, 20, 30, 40, 60, 100]
+              .filter((value) => !planTaramaSiniri || value <= planTaramaSiniri)
+              .map((value) => (
+                <option key={value} value={value}>
+                  {t("scan.assetCount", { count: value })}
+                </option>
+              ))}
           </select>
           <button className="btn btn-primary btn-sm" onClick={() => void run()} disabled={loading}>
             {loading ? <span className="spinner" /> : null}
@@ -146,7 +170,7 @@ export default function ScannerClient({
       </div>
 
       {data?.source === "demo" && <div className="notice notice-warn">{t("common.demoNotice")}</div>}
-      {error && <div className="notice notice-error">{error}</div>}
+      <HataNotu hata={error} />
 
       <div className="grid-4" style={{ marginBottom: 18 }}>
         <div className="card compact">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import AssetSearch from "@/components/AssetSearch";
+import PlanCards from "@/components/PlanCards";
 import Reveal from "@/components/motion/Reveal";
 import SpotlightCard from "@/components/motion/SpotlightCard";
 import { LogoWord } from "@/components/Logo";
@@ -12,35 +13,42 @@ import { intlTag, type Locale } from "@/lib/i18n";
 import { localeHref } from "@/lib/i18n/routing";
 import { faqJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { getQuotes } from "@/lib/markets/provider";
-import { MARKETS, MARKET_IDS, type MarketId, type Quote } from "@/lib/markets/types";
+import { MARKETS, AKTIF_MARKET_IDS, type MarketId, type Quote } from "@/lib/markets/types";
 
 // Tanıtım sayfası dakikada bir yeniden üretilir.
 export const revalidate = 60;
 
+/** Üst şeritteki altı başlık: en çok işlem görenlerle günün en hareketlileri. */
 async function highlights(): Promise<Quote[]> {
-  const markets: MarketId[] = ["kripto", "emtia", "abd"];
+  const TOPLAM = 6;
   const lists = await Promise.all(
-    markets.map((market) =>
+    AKTIF_MARKET_IDS.map((market) =>
       getQuotes(market, 12)
         .then(({ quotes }) => quotes)
         .catch(() => []),
     ),
   );
 
+  const dolu = lists.filter((list) => list.length > 0);
+  const pay = Math.ceil(TOPLAM / Math.max(dolu.length, 1));
+
   const picks: Quote[] = [];
-  // Her piyasadan ikişer başlık: en yüksek hacim ve günün en çok değişeni.
-  for (const list of lists) {
-    if (list.length === 0) continue;
-    const byVolume = [...list].sort((a, b) => b.volume - a.volume);
-    const byChange = [...list].sort(
+  const ekle = (quote?: Quote) => {
+    if (quote && !picks.some((p) => p.id === quote.id)) picks.push(quote);
+  };
+
+  for (const list of dolu) {
+    const hacim = [...list].sort((a, b) => b.volume - a.volume);
+    const hareket = [...list].sort(
       (a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent),
     );
-    for (const candidate of [byVolume[0], byChange[0], byVolume[1]]) {
-      if (candidate && !picks.some((p) => p.id === candidate.id)) picks.push(candidate);
-      if (picks.length % 3 === 0) break;
+    const oncesi = picks.length;
+    for (let i = 0; i < list.length && picks.length - oncesi < pay; i++) {
+      ekle(hacim[i]);
+      ekle(hareket[i]);
     }
   }
-  return picks.slice(0, 6);
+  return picks.slice(0, TOPLAM);
 }
 
 export default async function Landing({ locale: istenen }: { locale?: Locale } = {}) {
@@ -154,34 +162,36 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
       )}
 
       {/* ── Piyasalar ────────────────────────────────────── */}
-      <section className="section" id="piyasalar">
-        <div className="container">
-          <Reveal>
-            <p className="eyebrow">
-              <em>{t("nav.markets")}</em>
-            </p>
-            <h2 className="section-title">{t("home.marketsTitle")}</h2>
-            <p className="section-sub">{t("home.marketsSub")}</p>
-          </Reveal>
+      {/* Tek piyasa açıkken kart ızgarası anlamsız; şeritteki bağlantılar ve
+          menü zaten piyasa sayfasına götürüyor. */}
+      {AKTIF_MARKET_IDS.length > 1 && (
+        <section className="section" id="piyasalar">
+          <div className="container">
+            <Reveal>
+              <p className="eyebrow">
+                <em>{t("nav.markets")}</em>
+              </p>
+              <h2 className="section-title">{t("home.marketsTitle")}</h2>
+              <p className="section-sub">{t("home.marketsSub")}</p>
+            </Reveal>
 
-          <div className="grid-4">
-            {MARKET_IDS.map((id, index) => (
-              <Reveal key={id} delay={index * 70}>
-                <SpotlightCard>
-                  <Link href={yol(`/piyasa/${MARKETS[id].slug}`)} className="market-card">
-                    <span className={`market-dot market-dot-${id}`} aria-hidden />
-                    <h3>{t(`market.${id}` as "market.kripto")}</h3>
-                    <p>{t(`market.${id}.desc` as "market.kripto.desc")}</p>
-                    <span className="market-card-link">
-                      {t("common.details")} →
-                    </span>
-                  </Link>
-                </SpotlightCard>
-              </Reveal>
-            ))}
+            <div className="grid-4">
+              {AKTIF_MARKET_IDS.map((id, index) => (
+                <Reveal key={id} delay={index * 70}>
+                  <SpotlightCard>
+                    <Link href={yol(`/piyasa/${MARKETS[id].slug}`)} className="market-card">
+                      <span className={`market-dot market-dot-${id}`} aria-hidden />
+                      <h3>{t(`market.${id}` as "market.kripto")}</h3>
+                      <p>{t(`market.${id}.desc` as "market.kripto.desc")}</p>
+                      <span className="market-card-link">{t("common.details")} →</span>
+                    </Link>
+                  </SpotlightCard>
+                </Reveal>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── Neden ────────────────────────────────────────── */}
       <section className="section" id="ozellikler">
@@ -229,8 +239,8 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
           <div className="stat-grid">
             {[
               ["16", "home.stat.indicators"],
-              ["4", "home.stat.markets"],
               ["8", "home.stat.timeframes"],
+              ["8", "home.stat.languages"],
               ["7/24", "home.stat.always"],
             ].map(([value, key], index) => (
               <Reveal key={key} delay={index * 60}>
@@ -305,6 +315,31 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
         </div>
       </section>
 
+      {/* ── Planlar ──────────────────────────────────────── */}
+      <section className="section" id="planlar">
+        <div className="container">
+          <Reveal>
+            <p className="eyebrow">
+              <em>{t("nav.plans")}</em>
+            </p>
+            <h2 className="section-title">{t("plans.title")}</h2>
+            <p className="section-sub">{t("plans.sub")}</p>
+          </Reveal>
+
+          <Reveal delay={80}>
+            <PlanCards kayitHref={yol("/kayit")} />
+          </Reveal>
+
+          <Reveal delay={140}>
+            <p className="section-sub" style={{ marginTop: 22 }}>
+              <Link href={yol("/planlar")} style={{ color: "var(--accent)" }}>
+                {t("plans.detailLink")} →
+              </Link>
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ── SSS ──────────────────────────────────────────── */}
       <section className="section" id="sss">
         <div className="container">
@@ -354,11 +389,12 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
               <LogoWord />
             </div>
             <nav className="footer-links">
-              {MARKET_IDS.map((id) => (
+              {AKTIF_MARKET_IDS.map((id) => (
                 <Link key={id} href={yol(`/piyasa/${MARKETS[id].slug}`)}>
                   {t(`market.${id}` as "market.kripto")}
                 </Link>
               ))}
+              <Link href={yol("/planlar")}>{t("nav.plans")}</Link>
               <a href="#nasil">{t("nav.how")}</a>
               <a href="#sss">{t("nav.faq")}</a>
               <Link href={yol("/giris")}>{t("nav.login")}</Link>

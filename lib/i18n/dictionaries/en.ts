@@ -7,7 +7,7 @@ export const en: Dictionary = {
   "common.loading": "Loading…",
   "common.refresh": "Refresh",
   "common.search": "Search",
-  "common.searchPlaceholder": "Search a coin, stock, currency or commodity (BTC, AAPL, THYAO, gold…)",
+  "common.searchPlaceholder": "Search crypto (BTC, ETH, SOL, Bitcoin…)",
   "common.searchHint": "Type at least 2 characters",
   "common.noResults": "No results",
   "common.all": "All",
@@ -84,16 +84,16 @@ export const en: Dictionary = {
   "category.volatility": "Volatility",
   "category.volume": "Volume",
 
-  "home.badge": "Four markets, one analysis engine",
+  "home.badge": "Hundreds of crypto pairs, one analysis engine",
   "home.title": "Analyse it,\nsee the buy/sell signal",
   "home.lead":
-    "We pull data from crypto, US stocks, Borsa İstanbul, forex and commodities, compute 16 technical indicators, turn them into a weighted score and produce a {signals} signal — and explain why.",
+    "We pull live crypto data from Binance, compute 16 technical indicators, turn them into a weighted score and produce a {signals} signal — and explain why.",
   "home.ctaPrimary": "Create a free account",
   "home.ctaSecondary": "How does it work?",
   "home.disclaimerShort":
     "This is a technical analysis tool. Its signals are not investment advice; your decisions are your own responsibility.",
   "home.searchTitle": "What would you like to analyse?",
-  "home.searchSub": "Type a name or symbol; we search all four markets at once.",
+  "home.searchSub": "Type a name or symbol; we search hundreds of pairs.",
   "home.marketsTitle": "Four markets, one engine",
   "home.marketsSub": "The same indicator set and scoring runs on every market.",
   "home.highlightsEyebrow": "Live from the market",
@@ -108,8 +108,8 @@ export const en: Dictionary = {
     "Every indicator is computed separately, weighted, and combined into a single score. The result is more than a badge: you can read, sentence by sentence, why each indicator voted the way it did.",
   "home.feature.indicators": "16 technical indicators",
   "home.feature.indicators.desc": "RSI, MACD, Bollinger, ADX, Supertrend, OBV and more",
-  "home.feature.markets": "Four markets",
-  "home.feature.markets.desc": "Crypto, US stocks, Borsa İstanbul, forex and commodities",
+  "home.feature.markets": "Hundreds of pairs",
+  "home.feature.markets.desc": "Bitcoin, Ethereum and hundreds of altcoins traded on Binance",
   "home.feature.timeframes": "Multiple timeframes",
   "home.feature.timeframes.desc": "From one minute to weekly, plus higher-timeframe agreement",
   "home.feature.comment": "Plain-language commentary",
@@ -490,7 +490,7 @@ export const en: Dictionary = {
   /* ── Search engine titles and descriptions ── */
   "seo.home.title": "Technical analysis and buy/sell signals",
   "seo.home.description":
-    "Buy / sell / wait signals from 16 technical indicators across crypto, US stocks, Borsa Istanbul, forex and commodities — with the reasoning written out in plain language.",
+    "Buy / sell / wait signals from 16 technical indicators for Bitcoin, Ethereum and hundreds of altcoins — with the reasoning written out in plain language.",
 
   "seo.kripto.title": "Crypto technical analysis and buy/sell signals",
   "seo.kripto.description":
@@ -567,4 +567,77 @@ export const en: Dictionary = {
     "Both WTI and Brent. The gap between them comes from regional supply conditions, and their signals can diverge.",
 
   "nav.home": "Home",
+  /* ── Plans and credits ── */
+  "nav.plans": "Pricing",
+  "nav.subscription": "My plan",
+
+  "plan.ucretsiz": "Free",
+  "plan.basic": "Basic",
+  "plan.premium": "Premium",
+  "plan.ultimate": "Ultimate",
+  "plan.vurgu.dakikalik": "1-minute and 5-minute timeframes unlocked",
+  "plan.vurgu.oncelik": "Priority email support",
+
+  "plans.title": "Plans and pricing",
+  "plans.sub":
+    "One credit per analysis; browsing lists, market pages and search costs nothing.",
+  "plans.free": "Free",
+  "plans.perMonth": "/mo",
+  "plans.creditLine": "analysis credits / month",
+  "plans.scanLine": "Up to {count} assets per scan",
+  "plans.watchLine": "Watchlist of {count} assets",
+  "plans.intervalLine": "Timeframes: {list}",
+  "plans.popular": "Most chosen",
+  "plans.current": "Your current plan",
+  "plans.choose": "Choose this plan",
+  "plans.start": "Start free",
+  "plans.downgrade": "Back to the free plan",
+  "plans.changed": "Your plan has been updated.",
+  "plans.detailLink": "See plan details and credit rules",
+  "plans.paymentClosed":
+    "The payment provider is not connected yet, so paid plans cannot be activated right now. Once it is, upgrading will be a single step on this page.",
+  "plans.creditTitle": "How credits work",
+  "plans.creditSub": "Credits pay for detailed analysis, not for browsing.",
+  "plans.credit.1": "A detailed analysis of one asset costs 1 credit.",
+  "plans.credit.2":
+    "Reopening the same asset on the same timeframe within 30 minutes is free; refreshing the page never costs a credit.",
+  "plans.credit.3":
+    "One run of the signal scanner costs 1 credit — no matter how many assets it scans.",
+  "plans.credit.4": "Price lists, market pages and search cost nothing.",
+  "plans.credit.5": "Credits renew every month; unused credits do not roll over.",
+  "plans.faq.q1": "When exactly is a credit spent?",
+  "plans.faq.a1":
+    "When you open an asset's analysis page and when you run the signal scanner. If the analysis fails because of a data error, the credit is refunded.",
+  "plans.faq.q2": "What happens when I run out of credits?",
+  "plans.faq.a2":
+    "New analyses stop until the period renews; price lists, market pages, search and your watchlist stay open.",
+  "plans.faq.q3": "Can I change my plan at any time?",
+  "plans.faq.a3":
+    "Yes. An upgrade starts a fresh credit period, and returning to the free plan is always allowed.",
+  "plans.faq.q4": "How does payment work?",
+  "plans.faq.a4":
+    "The payment provider is not connected yet, so only the free plan is available at the moment. Paid plans will open on this same page once it is.",
+
+  "sub.title": "My plan",
+  "sub.sub": "Your plan, remaining credits and upgrade options.",
+  "sub.currentPlan": "Current plan",
+  "sub.noLedger":
+    "The credit ledger cannot be read right now. Your analyses keep working; the counter appears once the database is connected.",
+
+  "credit.remaining": "credits left",
+  "credit.renews": "Renews on {date}",
+  "credit.scanLimit": "{count} assets per scan",
+  "credit.watchLimit": "{count} assets on the watchlist",
+  "credit.exhausted": "You are out of analysis credits for this period.",
+  "credit.upgrade": "See plans",
+  "credit.periodLocked": "This timeframe is not in your plan — upgrading unlocks it.",
+
+  "home.stat.languages": "Languages",
+
+  "seo.plans.title": "Plans and pricing",
+  "seo.plans.description":
+    "Fibonex plans: monthly analysis credits, scanner limits and timeframes. One credit per analysis; browsing lists and market pages is free.",
+
+  "auth.apple": "Sign in with Apple",
+  "auth.appleRegister": "Sign up with Apple",
 };

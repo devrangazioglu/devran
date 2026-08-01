@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useI18n } from "@/components/I18nProvider";
+import OAuthButtons from "@/components/OAuthButtons";
 
 export default function LoginForm({
   googleEnabled,
+  appleEnabled,
   next = "/panel",
 }: {
   googleEnabled: boolean;
+  appleEnabled: boolean;
   next?: string;
 }) {
   const { t } = useI18n();
@@ -77,17 +80,7 @@ export default function LoginForm({
         </button>
       </form>
 
-      {googleEnabled && (
-        <>
-          <div className="divider">{t("auth.or")}</div>
-          <button
-            className="btn btn-ghost btn-block"
-            onClick={() => signIn("google", { callbackUrl: next })}
-          >
-            {t("auth.google")}
-          </button>
-        </>
-      )}
+      <OAuthButtons google={googleEnabled} apple={appleEnabled} next={next} />
     </>
   );
 }

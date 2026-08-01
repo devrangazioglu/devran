@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
+import { kullanicidanDurum } from "@/lib/credits";
 import { getInstrument, normalizeSymbol } from "@/lib/markets/provider";
-import { instrumentId, isMarketId, MARKETS } from "@/lib/markets/types";
+import { instrumentId, marketAktif, MARKETS } from "@/lib/markets/types";
 import { DEFAULT_SETTINGS, findUserByEmail } from "@/lib/users";
 import AssetClient from "./AssetClient";
 
@@ -29,7 +30,8 @@ export default async function AssetPage({
   const { market: marketParam, symbol: symbolParam } = await params;
   const { interval } = await searchParams;
 
-  if (!isMarketId(marketParam)) notFound();
+  // Kapalı piyasanın varlık sayfası açılmaz.
+  if (!marketAktif(marketParam)) notFound();
   const symbol = normalizeSymbol(marketParam, decodeURIComponent(symbolParam));
   if (!symbol) notFound();
 
@@ -51,6 +53,7 @@ export default async function AssetPage({
       instrument={instrument}
       initialInterval={requested ?? preferred}
       inWatchlist={(user?.watchlist ?? []).includes(instrumentId(marketParam, symbol))}
+      planPeriyotlar={user ? kullanicidanDurum(user).plan.periyotlar : null}
     />
   );
 }

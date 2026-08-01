@@ -108,6 +108,35 @@ export function organizationJsonLd(description: string) {
   };
 }
 
+/**
+ * Planlar sayfasının yapılandırılmış verisi.
+ *
+ * Arama sonucunda fiyat aralığının görünmesini sağlar. Fiyatlar tek kaynaktan
+ * (`lib/plans.ts`) geldiği için sayfadaki rakamla sonuçtaki rakam şaşmaz.
+ */
+export function planJsonLd(
+  ad: string,
+  aciklama: string,
+  planlar: { ad: string; ucret: number }[],
+  locale: Locale,
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: ad,
+    description: aciklama,
+    brand: { "@type": "Brand", name: SITE_NAME },
+    url: mutlakUrl(localeHref(locale, "/planlar")),
+    offers: planlar.map((p) => ({
+      "@type": "Offer",
+      name: p.ad,
+      price: p.ucret.toFixed(2),
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+    })),
+  };
+}
+
 export function faqJsonLd(sorular: { soru: string; cevap: string }[]) {
   return {
     "@context": "https://schema.org",

@@ -17,11 +17,14 @@ yorumlayan** üyelik girişli web uygulaması.
 
 ## Özellikler
 
-- 🔐 **Üyelik sistemi** — e-posta + parola (scrypt ile hash'lenir) ve isteğe bağlı Google ile giriş
-- 🌍 **Dört piyasa, tek motor** — analiz kodu varlık türünü bilmez; aynı göstergeler hisseye,
-  endekse, altına ve coine uygulanır
-- 🔎 **Birleşik arama** — ana sayfada ve üye menüsünde tüm piyasalarda arama; aksan duyarsız
-  ("altin" → Altın) ve çok dilli eş anlamlılarla ("gold", "oil", "borsa istanbul")
+- 🔐 **Üyelik sistemi** — e-posta + parola (scrypt ile hash'lenir), isteğe bağlı Google ve
+  Apple ile giriş
+- 💳 **Planlar ve kredi** — Ücretsiz / Basic / Premium / Ultimate; her ayrıntılı analiz bir
+  kredi düşer, gezinmek ücretsizdir (bkz. “Üyelik planları ve kredi”)
+- 🪙 **Kripto piyasası** — analiz kodu varlık türünü bilmez; ABD borsası, Borsa İstanbul ve
+  döviz/emtia kodu yerinde duruyor ama şimdilik kapalı (bkz. “Piyasa verisi nereden geliyor?”)
+- 🔎 **Birleşik arama** — ana sayfada ve üye menüsünde varlık arama; aksan duyarsız
+  ("altin" → Altın) ve çok dilli eş anlamlılarla
 - 📊 **16 teknik gösterge** — RSI, MACD, EMA 9/21/50/200, Bollinger, Stokastik, ATR, ADX+DI,
   Supertrend, OBV, MFI, CCI, Williams %R, ROC, VWAP, hacim oranı
 - 🧮 **Ağırlıklı skor motoru** — her gösterge −1…+1 yön üretir, ağırlıklandırılır ve −100…+100
@@ -68,7 +71,10 @@ sayfasından hesap oluşturun.
 |---|---|---|
 | `AUTH_SECRET` | ✅ | Oturum çerezlerini imzalar. `openssl rand -base64 32`. **Üretimde tanımlanmazsa giriş çalışmaz** (yedek anahtar yalnızca geliştirmede devreye girer) |
 | `DATABASE_URL` | üretimde ✅ | Postgres bağlantı dizesi. Tanımlıysa kullanıcılar veritabanında saklanır; tanımsızsa dosya deposuna düşülür (yalnızca yerel geliştirme). `POSTGRES_URL` de kabul edilir |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Google ile giriş. Boşsa yalnızca e-posta + parola görünür |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | — | Google ile giriş. Boşsa düğme gösterilmez |
+| `APPLE_CLIENT_ID` / `APPLE_CLIENT_SECRET` | — | Apple ile giriş. `APPLE_CLIENT_SECRET`, Apple Developer hesabında üretilen ve altı ayda bir yenilenen imzalı bir JWT'dir. Boşsa düğme gösterilmez |
+| `ODEME_SAGLAYICI_ANAHTARI` | — | Ödeme sağlayıcısının anahtarı. Tanımlı değilken ücretli planlara geçilemez ve arayüz bunu açıkça söyler |
+| `ODEME_TEST_MODU` | — | `1` ise ödemesiz plan değişimine izin verilir (yalnızca kendi ortamınızda denemek için; üretimde **kapalı** olmalı) |
 | `USERS_FILE` | — | Dosya deposu yolu (varsayılan `data/users.json`, git'e girmez) |
 | `PGPOOL_MAX` | — | Postgres havuzundaki en fazla bağlantı (varsayılan 3) |
 | `TWELVEDATA_API_KEY` | hisse/emtia için ✅ | ABD borsası, Türkiye borsası ve emtia verisi bu anahtarla gelir. [twelvedata.com](https://twelvedata.com/pricing) ücretsiz katman. Tanımsızsa bu üç piyasa boş kalır; kripto ve dövizler etkilenmez |
@@ -80,6 +86,39 @@ söyleyen bir uyarı görünür.
 
 Piyasa verisi için **API anahtarı gerekmez**; yalnızca herkese açık uç noktalar okunur,
 emir gönderilmez, hesabınıza erişilmez.
+
+## Üyelik planları ve kredi
+
+Dört plan var (`lib/plans.ts` tek kaynaktır; fiyatlar aylık, ABD doları):
+
+| Plan | Ücret | Aylık kredi | Taramada varlık | Takip listesi | Periyotlar |
+|---|---|---|---|---|---|
+| Ücretsiz | 0 | 90 | 10 | 10 | 1s, 4s, 1g, 1h |
+| Basic | 9,99 | 600 | 30 | 50 | 15dk ve üzeri |
+| Premium | 29,99 | 2500 | 60 | 200 | 1dk dahil tümü |
+| Ultimate | 59,99 | 7500 | 100 | 500 | 1dk dahil tümü |
+
+Kredi kuralları:
+
+- Bir varlığın **ayrıntılı analizi** 1 kredi düşer. Kredi, 16 göstergenin hesaplanıp
+  yorumlanmasının karşılığıdır.
+- Aynı varlık + aynı periyot 30 dakika içinde yeniden açılırsa ücretsizdir; sayfa yenilemek
+  ya da sekmeye geri dönmek kredi yakmaz.
+- Sinyal tarayıcının **bir çalıştırması** 1 kredidir, kaç varlık taradığından bağımsız.
+  Planlar arasındaki fark kredi değil, aynı anda taranabilen varlık sayısıdır.
+- Fiyat listeleri, piyasa sayfaları ve arama kredi harcamaz.
+- Analiz veri hatası yüzünden gösterilemezse kredi **iade edilir**.
+- Krediler ayda bir yenilenir, kullanılmayan kredi devretmez.
+
+Sayaç kullanıcı kaydının içinde (`users.abonelik`) tutulur ve `lib/credits.ts` üzerinden
+değişir; Postgres tarafında güncelleme `select … for update` içinde çalıştığı için aynı anda
+gelen iki istek birbirinin harcamasını ezmez. Veritabanı yoksa ya da yazılamıyorsa defter
+tutulamaz ve **kısıtlama uygulanmaz** — altyapı sorunu kimsenin hakkını yememeli.
+
+**Ödeme henüz bağlı değil.** Gerçek tahsilat bir sağlayıcı hesabı ve anahtarı istiyor;
+bağlanana kadar ücretli planlara geçiş kapalıdır ve arayüz sahte bir ödeme formu göstermek
+yerine durumu açıkça yazar. Bağlarken yapılacaklar `lib/odeme.ts` başlığında adım adım
+yazılıdır; ödeme onaylandığında çağrılacak tek şey `planDegistir(email, plan)`.
 
 ## Komutlar
 
@@ -230,6 +269,11 @@ piyasalarda "seans kapalı olabilir" riski eklenir.
   sentetik seriler üretilir ve arayüzde açıkça "demo veri" olarak işaretlenir.
 
 ## Piyasa verisi nereden geliyor?
+
+> **Şimdilik yalnızca kripto açık.** ABD borsası, Borsa İstanbul ve döviz/emtia arayüzden
+> kaldırıldı: bu üç piyasanın verisi aşağıda anlatılan kota duvarına takılıyor ve kullanıcı
+> boş ya da yarım tablo görüyordu. Kod, enstrüman listeleri ve besleme yerinde duruyor;
+> açmak için `AKTIF_MARKET_IDS` (`lib/markets/types.ts`) listesine eklemek yetiyor.
 
 Kripto dışı veriyi web sunucusundan çekmek iki duvara çarpıyordu: anahtarsız
 kaynaklar (Yahoo, Stooq) bulut sağlayıcısının IP aralığını engelliyor (ölçüldü:

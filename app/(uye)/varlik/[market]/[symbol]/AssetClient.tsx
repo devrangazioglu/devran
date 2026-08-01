@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import CandleChart from "@/components/CandleChart";
+import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
 import IndicatorChart from "@/components/IndicatorChart";
 import Reveal from "@/components/motion/Reveal";
@@ -33,17 +34,26 @@ export default function AssetClient({
   instrument,
   initialInterval,
   inWatchlist,
+  planPeriyotlar,
 }: {
   instrument: Instrument;
   initialInterval: string;
   inWatchlist: boolean;
+  /** Planın açtığı periyotlar; defter okunamıyorsa null (kısıtlama yok). */
+  planPeriyotlar: Interval[] | null;
 }) {
   const { t, intl } = useI18n();
   const intervals = MARKETS[instrument.market].intervals;
 
-  const [period, setPeriod] = useState<Interval>(initialInterval as Interval);
+  const [period, setPeriod] = useState<Interval>(() => {
+    const istenen = initialInterval as Interval;
+    if (!planPeriyotlar || planPeriyotlar.includes(istenen)) return istenen;
+    // Plana kapalı bir periyotla açılmak, sayfayı hatayla karşılamak demek.
+    return planPeriyotlar.includes("4h") ? "4h" : planPeriyotlar[planPeriyotlar.length - 1];
+  });
   const [data, setData] = useState<AnalyzeResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Hata nesnesi olduğu gibi saklanır: kodu (kredi/plan) HataNotu okuyor.
+  const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [watched, setWatched] = useState(inWatchlist);
   const [savingWatch, setSavingWatch] = useState(false);
@@ -61,7 +71,7 @@ export default function AssetClient({
           ),
         );
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : t("common.error"));
+        setError(caught ?? new Error(t("common.error")));
         setData(null);
       } finally {
         setLoading(false);
@@ -123,15 +133,20 @@ export default function AssetClient({
         <div className="toolbar">
           <MarketBadge market={instrument.market} />
           <div className="segmented">
-            {intervals.map((value) => (
-              <button
-                key={value}
-                className={value === period ? "active" : ""}
-                onClick={() => setPeriod(value)}
-              >
-                {value}
-              </button>
-            ))}
+            {intervals.map((value) => {
+              const acik = !planPeriyotlar || planPeriyotlar.includes(value);
+              return (
+                <button
+                  key={value}
+                  className={value === period ? "active" : ""}
+                  onClick={() => setPeriod(value)}
+                  disabled={!acik}
+                  title={acik ? undefined : t("credit.periodLocked")}
+                >
+                  {acik ? value : `🔒 ${value}`}
+                </button>
+              );
+            })}
           </div>
           <button className="btn btn-ghost btn-sm" onClick={toggleWatch} disabled={savingWatch}>
             {watched ? `★ ${t("watch.unfollow")}` : `☆ ${t("watch.follow")}`}
@@ -151,14 +166,16 @@ export default function AssetClient({
         <div className="notice">{t("asset.analysisLangNote")}</div>
       )}
       {instrument.market !== "kripto" && <div className="notice">{t("market.closedNote")}</div>}
-      {error && (
-        <div className="notice notice-error">
-          {error}{" "}
-          <Link href="/panel" style={{ textDecoration: "underline" }}>
-            {t("asset.backToPanel")}
-          </Link>
-        </div>
-      )}
+      {error ? (
+        <>
+          <HataNotu hata={error} />
+          <p className="muted" style={{ marginTop: -8 }}>
+            <Link href="/panel" style={{ textDecoration: "underline" }}>
+              {t("asset.backToPanel")}
+            </Link>
+          </p>
+        </>
+      ) : null}
 
       {loading && !data && (
         <div className="stack">

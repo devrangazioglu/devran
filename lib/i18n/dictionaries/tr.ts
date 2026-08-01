@@ -6,7 +6,7 @@ export const tr = {
   "common.loading": "Yükleniyor…",
   "common.refresh": "Yenile",
   "common.search": "Ara",
-  "common.searchPlaceholder": "Coin, hisse, döviz veya emtia ara (BTC, AAPL, THYAO, altın…)",
+  "common.searchPlaceholder": "Kripto ara (BTC, ETH, SOL, Bitcoin…)",
   "common.searchHint": "En az 2 karakter yazın",
   "common.noResults": "Sonuç bulunamadı",
   "common.all": "Tümü",
@@ -88,16 +88,16 @@ export const tr = {
   "category.volume": "Hacim",
 
   /* ── Ana sayfa ────────────────────────────────────────── */
-  "home.badge": "Dört piyasa, tek analiz motoru",
+  "home.badge": "Yüzlerce kripto parite, tek analiz motoru",
   "home.title": "Analiz et,\nal–sat sinyalini gör",
   "home.lead":
-    "Kripto, Amerikan borsası, Borsa İstanbul, döviz ve emtia verisini çekiyoruz; 16 teknik göstergeyi hesaplayıp ağırlıklı bir skora çeviriyoruz ve {signals} sinyali üretiyoruz — üstelik neden öyle olduğunu anlatıyoruz.",
+    "Binance'ten canlı kripto verisini çekiyoruz; 16 teknik göstergeyi hesaplayıp ağırlıklı bir skora çeviriyoruz ve {signals} sinyali üretiyoruz — üstelik neden öyle olduğunu anlatıyoruz.",
   "home.ctaPrimary": "Ücretsiz hesap aç",
   "home.ctaSecondary": "Nasıl çalışır?",
   "home.disclaimerShort":
     "Bu bir teknik analiz aracıdır. Ürettiği sinyaller yatırım tavsiyesi değildir; kararlarınızın sorumluluğu size aittir.",
   "home.searchTitle": "Ne analiz etmek istiyorsun?",
-  "home.searchSub": "Adını ya da sembolünü yaz; dört piyasada birden arıyoruz.",
+  "home.searchSub": "Adını ya da sembolünü yaz; yüzlerce parite arasında arıyoruz.",
   "home.marketsTitle": "Dört piyasa, aynı motor",
   "home.marketsSub": "Aynı gösterge seti ve aynı skorlama her piyasada çalışır.",
   "home.highlightsEyebrow": "Piyasadan canlı görünüm",
@@ -111,8 +111,8 @@ export const tr = {
     "Her gösterge ayrı ayrı hesaplanır, ağırlıklandırılır ve tek bir skorda birleşir. Sonuç sadece bir rozet değil: hangi göstergenin neden o yönde oy verdiğini cümle cümle okuyabilirsiniz.",
   "home.feature.indicators": "16 teknik gösterge",
   "home.feature.indicators.desc": "RSI, MACD, Bollinger, ADX, Supertrend, OBV ve dahası",
-  "home.feature.markets": "Dört piyasa",
-  "home.feature.markets.desc": "Kripto, ABD borsası, Borsa İstanbul, döviz ve emtia",
+  "home.feature.markets": "Yüzlerce parite",
+  "home.feature.markets.desc": "Bitcoin, Ethereum ve Binance'te işlem gören yüzlerce altcoin",
   "home.feature.timeframes": "Çoklu zaman dilimi",
   "home.feature.timeframes.desc": "1 dakikadan haftalığa kadar periyotlar ve trend uyumu",
   "home.feature.comment": "Sade dille yorum",
@@ -513,7 +513,7 @@ export const tr = {
      sonucunda kesiliyor ve cümlenin sonu kullanıcıya ulaşmıyor. */
   "seo.home.title": "Teknik analiz ve al/sat sinyalleri",
   "seo.home.description":
-    "Kripto, ABD borsası, Borsa İstanbul, döviz ve emtia için 16 teknik göstergeyi hesaplayıp AL / SAT / BEKLE sinyali üretir ve sonucu sade bir dille yorumlar.",
+    "Bitcoin, Ethereum ve yüzlerce altcoin için 16 teknik göstergeyi hesaplayıp AL / SAT / BEKLE sinyali üretir ve sonucu sade bir dille yorumlar.",
 
   "seo.kripto.title": "Kripto teknik analiz ve al/sat sinyalleri",
   "seo.kripto.description":
@@ -591,6 +591,78 @@ export const tr = {
     "Hem WTI hem Brent listelenir. İkisi arasındaki fark bölgesel arz koşullarından kaynaklanır ve sinyalleri birbirinden ayrışabilir.",
 
   "nav.home": "Ana sayfa",
+  /* ── Planlar ve kredi ─────────────────────────────────── */
+  "nav.plans": "Planlar",
+  "nav.subscription": "Aboneliğim",
+
+  "plan.ucretsiz": "Ücretsiz",
+  "plan.basic": "Basic",
+  "plan.premium": "Premium",
+  "plan.ultimate": "Ultimate",
+  "plan.vurgu.dakikalik": "1 ve 5 dakikalık periyotlar açık",
+  "plan.vurgu.oncelik": "Öncelikli e-posta desteği",
+
+  "plans.title": "Planlar ve fiyatlar",
+  "plans.sub": "Her analiz bir kredi; listeleri, piyasa sayfalarını ve aramayı gezmek ücretsiz.",
+  "plans.free": "Ücretsiz",
+  "plans.perMonth": "/ay",
+  "plans.creditLine": "analiz kredisi / ay",
+  "plans.scanLine": "Tarayıcıda tek seferde {count} varlık",
+  "plans.watchLine": "{count} varlıklık takip listesi",
+  "plans.intervalLine": "Periyotlar: {list}",
+  "plans.popular": "En çok seçilen",
+  "plans.current": "Mevcut planınız",
+  "plans.choose": "Bu planı seç",
+  "plans.start": "Ücretsiz başla",
+  "plans.downgrade": "Ücretsiz plana dön",
+  "plans.changed": "Planınız güncellendi.",
+  "plans.detailLink": "Planların ayrıntısı ve kredi kuralları",
+  "plans.paymentClosed":
+    "Ödeme sağlayıcısı henüz bağlı değil, bu yüzden ücretli planlara şu anda geçilemiyor. Bağlandığında yükseltme bu sayfadan tek adımda yapılabilecek.",
+  "plans.creditTitle": "Kredi nasıl işler?",
+  "plans.creditSub": "Kredi ayrıntılı analiz için harcanır; gezinmek için değil.",
+  "plans.credit.1": "Bir varlığın ayrıntılı analizi 1 kredi düşer.",
+  "plans.credit.2":
+    "Aynı varlığı aynı periyotta 30 dakika içinde yeniden açmak ücretsizdir; sayfayı yenilemek kredi yakmaz.",
+  "plans.credit.3":
+    "Sinyal tarayıcının bir çalıştırması 1 kredidir — kaç varlık taradığı fark etmez.",
+  "plans.credit.4": "Fiyat listeleri, piyasa sayfaları ve arama kredi harcamaz.",
+  "plans.credit.5": "Krediler her ay yenilenir; kullanılmayan kredi bir sonraki aya devretmez.",
+  "plans.faq.q1": "Kredi tam olarak ne zaman düşer?",
+  "plans.faq.a1":
+    "Bir varlığın analiz sayfasını açtığınızda ve sinyal tarayıcıyı çalıştırdığınızda. Analiz veri hatası yüzünden görüntülenemezse kredi geri verilir.",
+  "plans.faq.q2": "Kredim biterse ne olur?",
+  "plans.faq.a2":
+    "Yeni analiz yapılamaz; fiyat listeleri, piyasa sayfaları, arama ve takip listeniz açık kalır. Krediler dönem sonunda kendiliğinden yenilenir.",
+  "plans.faq.q3": "Planımı istediğim zaman değiştirebilir miyim?",
+  "plans.faq.a3":
+    "Evet. Yükseltmede kredi dönemi baştan başlar; ücretsiz plana dönmek her zaman serbesttir.",
+  "plans.faq.q4": "Ödeme nasıl yapılıyor?",
+  "plans.faq.a4":
+    "Ödeme sağlayıcısı henüz bağlı değil; bu yüzden şu anda yalnızca ücretsiz plan kullanılabiliyor. Sağlayıcı bağlandığında ücretli planlar aynı sayfadan açılacak.",
+
+  "sub.title": "Aboneliğim",
+  "sub.sub": "Planınız, kalan krediniz ve yükseltme seçenekleri.",
+  "sub.currentPlan": "Mevcut plan",
+  "sub.noLedger":
+    "Kredi defteri şu anda okunamıyor. Analizleriniz çalışmaya devam eder; kredi sayacı veritabanı bağlandığında görünür.",
+
+  "credit.remaining": "kredi kaldı",
+  "credit.renews": "{date} tarihinde yenilenir",
+  "credit.scanLimit": "taramada {count} varlık",
+  "credit.watchLimit": "{count} varlık takip",
+  "credit.exhausted": "Bu dönemki analiz krediniz bitti.",
+  "credit.upgrade": "Planlara bak",
+  "credit.periodLocked": "Bu periyot planınızda kapalı — yükseltince açılır.",
+
+  "home.stat.languages": "Dil desteği",
+
+  "seo.plans.title": "Planlar ve fiyatlar",
+  "seo.plans.description":
+    "Fibonex planları: aylık analiz kredisi, tarayıcı sınırı ve zaman dilimleri. Her analiz bir kredi; listeleri ve piyasa sayfalarını gezmek ücretsiz.",
+
+  "auth.apple": "Apple ile giriş yap",
+  "auth.appleRegister": "Apple ile kaydol",
 } as const;
 
 export type DictionaryKey = keyof typeof tr;

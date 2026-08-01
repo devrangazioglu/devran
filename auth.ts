@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import Apple from "next-auth/providers/apple";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import type { Provider } from "next-auth/providers";
@@ -25,7 +26,28 @@ const providers: Provider[] = [
   }),
 ];
 
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+/**
+ * Sağlayıcılar yalnızca anahtarları tanımlıysa eklenir.
+ *
+ * Anahtarsız bir sağlayıcı eklemek, giriş sayfasında çalışmayan bir düğme
+ * göstermek demek: kullanıcı tıklar, sağlayıcı hata sayfası döner.
+ */
+export const googleAuthEnabled = Boolean(
+  process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim(),
+);
+
+/**
+ * Apple ile giriş.
+ *
+ * `APPLE_CLIENT_SECRET`, Apple Developer hesabından üretilen ve altı ayda bir
+ * yenilenmesi gereken imzalı bir JWT'dir (client id + team id + key id ile
+ * üretilir); bu yüzden diğer sağlayıcılardaki gibi sabit bir "secret" değildir.
+ */
+export const appleAuthEnabled = Boolean(
+  process.env.APPLE_CLIENT_ID?.trim() && process.env.APPLE_CLIENT_SECRET?.trim(),
+);
+
+if (googleAuthEnabled) {
   providers.push(
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -34,9 +56,14 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-export const googleAuthEnabled = Boolean(
-  process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
-);
+if (appleAuthEnabled) {
+  providers.push(
+    Apple({
+      clientId: process.env.APPLE_CLIENT_ID,
+      clientSecret: process.env.APPLE_CLIENT_SECRET,
+    }),
+  );
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
@@ -51,8 +78,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   callbacks: {
     async signIn({ account, user }) {
-      // Google ile gelen kullanıcıyı yerel depoya da yaz (takip listesi için).
-      if (account?.provider === "google" && user.email) {
+      // OAuth ile gelen kullanıcıyı yerel depoya da yaz (takip listesi,
+      // ayarlar ve kredi defteri bu kayda bağlı).
+      if ((account?.provider === "google" || account?.provider === "apple") && user.email) {
         try {
           await upsertOAuthUser(user.email, user.name);
         } catch (error) {

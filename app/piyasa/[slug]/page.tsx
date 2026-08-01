@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 
 import MarketView from "@/components/pages/MarketView";
 import { DEFAULT_LOCALE, makeT } from "@/lib/i18n";
-import { marketBySlug, MARKETS, MARKET_IDS } from "@/lib/markets/types";
+import { marketBySlug, MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
 import { dilAlternatifleri, ogLocale, SITE_NAME } from "@/lib/seo";
 
 export const revalidate = 60;
 
 export function generateStaticParams() {
-  return MARKET_IDS.map((id) => ({ slug: MARKETS[id].slug }));
+  return AKTIF_MARKET_IDS.map((id) => ({ slug: MARKETS[id].slug }));
 }
 
 export async function generateMetadata({

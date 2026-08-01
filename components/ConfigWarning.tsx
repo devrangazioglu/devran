@@ -1,4 +1,5 @@
 import { postgresEnabled } from "@/lib/db";
+import { AKTIF_MARKET_IDS } from "@/lib/markets/types";
 import { twelveDataEnabled } from "@/lib/markets/twelvedata";
 
 /**
@@ -10,7 +11,10 @@ export default function ConfigWarning() {
   const production = process.env.NODE_ENV === "production";
   const missingSecret = !process.env.AUTH_SECRET;
   const ephemeralStore = production && !postgresEnabled();
-  const missingMarketKey = !twelveDataEnabled();
+  // Anahtar uyarısı yalnızca o anahtarla beslenen bir piyasa **açıkken**
+  // anlamlı; hepsi kapalıyken kullanıcıya çözemeyeceği bir eksik gösterilir.
+  const anahtarliPiyasaAcik = AKTIF_MARKET_IDS.some((id) => id !== "kripto");
+  const missingMarketKey = anahtarliPiyasaAcik && !twelveDataEnabled();
 
   if (!missingSecret && !ephemeralStore && !missingMarketKey) return null;
 

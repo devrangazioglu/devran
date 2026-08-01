@@ -8,6 +8,8 @@
 import { randomUUID, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
+import { isPlanId, type PlanId } from "./plans";
+
 const scrypt = promisify(scryptCallback) as (
   password: string,
   salt: Buffer,
@@ -25,6 +27,26 @@ export type UserSettings = {
   onlyStrongSignals: boolean;
 };
 
+/**
+ * Kullanıcının üyeliği ve kredi sayacı.
+ *
+ * Kredi, kullanıcının bu dönemde kaç varlık analiz edebileceğini söyler.
+ * Sayaç "kalan" değil "harcanan" tutar: plan değiştiğinde kalan krediyi
+ * yeniden hesaplamak gerekmez, yeni planın hakkı doğrudan geçerli olur.
+ */
+export type Subscription = {
+  plan: PlanId;
+  /** Bu kredi döneminin başlangıcı (ms). */
+  donemBasi: number;
+  /** Dönem içinde harcanan kredi. */
+  harcanan: number;
+  /**
+   * Ücretsiz tekrar penceresi: "kripto:BTCUSDT:4h" → son ödemenin anı (ms).
+   * Aynı analizi kısa süre içinde yeniden açmak kredi yakmaz.
+   */
+  sonAnalizler: Record<string, number>;
+};
+
 export type User = {
   id: string;
   email: string;
@@ -33,6 +55,7 @@ export type User = {
   createdAt: number;
   watchlist: string[];
   settings: UserSettings;
+  abonelik: Subscription;
 };
 
 export type PublicUser = Omit<User, "passwordHash">;
@@ -44,12 +67,18 @@ export const DEFAULT_SETTINGS: UserSettings = {
   onlyStrongSignals: false,
 };
 
+/**
+ * Yeni hesabın hazır takip listesi.
+ *
+ * Yalnızca açık piyasalardan seçilir; kapalı bir piyasanın varlığı listeye
+ * konursa kullanıcı ilk girişte açılmayan satırlar görür.
+ */
 export const DEFAULT_WATCHLIST = [
   "kripto:BTCUSDT",
   "kripto:ETHUSDT",
-  "abd:AAPL",
-  "bist:THYAO.IS",
-  "emtia:GC=F",
+  "kripto:SOLUSDT",
+  "kripto:XRPUSDT",
+  "kripto:BNBUSDT",
 ];
 
 /** Depo yazılamadığında/erişilemediğinde fırlatılır. */
@@ -128,6 +157,41 @@ export function buildUser(input: {
     createdAt: Date.now(),
     watchlist: [...DEFAULT_WATCHLIST],
     settings: { ...DEFAULT_SETTINGS },
+    abonelik: yeniAbonelik(),
+  };
+}
+
+/* ────────────────────── Abonelik ────────────────────── */
+
+export function yeniAbonelik(now = Date.now()): Subscription {
+  return { plan: "ucretsiz", donemBasi: now, harcanan: 0, sonAnalizler: {} };
+}
+
+/**
+ * Depodan gelen ham abonelik verisini eksiksiz bir kayda tamamlar.
+ *
+ * Alan hiç yoksa (kredi sisteminden önce açılmış hesaplar) ücretsiz planla
+ * ve dönemi bugün başlamış gibi doldurulur; kimse geçmişe dönük borçlu olmaz.
+ */
+export function normalizeSubscription(raw: unknown, now = Date.now()): Subscription {
+  const value = (raw ?? {}) as Partial<Subscription>;
+  const sonAnalizler: Record<string, number> = {};
+  if (value.sonAnalizler && typeof value.sonAnalizler === "object") {
+    for (const [key, at] of Object.entries(value.sonAnalizler)) {
+      if (typeof at === "number" && Number.isFinite(at)) sonAnalizler[key] = at;
+    }
+  }
+  return {
+    plan: isPlanId(value.plan) ? value.plan : "ucretsiz",
+    donemBasi:
+      typeof value.donemBasi === "number" && Number.isFinite(value.donemBasi)
+        ? value.donemBasi
+        : now,
+    harcanan:
+      typeof value.harcanan === "number" && Number.isFinite(value.harcanan) && value.harcanan > 0
+        ? Math.floor(value.harcanan)
+        : 0,
+    sonAnalizler,
   };
 }
 

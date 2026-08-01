@@ -3,11 +3,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { analyze } from "@/lib/analysis";
 import type { ScanRow } from "@/lib/api-types";
+import { krediHarca, krediIade, krediOzeti, kullanicidanDurum } from "@/lib/credits";
 import { displayTicker } from "@/lib/markets/instruments";
 import { getCandles, getInstruments, getQuotes, mapWithLimit } from "@/lib/markets/provider";
 import {
   isInterval,
-  isMarketId,
+  marketAktif,
   MarketDataError,
   MARKETS,
   parseInstrumentId,
@@ -15,7 +16,9 @@ import {
   type Instrument,
   type Interval,
 } from "@/lib/markets/types";
+import { TARAMA_KREDISI } from "@/lib/plans";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { findUserByEmail } from "@/lib/users";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,16 +46,53 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const marketParam = searchParams.get("market") ?? "kripto";
   const intervalParam = searchParams.get("interval") ?? "4h";
-  const limit = Math.min(Math.max(Number(searchParams.get("limit") ?? 30), 5), 60);
+  const istenenLimit = Math.min(Math.max(Number(searchParams.get("limit") ?? 30), 5), 100);
   const idsParam = searchParams.get("ids");
 
-  if (!isMarketId(marketParam)) {
-    return NextResponse.json({ error: "Geçersiz piyasa." }, { status: 400 });
+  if (!marketAktif(marketParam)) {
+    return NextResponse.json({ error: "Bu piyasa şu anda kapalı." }, { status: 404 });
   }
   if (!isInterval(intervalParam)) {
     return NextResponse.json({ error: "Geçersiz zaman dilimi." }, { status: 400 });
   }
   const interval = intervalParam as Interval;
+
+  // Plan: tarama boyutu ve periyot hakkı buradan gelir.
+  const email = session.user.email ?? "";
+  const kullanici = email ? await findUserByEmail(email).catch(() => null) : null;
+  const durum = kullanici ? kullanicidanDurum(kullanici) : null;
+
+  if (durum && !durum.plan.periyotlar.includes(interval)) {
+    return NextResponse.json(
+      {
+        error: `${interval} periyodu ${durum.plan.ad} planında kapalı. Planlar sayfasından yükseltebilirsiniz.`,
+        kod: "plan-periyot",
+      },
+      { status: 403 },
+    );
+  }
+  const limit = Math.min(istenenLimit, durum?.plan.taramaSiniri ?? istenenLimit);
+
+  // Bir tarama çalıştırması bir kredi — kaç varlık tarandığından bağımsız.
+  // Aynı tarama kısa süre içinde tekrarlanırsa (sayfa yenileme, sekme dönüşü)
+  // ücret alınmaz.
+  const anahtar = idsParam ? `tarama:takip:${interval}` : `tarama:${marketParam}:${interval}`;
+  const harcama = email
+    ? await krediHarca(email, anahtar, TARAMA_KREDISI)
+    : ({ ok: true, ucretsiz: true, durum: null } as const);
+
+  if (!harcama.ok) {
+    return NextResponse.json(
+      {
+        error:
+          "Bu dönemki analiz krediniz bitti. Planlar sayfasından yükseltebilir ya da dönemin " +
+          "yenilenmesini bekleyebilirsiniz.",
+        kod: "kredi-yetersiz",
+        kredi: krediOzeti(harcama.durum),
+      },
+      { status: 402 },
+    );
+  }
 
   try {
     // Taranacak varlıklar: ya verilen kimlikler (takip listesi) ya da piyasanın ilk N'i.
@@ -64,7 +104,8 @@ export async function GET(request: Request) {
         .split(",")
         .map((id) => parseInstrumentId(id.trim()))
         .filter((v): v is { market: typeof marketParam; symbol: string } => v !== null)
-        .slice(0, 60);
+        .filter(({ market }) => marketAktif(market))
+        .slice(0, limit);
 
       const quoteCache = new Map<string, Awaited<ReturnType<typeof getQuotes>>>();
       for (const { market } of ids) {
@@ -119,6 +160,10 @@ export async function GET(request: Request) {
     }
 
     if (targets.length === 0) {
+      // Taranacak varlık yoksa ortada bir hizmet de yok; kredi geri verilir.
+      if (email && harcama.ok && !harcama.ucretsiz) {
+        await krediIade(email, anahtar, TARAMA_KREDISI);
+      }
       return NextResponse.json({
         market: idsParam ? "mixed" : marketParam,
         interval,
@@ -126,6 +171,7 @@ export async function GET(request: Request) {
         updatedAt: Date.now(),
         scanned: 0,
         rows: [],
+        kredi: null,
       });
     }
 
@@ -186,8 +232,12 @@ export async function GET(request: Request) {
       updatedAt: Date.now(),
       scanned: clean.length,
       rows: clean,
+      kredi: krediOzeti(harcama.durum),
     });
   } catch (error) {
+    if (email && harcama.ok && !harcama.ucretsiz) {
+      await krediIade(email, anahtar, TARAMA_KREDISI);
+    }
     const status = error instanceof MarketDataError ? error.status : 500;
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Tarama yapılamadı." },

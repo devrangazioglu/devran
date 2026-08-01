@@ -3,18 +3,21 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { analyze, chartSeries } from "@/lib/analysis";
 import { buildCommentary } from "@/lib/commentary";
+import { krediHarca, krediIade, krediOzeti, kullanicidanDurum } from "@/lib/credits";
 import { analysisReady } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import { getCandles, getQuotes, normalizeSymbol } from "@/lib/markets/provider";
 import {
   isInterval,
-  isMarketId,
+  marketAktif,
   MarketDataError,
   MARKETS,
   type Interval,
   type MarketId,
 } from "@/lib/markets/types";
+import { ANALIZ_KREDISI } from "@/lib/plans";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { findUserByEmail } from "@/lib/users";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,8 +53,8 @@ export async function GET(request: Request) {
   const marketParam = searchParams.get("market") ?? "kripto";
   const intervalParam = searchParams.get("interval") ?? "4h";
 
-  if (!isMarketId(marketParam)) {
-    return NextResponse.json({ error: "Geçersiz piyasa." }, { status: 400 });
+  if (!marketAktif(marketParam)) {
+    return NextResponse.json({ error: "Bu piyasa şu anda kapalı." }, { status: 404 });
   }
   const symbol = normalizeSymbol(marketParam, searchParams.get("symbol") ?? "");
   if (!symbol) {
@@ -62,6 +65,42 @@ export async function GET(request: Request) {
   }
   const interval = intervalParam;
   const locale = await getLocale();
+
+  // Plan ve kredi. Kayıt okunamıyorsa (depo yok/erişilemiyor) kısıtlama
+  // uygulanmaz; altyapı sorunu kullanıcının hakkını yemesin.
+  const email = session.user.email ?? "";
+  const kullanici = email ? await findUserByEmail(email).catch(() => null) : null;
+  const durum = kullanici ? kullanicidanDurum(kullanici) : null;
+
+  if (durum && !durum.plan.periyotlar.includes(interval)) {
+    return NextResponse.json(
+      {
+        error: `${interval} periyodu ${durum.plan.ad} planında kapalı. Planlar sayfasından yükseltebilirsiniz.`,
+        kod: "plan-periyot",
+      },
+      { status: 403 },
+    );
+  }
+
+  // Bir varlığın analizi bir kredi. Aynı varlık + periyot kısa süre içinde
+  // yeniden açılırsa ücretsiz (bkz. lib/plans.ts).
+  const anahtar = `${marketParam}:${symbol}:${interval}`;
+  const harcama = email
+    ? await krediHarca(email, anahtar, ANALIZ_KREDISI)
+    : ({ ok: true, ucretsiz: true, durum: null } as const);
+
+  if (!harcama.ok) {
+    return NextResponse.json(
+      {
+        error:
+          "Bu dönemki analiz krediniz bitti. Planlar sayfasından yükseltebilir ya da dönemin " +
+          "yenilenmesini bekleyebilirsiniz.",
+        kod: "kredi-yetersiz",
+        kredi: krediOzeti(harcama.durum),
+      },
+      { status: 402 },
+    );
+  }
 
   try {
     const { candles, source, instrument } = await getCandles(marketParam, symbol, interval, 300);
@@ -98,6 +137,7 @@ export async function GET(request: Request) {
       analysis,
       commentary,
       analysisLocalized: analysisReady(locale),
+      kredi: krediOzeti(harcama.durum),
       quote,
       candles: trim(candles),
       series: {
@@ -114,6 +154,10 @@ export async function GET(request: Request) {
       timeframes: timeframes.filter((t) => t !== null),
     });
   } catch (error) {
+    // Görülemeyen analiz için ödeme alınmaz.
+    if (email && harcama.ok && !harcama.ucretsiz) {
+      await krediIade(email, anahtar, ANALIZ_KREDISI);
+    }
     const status = error instanceof MarketDataError ? error.status : 500;
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Analiz yapılamadı." },

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LogoMark } from "@/components/Logo";
 import { redirect } from "next/navigation";
 
-import { auth, googleAuthEnabled } from "@/auth";
+import { appleAuthEnabled, auth, googleAuthEnabled } from "@/auth";
 import ConfigWarning from "@/components/ConfigWarning";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { getI18n } from "@/lib/i18n/server";
@@ -45,7 +45,11 @@ export default async function LoginPage({
         <h1>{t("auth.loginTitle")}</h1>
         <p className="sub">{t("auth.loginSub")}</p>
         <ConfigWarning />
-        <LoginForm googleEnabled={googleAuthEnabled} next={next} />
+        <LoginForm
+          googleEnabled={googleAuthEnabled}
+          appleEnabled={appleAuthEnabled}
+          next={next}
+        />
         <p className="muted auth-alt">
           {t("auth.noAccount")}{" "}
           <Link href={withNextPath("/kayit", next)} style={{ color: "var(--accent)" }}>

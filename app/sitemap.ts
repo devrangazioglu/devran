@@ -9,7 +9,7 @@ import type { MetadataRoute } from "next";
 
 import { LOCALES } from "@/lib/i18n";
 import { localeHref } from "@/lib/i18n/routing";
-import { MARKETS, MARKET_IDS } from "@/lib/markets/types";
+import { MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
 import { dilAlternatifleri, mutlakUrl } from "@/lib/seo";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -18,11 +18,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Ana sayfa en önemli, piyasa sayfaları hemen ardından.
   const yollar: { path: string; priority: number; changeFrequency: "daily" | "hourly" }[] = [
     { path: "/", priority: 1, changeFrequency: "daily" },
-    ...MARKET_IDS.map((id) => ({
+    ...AKTIF_MARKET_IDS.map((id) => ({
       path: `/piyasa/${MARKETS[id].slug}`,
       priority: 0.9,
       changeFrequency: "hourly" as const,
     })),
+    { path: "/planlar", priority: 0.8, changeFrequency: "daily" },
   ];
 
   return yollar.flatMap(({ path, priority, changeFrequency }) =>

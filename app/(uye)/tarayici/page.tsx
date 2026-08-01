@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { kullanicidanDurum } from "@/lib/credits";
 import { DEFAULT_SETTINGS, findUserByEmail } from "@/lib/users";
 import ScannerClient from "./ScannerClient";
 
@@ -12,6 +13,7 @@ export default async function ScannerPage() {
   const session = await auth();
   const user = session?.user?.email ? await findUserByEmail(session.user.email) : null;
   const settings = user?.settings ?? DEFAULT_SETTINGS;
+  const durum = user ? kullanicidanDurum(user) : null;
 
   return (
     <ScannerClient
@@ -20,6 +22,8 @@ export default async function ScannerPage() {
       defaultLimit={settings.scanLimit}
       onlyStrong={settings.onlyStrongSignals}
       watchlist={user?.watchlist ?? []}
+      planPeriyotlar={durum?.plan.periyotlar ?? null}
+      planTaramaSiniri={durum?.plan.taramaSiniri ?? null}
     />
   );
 }

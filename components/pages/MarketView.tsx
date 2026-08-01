@@ -10,7 +10,7 @@ import { intlTag, type Locale } from "@/lib/i18n";
 import { localeHref } from "@/lib/i18n/routing";
 import { getI18n } from "@/lib/i18n/server";
 import { getQuotes } from "@/lib/markets/provider";
-import { marketBySlug, MARKETS, MARKET_IDS, type Quote } from "@/lib/markets/types";
+import { marketBySlug, MARKETS, AKTIF_MARKET_IDS, type Quote } from "@/lib/markets/types";
 import { breadcrumbJsonLd, faqJsonLd, itemListJsonLd } from "@/lib/seo";
 
 export default async function MarketView({
@@ -83,17 +83,19 @@ export default async function MarketView({
               <h1>{t(`market.${market.id}.h1` as "market.kripto.h1")}</h1>
               <p className="sub">{t(`market.${market.id}.desc` as "market.kripto.desc")}</p>
             </div>
-            <div className="toolbar market-tabs">
-              {MARKET_IDS.map((id) => (
-                <Link
-                  key={id}
-                  href={yol(`/piyasa/${MARKETS[id].slug}`)}
-                  className={`segmented-link ${id === market.id ? "active" : ""}`}
-                >
-                  {t(`market.${id}` as "market.kripto")}
-                </Link>
-              ))}
-            </div>
+            {AKTIF_MARKET_IDS.length > 1 && (
+              <div className="toolbar market-tabs">
+                {AKTIF_MARKET_IDS.map((id) => (
+                  <Link
+                    key={id}
+                    href={yol(`/piyasa/${MARKETS[id].slug}`)}
+                    className={`segmented-link ${id === market.id ? "active" : ""}`}
+                  >
+                    {t(`market.${id}` as "market.kripto")}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ maxWidth: 560, marginBottom: 20 }}>

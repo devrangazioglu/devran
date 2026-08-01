@@ -1,6 +1,7 @@
 /** API route'larının döndürdüğü gövdelerin paylaşılan tipleri. */
 
 import type { Analysis, SignalLabel } from "./analysis";
+import type { KrediOzeti } from "./credits";
 import type { Candle, DataSource, Instrument, Interval, MarketId, Quote } from "./markets/types";
 import type { Commentary } from "./commentary";
 
@@ -16,6 +17,8 @@ export type AnalyzeResponse = {
   commentary: Commentary;
   /** Analiz metinleri aktif dilde hazır değilse arayüz not gösterir. */
   analysisLocalized: boolean;
+  /** Bu istekten sonraki kredi durumu; defter tutulamıyorsa null. */
+  kredi: KrediOzeti | null;
   quote: Quote | null;
   candles: Candle[];
   series: {
@@ -64,11 +67,37 @@ export type ScanResponse = {
   updatedAt: number;
   scanned: number;
   rows: ScanRow[];
+  kredi: KrediOzeti | null;
 };
 
 export type SearchResponse = { results: Instrument[] };
 
-export type ApiError = { error: string };
+export type AbonelikResponse = {
+  ozet: KrediOzeti | null;
+  /** Ödeme sağlayıcısı bağlı mı? Değilse arayüz sahte ödeme formu göstermez. */
+  odemeAcik: boolean;
+};
+
+/** `kod`, arayüzün hatayı tanıyıp doğru eylemi sunması için. */
+export type ApiError = { error: string; kod?: string };
+
+/**
+ * API hatası.
+ *
+ * Mesaj kullanıcıya gösterilebilir; `kod` ise makine okunur: arayüz "kredi
+ * bitti" ile "sağlayıcı düştü" arasındaki farkı buradan anlar ve doğru
+ * yönlendirmeyi (ör. planlar sayfası) gösterir.
+ */
+export class ApiHatasi extends Error {
+  constructor(
+    message: string,
+    readonly kod?: string,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = "ApiHatasi";
+  }
+}
 
 /** JSON getirir; hata gövdesindeki mesajı fırlatır. */
 export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -76,11 +105,12 @@ export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> 
   const body = (await response.json().catch(() => null)) as T | ApiError | null;
 
   if (!response.ok) {
-    const message =
-      body && typeof body === "object" && "error" in body
-        ? (body as ApiError).error
-        : `İstek başarısız (${response.status})`;
-    throw new Error(message);
+    const hata = body && typeof body === "object" && "error" in body ? (body as ApiError) : null;
+    throw new ApiHatasi(
+      hata?.error ?? `İstek başarısız (${response.status})`,
+      hata?.kod,
+      response.status,
+    );
   }
   if (!body) throw new Error("Sunucudan boş yanıt geldi.");
   return body as T;

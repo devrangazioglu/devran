@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
 import Reveal from "@/components/motion/Reveal";
 import SpotlightCard from "@/components/motion/SpotlightCard";
@@ -13,7 +14,7 @@ import { formatCompact, formatNumber, formatPrice, formatRelative } from "@/lib/
 import { displayTicker } from "@/lib/markets/instruments";
 import {
   MARKETS,
-  MARKET_IDS,
+  AKTIF_MARKET_IDS,
   parseInstrumentId,
   type Interval,
   type MarketId,
@@ -27,24 +28,40 @@ export default function PanelClient({
   defaultMarket,
   defaultInterval,
   watchlist,
+  planPeriyotlar,
 }: {
   name: string;
   defaultMarket: string;
   defaultInterval: string;
   watchlist: string[];
+  /** Planın açtığı periyotlar; defter okunamıyorsa null (kısıtlama yok). */
+  planPeriyotlar: Interval[] | null;
 }) {
   const { t, intl } = useI18n();
 
   const [market, setMarket] = useState<MarketId>(
-    (MARKET_IDS.includes(defaultMarket as MarketId) ? defaultMarket : "kripto") as MarketId,
+    (AKTIF_MARKET_IDS.includes(defaultMarket as MarketId) ? defaultMarket : "kripto") as MarketId,
   );
   const [period, setPeriod] = useState<Interval>(defaultInterval as Interval);
   const [markets, setMarkets] = useState<MarketsResponse | null>(null);
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const [marketError, setMarketError] = useState<string | null>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
+  // Tarama hatası nesne olarak saklanır: kredi/plan kodunu HataNotu okuyor.
+  const [scanError, setScanError] = useState<unknown>(null);
   const [loadingMarkets, setLoadingMarkets] = useState(true);
   const [loadingScan, setLoadingScan] = useState(true);
+
+  // Planın kapalı bıraktığı periyot arayüzde de kilitli görünür: tıklanabilir
+  // ama çalışmayan bir düğme, kullanıcıya hata ekranından başka bir şey vermez.
+  const periyotAcik = (value: Interval) => !planPeriyotlar || planPeriyotlar.includes(value);
+
+  // Ayarlardaki varsayılan periyot plana kapalıysa açık olan bir periyoda geç.
+  useEffect(() => {
+    if (!periyotAcik(period) && planPeriyotlar?.length) {
+      setPeriod(planPeriyotlar.includes("4h") ? "4h" : planPeriyotlar[planPeriyotlar.length - 1]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, planPeriyotlar]);
 
   // Piyasa değişince o piyasanın desteklediği bir periyoda geç.
   useEffect(() => {
@@ -81,7 +98,7 @@ export default function PanelClient({
         );
       } catch (error) {
         if (!sessiz) setScan(null);
-        setScanError(error instanceof Error ? error.message : t("common.error"));
+        setScanError(error ?? new Error(t("common.error")));
       } finally {
         if (!sessiz) setLoadingScan(false);
       }
@@ -98,20 +115,19 @@ export default function PanelClient({
     void loadScan(market, period);
   }, [market, period, loadScan]);
 
-  // Kendiliğinden tazeleme.
+  // Fiyat listesinin kendiliğinden tazelenmesi.
   //
-  // Kripto dışı piyasalarda ücretsiz veri kotası dakikada birkaç sembol
-  // veriyor; liste ilk açılışta yarım geliyor ve kullanıcının elle yenilemesi
-  // gerekiyordu. Dakikada bir tazeleyince eksikler kendiliğinden doluyor.
-  // Sekme arka plandayken istek atılmaz: görünmeyen sayfa kota harcamasın.
+  // Yalnızca fiyat listesi tazelenir; tarama tazelenmez. Tarama kredi harcayan
+  // bir işlem ve açık unutulmuş bir sekmenin kullanıcının kredisini sessizce
+  // yakması kabul edilemez — tarama, kullanıcı ↻ dediğinde ya da piyasa/periyot
+  // değiştirdiğinde yenilenir. Sekme arka plandayken istek atılmaz.
   useEffect(() => {
     const timer = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       void loadMarkets(market, true);
-      if (MARKETS[market].intervals.includes(period)) void loadScan(market, period, true);
     }, 60_000);
     return () => clearInterval(timer);
-  }, [market, period, loadMarkets, loadScan]);
+  }, [market, loadMarkets]);
 
   const quotes = markets?.quotes ?? [];
   const rising = quotes.filter((q) => q.changePercent > 0).length;
@@ -140,17 +156,21 @@ export default function PanelClient({
         </div>
 
         <div className="toolbar">
-          <div className="segmented">
-            {MARKET_IDS.map((id) => (
-              <button
-                key={id}
-                className={id === market ? "active" : ""}
-                onClick={() => setMarket(id)}
-              >
-                {t(`market.${id}` as "market.kripto")}
-              </button>
-            ))}
-          </div>
+          {/* Tek piyasa açıkken seçici gösterilmez: tek düğmeli bir seçim,
+              kullanıcıya olmayan bir tercih sunar. */}
+          {AKTIF_MARKET_IDS.length > 1 && (
+            <div className="segmented">
+              {AKTIF_MARKET_IDS.map((id) => (
+                <button
+                  key={id}
+                  className={id === market ? "active" : ""}
+                  onClick={() => setMarket(id)}
+                >
+                  {t(`market.${id}` as "market.kripto")}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="segmented">
             {MARKETS[market].intervals
               .filter((value) => ["15m", "1h", "4h", "1d"].includes(value))
@@ -159,8 +179,10 @@ export default function PanelClient({
                   key={value}
                   className={value === period ? "active" : ""}
                   onClick={() => setPeriod(value)}
+                  disabled={!periyotAcik(value)}
+                  title={periyotAcik(value) ? undefined : t("credit.periodLocked")}
                 >
-                  {value}
+                  {periyotAcik(value) ? value : `🔒 ${value}`}
                 </button>
               ))}
           </div>
@@ -289,7 +311,7 @@ export default function PanelClient({
         )}
       </div>
 
-      {scanError && <div className="notice notice-error">{scanError}</div>}
+      <HataNotu hata={scanError} />
 
       {/* Piyasa listesi */}
       <div className="page-head" style={{ marginBottom: 12 }}>

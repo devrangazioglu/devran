@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import AssetSearch from "@/components/AssetSearch";
+import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
 import { AssetAvatar, Change, MarketBadge, Score, SignalBadge } from "@/components/ui";
 import { getJson, type ScanResponse } from "@/lib/api-types";
@@ -23,7 +24,7 @@ export default function WatchlistClient({
   const [ids, setIds] = useState(initialIds);
   const [period, setPeriod] = useState<Interval>(defaultInterval as Interval);
   const [data, setData] = useState<ScanResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -43,7 +44,7 @@ export default function WatchlistClient({
         );
       } catch (caught) {
         setData(null);
-        setError(caught instanceof Error ? caught.message : t("common.error"));
+        setError(caught ?? new Error(t("common.error")));
       } finally {
         setLoading(false);
       }
@@ -115,7 +116,7 @@ export default function WatchlistClient({
         </div>
       </div>
 
-      {error && <div className="notice notice-error">{error}</div>}
+      <HataNotu hata={error} />
       {data?.source === "demo" && <div className="notice notice-warn">{t("common.demoNotice")}</div>}
 
       <div className="card" style={{ marginBottom: 18 }}>
