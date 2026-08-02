@@ -311,10 +311,14 @@ yazabilmek) böylece ayrı ayrı doğrulanabilir.
 2. **Actions → Piyasa verisi → Run workflow** ile bir kez elle çalıştırın. Kütükte
    her piyasa için kaç sembolün yazıldığı görünür.
 
-Sonrasında iş her gün 22:20 UTC'de (TSİ 01:20) kendiliğinden çalışır; ABD seansı
-kapandıktan sonrasına denk gelir. Bir piyasadan hiç veri gelmezse iş başarısız
-sayılır ve GitHub bildirim gönderir — sessizce boş dönen bir besleme, sitenin
-günlerce eski veriyle kalması demek olurdu.
+3. Beslediği piyasalar şu an kapalı olduğu için **zamanlama devre dışı**
+   (`.github/workflows/piyasa-verisi.yml` içinde `schedule` bloğu yorumda).
+   Piyasaları açarken bu bloğun yorumunu kaldırın; iş her gün 22:20 UTC'de
+   (TSİ 01:20), ABD seansı kapandıktan sonra çalışır.
+
+Bir piyasadan hiç veri gelmezse iş başarısız sayılır ve GitHub bildirim
+gönderir — sessizce boş dönen bir besleme, sitenin günlerce eski veriyle
+kalması demek olurdu.
 
 **Yedek yol:** besleme çalışmazsa site eski davranışına döner (Twelve Data +
 kredi bütçesi + bayat önbellek), yani hiçbir şey görünmez hâle gelmez; yalnızca

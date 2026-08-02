@@ -8,14 +8,20 @@
 #
 # Kurulum: depo ayarlarında `DATABASE_URL` adında bir secret tanımlayın
 # (Vercel'deki Postgres bağlantı dizesinin aynısı).
+#
+# ŞU AN ZAMANLAMA KAPALI. Beslediği üç piyasa (ABD, BIST, döviz/emtia) arayüzde
+# kapalı ve `DATABASE_URL` secret'ı tanımlı değil; bu hâlde gece çalışan iş her
+# gün kırmızı bir hata bırakıyordu — kimsenin beklemediği bir iş için gürültü.
+# Piyasalar açılırken: secret'ı ekleyin ve aşağıdaki `schedule` bloğunun
+# yorumunu kaldırın. Elle çalıştırma her zaman açık.
 
 name: Piyasa verisi
 
 on:
-  schedule:
-    # 22:20 UTC — ABD seansı kapandıktan sonra, BIST çoktan kapalı.
-    # Dakika 0 seçilmedi: o dakikada tüm dünyanın işleri aynı anda kuyruğa girer.
-    - cron: "20 22 * * 1-6"
+  # schedule:
+  #   # 22:20 UTC — ABD seansı kapandıktan sonra, BIST çoktan kapalı.
+  #   # Dakika 0 seçilmedi: o dakikada tüm dünyanın işleri aynı anda kuyruğa girer.
+  #   - cron: "20 22 * * 1-6"
   # Elle çalıştırma: ilk kurulumda ve bir şey bozulduğunda.
   workflow_dispatch:
 
