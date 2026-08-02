@@ -1,0 +1,62 @@
+# Günlük piyasa verisi beslemesi.
+#
+# Neden burada çalışıyor: uygulamanın çalıştığı bulut sağlayıcısının IP aralığı
+# anahtarsız veri kaynakları tarafından engelleniyor (ölçüldü: 429). GitHub'ın
+# çalıştırıcıları bu aralıkta değil, dolayısıyla veri buradan alınıp doğrudan
+# veritabanına yazılıyor. Site zaten önce veritabanına baktığı için hiçbir
+# sağlayıcıya gitmiyor ve kota kavramı ortadan kalkıyor.
+#
+# Kurulum: depo ayarlarında `DATABASE_URL` adında bir secret tanımlayın
+# (Vercel'deki Postgres bağlantı dizesinin aynısı).
+#
+# ŞU AN ZAMANLAMA KAPALI. Beslediği üç piyasa (ABD, BIST, döviz/emtia) arayüzde
+# kapalı ve `DATABASE_URL` secret'ı tanımlı değil; bu hâlde gece çalışan iş her
+# gün kırmızı bir hata bırakıyordu — kimsenin beklemediği bir iş için gürültü.
+# Piyasalar açılırken: secret'ı ekleyin ve aşağıdaki `schedule` bloğunun
+# yorumunu kaldırın. Elle çalıştırma her zaman açık.
+
+name: Piyasa verisi
+
+on:
+  # schedule:
+  #   # 22:20 UTC — ABD seansı kapandıktan sonra, BIST çoktan kapalı.
+  #   # Dakika 0 seçilmedi: o dakikada tüm dünyanın işleri aynı anda kuyruğa girer.
+  #   - cron: "20 22 * * 1-6"
+  # Elle çalıştırma: ilk kurulumda ve bir şey bozulduğunda.
+  workflow_dispatch:
+
+# Aynı anda iki besleme çalışmasın; ikisi de aynı satırlara yazar.
+concurrency:
+  group: piyasa-verisi
+  cancel-in-progress: false
+
+jobs:
+  besle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # Secret eksikse hata, veri kaynağıyla ilgiliymiş gibi görünmesin.
+      - name: DATABASE_URL secret'ı tanımlı mı?
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL secret'ı tanımlı değil. Settings → Secrets and variables → Actions yolundan Vercel'deki Postgres bağlantı dizesini ekleyin."
+            exit 1
+          fi
+          echo "DATABASE_URL tanımlı (${#DATABASE_URL} karakter)."
+
+      - name: Veriyi çek ve veritabanına yaz
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run besle

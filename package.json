@@ -1,24 +1,26 @@
 {
-  "name": "transivo",
+  "name": "fibonex",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test \".test-build/tests/**/*.test.js\"",
+    "besle": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/besle.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.115.0",
     "next": "^15.3.3",
     "next-auth": "^5.0.0-beta.32",
-    "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^6.2.108",
+    "pg": "^8.22.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "typescript": "^5.8.3"

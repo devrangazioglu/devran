@@ -22,3 +22,10 @@ npm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# kullanıcı deposu (parola hash'leri, takip listeleri)
+/data/
+
+# test derleme çıktısı
+/.test-build/
+/.scripts-build/

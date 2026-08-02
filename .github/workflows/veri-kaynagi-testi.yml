@@ -1,0 +1,32 @@
+# Veri kaynağı ölçümü.
+#
+# Tek bir soruyu yanıtlar: bu makineden piyasa verisi alınabiliyor mu?
+# Veritabanı gerekmez, secret gerekmez, hiçbir yere yazmaz — yalnızca birkaç
+# sembol çekip sonucu basar. Beslemenin "veri alma" ve "veritabanına yazma"
+# ayaklarını birbirinden ayırmak için var: biri çalışmayınca diğeri hakkında
+# hüküm vermek kolay ama yanlış oluyor.
+#
+# Actions → Veri kaynağı testi → Run workflow ile çalıştırın.
+
+name: Veri kaynağı testi
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Kaynaktan birkaç sembol çek
+        run: npm run besle -- --dene
