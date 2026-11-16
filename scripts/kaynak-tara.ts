@@ -9,13 +9,17 @@
  *   ✗ Stooq, genelpara, bigpara, isyatirim → 403 / 404 / 401
  *   ✗ Binance → HTTP 451 (çalıştırıcı ABD'de)
  *   ✓ TradingView tarayıcısı → tek istekte 649 BIST / 5012 NASDAQ / 2716 NYSE
+ *     gecikme: hisse 15 dk (delayed_streaming_900), vadeli 10 dk (…_600)
+ *     endeksler tarayıcıda yok (type=index → 0 satır)
  *   ✓ Yahoo + r.jina.ai aktarıcısı → 10/10 ardışık istek, sembol başına 373 ms
  *   ~ allorigins → üçüncü turda çalıştı, dördüncüde HTTP 522: yedek
  *   ✗ corsproxy.io, cors.lol, thingproxy, corsfix, cors.workers.dev, codetabs
- *   ✓ gold-api (dakikası dakikasına altın/gümüş), truncgil, Frankfurter
+ *   ✓ gold-api → altın/gümüş/platin/paladyum, saniyesi saniyesine güncel
+ *   ✓ truncgil → TRY kurları, "Değişim" alanı da var
+ *   ~ frankfurter → ECB günlük: hafta sonu üç gün eski veri veriyor
  *
- * Beşinci tur üç şeyi sorar: emtia TradingView'da var mı, ABD verisi ne kadar
- * gecikmeli, metal/kur kaynaklarının alan adları hâlâ aynı mı.
+ * Altıncı tur: döviz ve endeksler de tarayıcıdan gelebilir mi, bütün emtia
+ * tek istekte alınabilir mi.
  *
  * Çalıştırma (veritabanı ve anahtar gerektirmez):
  *   npm run kaynak-tara
@@ -119,7 +123,7 @@ function tradingview(goster = 1) {
       .slice(0, goster)
       .map((s) => `${s.s}=${JSON.stringify(s.d)}`)
       .join(" · ");
-    return `${veri.totalCount ?? satirlar.length} sembol · ${ornekler}`.slice(0, 300);
+    return `${veri.totalCount ?? satirlar.length} sembol · ${ornekler}`.slice(0, 320);
   };
 }
 
@@ -133,69 +137,80 @@ function jsonOzet(alanlar: string[]) {
   };
 }
 
+const SUTUN = ["name", "close", "change", "high", "low", "volume", "update_mode", "currency"];
+
 async function tara(): Promise<void> {
   console.log("Ücretsiz veri kaynakları ölçülüyor…\n");
 
-  /* ── 1) Emtia: TradingView'da vadeli kontratlar ── */
-  await dene("tv vadeli", "emtia", "https://scanner.tradingview.com/futures/scan", tradingview(3), {
+  /* ── 1) Bütün emtia tek istekte gelebilir mi? ── */
+  await dene("tv emtia süzgeç", "emtia", "https://scanner.tradingview.com/futures/scan", tradingview(2), {
     govde: {
-      columns: ["name", "description", "close", "change", "volume", "update_mode", "currency"],
-      sort: { sortBy: "volume", sortOrder: "desc" },
-      range: [0, 25],
-    },
-    baslik: TV_BASLIK,
-  });
-
-  // Aradığımız kontratlar adıyla duruyor mu? (altın, gümüş, petrol, gaz)
-  for (const sembol of ["COMEX:GC1!", "COMEX:SI1!", "NYMEX:CL1!", "NYMEX:NG1!"]) {
-    await dene(
-      `tv ${sembol.split(":")[1]}`,
-      "emtia",
-      `https://scanner.tradingview.com/symbol?symbol=${encodeURIComponent(sembol)}&fields=` +
-        encodeURIComponent("close,change,high,low,volume,update_mode,currency"),
-      (govde) => JSON.stringify(JSON.parse(govde)).slice(0, 200),
-      { baslik: TV_BASLIK },
-    );
-  }
-
-  /* ── 2) ABD verisi ne kadar gecikmeli? ── */
-  await dene("tv abd kipi", "abd", "https://scanner.tradingview.com/america/scan", tradingview(3), {
-    govde: {
-      filter: [{ left: "name", operation: "in_range", right: ["AAPL", "MSFT", "NVDA"] }],
-      columns: ["name", "close", "change", "update_mode", "currency"],
-      range: [0, 3],
-    },
-    baslik: TV_BASLIK,
-  });
-
-  // Endeksler de tarayıcıda var mı? (^GSPC karşılığı)
-  await dene("tv endeks", "abd", "https://scanner.tradingview.com/america/scan", tradingview(5), {
-    govde: {
-      filter: [{ left: "type", operation: "equal", right: "index" }],
-      columns: ["name", "description", "close", "change", "update_mode"],
+      filter: [
+        {
+          left: "name",
+          operation: "in_range",
+          right: ["GC1!", "SI1!", "PL1!", "PA1!", "HG1!", "CL1!", "BZ1!", "NG1!", "ZW1!", "KC1!"],
+        },
+      ],
+      columns: SUTUN,
       sort: { sortBy: "name", sortOrder: "asc" },
+      range: [0, 30],
+    },
+    baslik: TV_BASLIK,
+  });
+
+  /* ── 2) Döviz tarayıcısı ── */
+  await dene("tv döviz", "doviz", "https://scanner.tradingview.com/forex/scan", tradingview(3), {
+    govde: {
+      columns: SUTUN,
+      sort: { sortBy: "volume", sortOrder: "desc" },
       range: [0, 10],
     },
     baslik: TV_BASLIK,
   });
 
-  /* ── 3) Metal ve kur: alan adları hâlâ aynı mı? ── */
-  for (const metal of ["XAU", "XAG", "XPT", "XPD"]) {
+  await dene("tv döviz süzgeç", "doviz", "https://scanner.tradingview.com/forex/scan", tradingview(4), {
+    govde: {
+      filter: [
+        {
+          left: "name",
+          operation: "in_range",
+          right: ["USDTRY", "EURTRY", "GBPTRY", "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD"],
+        },
+      ],
+      columns: SUTUN,
+      sort: { sortBy: "name", sortOrder: "asc" },
+      range: [0, 20],
+    },
+    baslik: TV_BASLIK,
+  });
+
+  /* ── 3) Endeksler: tek sembol uç noktasından gelir mi? ── */
+  for (const sembol of ["SP:SPX", "NASDAQ:IXIC", "TVC:DXY", "BIST:XU100", "DJ:DJI"]) {
     await dene(
-      `gold-api ${metal}`,
-      "emtia",
-      `https://api.gold-api.com/price/${metal}`,
-      jsonOzet(["name", "price", "updatedAt"]),
+      `tv ${sembol}`,
+      "endeks",
+      `https://scanner.tradingview.com/symbol?symbol=${encodeURIComponent(sembol)}&fields=` +
+        encodeURIComponent("close,change,high,low,volume,update_mode,currency"),
+      (govde) => JSON.stringify(JSON.parse(govde)).slice(0, 190),
+      { baslik: TV_BASLIK },
     );
   }
 
+  /* ── 4) truncgil: hangi kalemler var? ── */
   await dene(
     "truncgil",
     "doviz",
     "https://finans.truncgil.com/today.json",
     (govde) => {
       const veri = JSON.parse(govde) as Record<string, unknown>;
-      return `${Object.keys(veri).length} kalem · USD=${JSON.stringify(veri["USD"])}`.slice(0, 180);
+      const anahtarlar = Object.keys(veri);
+      const ilgi = anahtarlar.filter((a) =>
+        /USD|EUR|GBP|GRAM|ALTIN|CEYREK|JPY|CHF|CAD|AUD/i.test(a),
+      );
+      return `${anahtarlar.length} kalem · ilgili: ${ilgi.slice(0, 14).join(",")} · GRAM ALTIN=${JSON.stringify(
+        veri["gram-altin"] ?? veri["GRAM ALTIN"] ?? veri["Gram Altın"],
+      )}`.slice(0, 300);
     },
   );
 
