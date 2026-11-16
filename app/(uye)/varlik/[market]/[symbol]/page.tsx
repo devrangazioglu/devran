@@ -2,11 +2,11 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
 import { kullanicidanDurum } from "@/lib/credits";
+import { varlikPeriyotlari } from "@/lib/markets/anlik";
 import { getInstrument, normalizeSymbol } from "@/lib/markets/provider";
 import {
   instrumentId,
   marketAktif,
-  MARKETS,
   varsayilanPeriyot,
   type Interval,
 } from "@/lib/markets/types";
@@ -48,7 +48,7 @@ export default async function AssetPage({
   const user = session?.user?.email ? await findUserByEmail(session.user.email) : null;
   const settings = user?.settings ?? DEFAULT_SETTINGS;
 
-  const supported = MARKETS[marketParam].intervals;
+  const supported = varlikPeriyotlari(marketParam, symbol);
   const requested = interval && supported.includes(interval as never) ? interval : null;
   // Borsa ve emtia günlükle açılır (veritabanından, kaynağa gitmeden); gün
   // içi periyot sayfada seçilebilir. Ayarlardaki varsayılan periyot yalnızca

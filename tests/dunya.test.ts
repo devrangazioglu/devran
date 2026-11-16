@@ -132,3 +132,14 @@ test("grafik akışı: paket ayrıştırma ve mum çözümleme", () => {
   assert.equal(mumlar[1].close, 11.5);
   assert.equal(mumlar[1].quoteVolume, 2000 * 11.5);
 });
+
+test("periyotlar: anlık varlıkta 1 dk'dan, gecikmelide 15 dk'dan başlar; en yakına düşer", async () => {
+  const { enYakinPeriyot, varlikPeriyotlari } = await import("../lib/markets/anlik");
+  assert.deepEqual(varlikPeriyotlari("abd", "AAPL").slice(0, 2), ["1m", "5m"]);
+  assert.deepEqual(varlikPeriyotlari("almanya", "^GDAXI").slice(0, 2), ["1m", "5m"]);
+  assert.deepEqual(varlikPeriyotlari("almanya", "SAP.DE"), ["15m", "1h", "4h", "1d", "1w"]);
+  assert.deepEqual(varlikPeriyotlari("emtia", "NG=F")[0], "15m");
+  assert.equal(enYakinPeriyot(varlikPeriyotlari("emtia", "NG=F"), "1m"), "15m");
+  assert.equal(enYakinPeriyot(varlikPeriyotlari("emtia", "NG=F"), "30m"), "1h");
+  assert.equal(enYakinPeriyot(varlikPeriyotlari("emtia", "GC=F"), "5m"), "5m");
+});

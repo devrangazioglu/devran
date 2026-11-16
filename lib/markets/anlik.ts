@@ -15,7 +15,7 @@
  * Bu dosya yalnızca veri içerir; arayüz de "canlı" işaretini buradan bilir.
  */
 
-import type { MarketId } from "./types";
+import { GUN_ICI_VE_GUNLUK, TUM_PERIYOTLAR, type Interval, type MarketId } from "./types";
 
 /** Endeks → anlık yayınlanan TradingView sembolü. */
 export const ENDEKS_ANLIK: Record<string, string> = {
@@ -54,4 +54,26 @@ export function anlikMi(market: MarketId, symbol: string): boolean {
   if (symbol.endsWith("=X")) return true; // döviz
   // ABD hisseleri: grafik akışı ve quote oturumu gecikmesiz veriyor.
   return market === "abd";
+}
+
+/**
+ * Bu varlıkta seçilebilen periyotlar.
+ *
+ * Anlık gelen varlıkta 1 dk'dan haftalığa hepsi; gecikmeli gelende 15 dk'dan
+ * başlar. Aynı piyasada ikisi bir arada olabilir: Almanya'da DAX anlık, SAP
+ * gecikmeli; emtiada altın anlık, doğal gaz 10 dk gecikmeli.
+ */
+export function varlikPeriyotlari(market: MarketId, symbol: string): Interval[] {
+  return anlikMi(market, symbol) ? TUM_PERIYOTLAR : GUN_ICI_VE_GUNLUK;
+}
+
+/**
+ * İstenen periyot bu varlıkta yoksa en yakın desteklenen: isteğe eşit ya da
+ * ondan büyük ilk periyot (1 dk istenen doğal gaz için 15 dk). Haftalığı da
+ * aşan istek olmaz, ama olursa en büyüğü döner.
+ */
+export function enYakinPeriyot(desteklenen: Interval[], istenen: Interval): Interval {
+  if (desteklenen.includes(istenen)) return istenen;
+  const sira = TUM_PERIYOTLAR.indexOf(istenen);
+  return desteklenen.find((p) => TUM_PERIYOTLAR.indexOf(p) >= sira) ?? desteklenen[desteklenen.length - 1];
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { enYakinPeriyot, varlikPeriyotlari } from "@/lib/markets/anlik";
+
 import { auth } from "@/auth";
 import { analyze } from "@/lib/analysis";
 import type { ScanRow } from "@/lib/api-types";
@@ -184,9 +186,9 @@ export async function GET(request: Request) {
     let firstFailure: unknown = null;
     const rows = await mapWithLimit(targets, concurrency, async (target): Promise<ScanRow | null> => {
       const { instrument } = target;
-      // Bu piyasada desteklenmeyen periyot için en yakın desteklenene düş.
-      const supported = MARKETS[instrument.market].intervals;
-      const effective = supported.includes(interval) ? interval : supported[supported.length - 2];
+      // Bu varlıkta olmayan periyotta en yakın desteklenene düş (ABD
+      // taramasında 1 dk; gecikmeli bir varlık varsa onu 15 dk'da tarar).
+      const effective = enYakinPeriyot(varlikPeriyotlari(instrument.market, instrument.symbol), interval);
 
       try {
         const { candles, source: candleSource } = await getCandles(

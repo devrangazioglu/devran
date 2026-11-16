@@ -37,7 +37,7 @@ import {
   formatPrice,
   formatRelative,
 } from "@/lib/format";
-import { anlikMi } from "@/lib/markets/anlik";
+import { anlikMi, varlikPeriyotlari } from "@/lib/markets/anlik";
 import { MARKETS, type Instrument, type Interval } from "@/lib/markets/types";
 
 export default function AssetClient({
@@ -53,7 +53,7 @@ export default function AssetClient({
   planPeriyotlar: Interval[] | null;
 }) {
   const { t, intl } = useI18n();
-  const intervals = MARKETS[instrument.market].intervals;
+  const intervals = varlikPeriyotlari(instrument.market, instrument.symbol);
 
   const [period, setPeriod] = useState<Interval>(() => {
     const istenen = initialInterval as Interval;

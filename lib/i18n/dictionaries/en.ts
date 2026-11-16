@@ -837,7 +837,7 @@ export const en: Dictionary = {
     "Signals for Borsa Istanbul stocks are produced on five timeframes, from 15 minutes to weekly; prices are delayed by 15 minutes. The table lists the BIST 100 and BIST 30 indices along with the most traded stocks. Each score runs from −100 to +100: +45 and above is a strong buy, −45 and below a strong sell, and the band in between marks an undecided market, shown as WAIT.",
   "market.emtia.aboutTitle": "Technical analysis for forex, gold and oil",
   "market.emtia.about":
-    "Signals for currencies, gold, silver and oil are produced on five timeframes, from 15 minutes to weekly. Exchange rates, gold, silver, platinum, palladium and oil arrive in real time; natural gas, copper, wheat and coffee futures are delayed by 10 minutes. Daily exchange rates may come from the European Central Bank's reference rates, which carry closing values only, so indicators that depend on the intraday high and low (ATR, Stochastic, Williams %R) stay narrow on the daily currency chart. Currencies carry no volume data, so volume-based indicators are not used for them.",
+    "Currencies, gold, silver and oil arrive in real time, so eight timeframes are available, from 1 minute to weekly; delayed futures start at 15 minutes. Exchange rates, gold, silver, platinum, palladium and oil arrive in real time; natural gas, copper, wheat and coffee futures are delayed by 10 minutes. Daily exchange rates may come from the European Central Bank's reference rates, which carry closing values only, so indicators that depend on the intraday high and low (ATR, Stochastic, Williams %R) stay narrow on the daily currency chart. Currencies carry no volume data, so volume-based indicators are not used for them.",
 
   "market.methodology":
     "Every indicator is computed on our own servers from open formulas; no ready-made signals are bought from anyone. The score comes from a weighted vote of the indicators and always returns the same result for the same data. These signals are not investment advice.",
@@ -854,7 +854,7 @@ export const en: Dictionary = {
 
   "market.abd.faq1.q": "Is the stock data real time?",
   "market.abd.faq1.a":
-    "Yes. US stocks and the S&P 500, Nasdaq and Dow Jones indices arrive in real time and are marked ● live in the table. Signals are produced on five timeframes, from 15 minutes to weekly.",
+    "Yes. US stocks and the S&P 500, Nasdaq and Dow Jones indices arrive in real time and are marked ● live in the table. Because the data is real time, eight timeframes are available, from 1 minute to weekly.",
   "market.abd.faq2.q": "Which stocks are listed?",
   "market.abd.faq2.a":
     "The indices and the most traded stocks come in the ready-made list. Any stock outside it can be found through search, and its analysis is computed the moment you open it.",

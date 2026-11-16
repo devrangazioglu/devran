@@ -174,6 +174,12 @@ export type QuoteList = { quotes: Quote[]; source: DataSource; updatedAt: number
 /** Günlük mum gün içinde ancak bir kez değişir; kotayı korumak için uzun tutulur. */
 const GUNLUK_TTL_MS = 4 * 60 * 60_000;
 const GUN_ICI_TTL_MS = 5 * 60_000;
+/** 1 ve 5 dakikalık mumlarda 5 dk önbellek, grafiği beş mum geride bırakırdı. */
+function kisaTtl(interval: Interval): number {
+  if (interval === "1m") return 30_000;
+  if (interval === "5m") return 90_000;
+  return GUN_ICI_TTL_MS;
+}
 /**
  * Grafik akışından gelen günlük mum: kota yok, bu yüzden 4 saat beklemek
  * gerekmiyor. Yarım saat, seans içinde son mumun güncel kalmasını sağlarken
@@ -718,7 +724,7 @@ export async function getCandles(
             source: "canli",
             fetchedAt: Date.now(),
           };
-          await paylasimliYaz(key, result, gunlukVeHaftalik ? TV_TTL_MS : GUN_ICI_TTL_MS);
+          await paylasimliYaz(key, result, gunlukVeHaftalik ? TV_TTL_MS : kisaTtl(interval));
           return { ...result, candles: candles.slice(-limit) };
         }
       }

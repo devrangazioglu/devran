@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { varlikPeriyotlari } from "@/lib/markets/anlik";
+
 import { auth } from "@/auth";
 import { analyze, chartSeries, isBuySignal, isSellSignal } from "@/lib/analysis";
 import { buildCommentary } from "@/lib/commentary";
@@ -15,7 +17,6 @@ import {
   isInterval,
   marketAktif,
   MarketDataError,
-  MARKETS,
   type Interval,
   type MarketId,
 } from "@/lib/markets/types";
@@ -28,8 +29,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 45;
 
 /** Detay sayfasında karşılaştırılacak üst zaman dilimleri. */
-function higherTimeframes(market: MarketId, interval: Interval): Interval[] {
-  const available = MARKETS[market].intervals;
+function higherTimeframes(available: Interval[], market: MarketId, interval: Interval): Interval[] {
   const index = available.indexOf(interval);
   // Borsa ve emtiada günlük/haftalık sayfa veritabanından açılır; yanına üç
   // gün içi periyot eklemek her açılışta veri kaynağına altı istek (periyot +
@@ -69,7 +69,8 @@ export async function GET(request: Request) {
   if (!symbol) {
     return NextResponse.json({ error: "Geçersiz sembol." }, { status: 400 });
   }
-  if (!isInterval(intervalParam) || !MARKETS[marketParam].intervals.includes(intervalParam)) {
+  const periyotlar = varlikPeriyotlari(marketParam, symbol);
+  if (!isInterval(intervalParam) || !periyotlar.includes(intervalParam)) {
     return NextResponse.json({ error: "Bu piyasa için geçersiz zaman dilimi." }, { status: 400 });
   }
   const interval = intervalParam;
@@ -138,7 +139,7 @@ export async function GET(request: Request) {
       .catch(() => null);
 
     const timeframes = await Promise.all(
-      higherTimeframes(marketParam, interval).map(async (other) => {
+      higherTimeframes(periyotlar, marketParam, interval).map(async (other) => {
         try {
           // Tarayıcıyla aynı mum sayısı ve aynı bağlam: aynı periyot her
           // ekranda aynı skoru göstersin. Geçmiş sınaması burada gereksiz

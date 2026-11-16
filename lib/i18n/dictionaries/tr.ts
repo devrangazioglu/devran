@@ -861,7 +861,7 @@ export const tr = {
     "Borsa İstanbul hisseleri için sinyaller 15 dakikalıktan haftalığa kadar beş periyotta üretilir; fiyatlar 15 dakika gecikmelidir. Tabloda BIST 100 ve BIST 30 endeksleriyle birlikte işlem hacmi yüksek hisseler yer alır. Her hisse için hesaplanan skor −100 ile +100 arasındadır: +45 ve üzeri güçlü alış, −45 ve altı güçlü satış sayılır; arada kalan bölge kararsız piyasayı gösterir ve BEKLE olarak işaretlenir.",
   "market.emtia.aboutTitle": "Döviz, altın ve petrolde teknik analiz",
   "market.emtia.about":
-    "Döviz, altın, gümüş ve petrol için sinyaller 15 dakikalıktan haftalığa kadar beş periyotta üretilir. Döviz kurları, altın, gümüş, platin, paladyum ve petrol gecikmesiz (anlık) gelir; doğal gaz, bakır, buğday ve kahve vadelileri 10 dakika gecikmelidir. Günlük kurlar Avrupa Merkez Bankası'nın referans kurundan gelebilir; bu veri yalnızca kapanış içerdiği için gün içi en yüksek/en düşük seviyeye dayanan göstergeler (ATR, Stokastik, Williams %R) günlük kur grafiğinde dar kalır. Kurlarda işlem hacmi verisi olmadığı için hacme dayanan göstergeler kullanılmaz.",
+    "Döviz, altın, gümüş ve petrol anlık geldiği için 1 dakikalıktan haftalığa kadar sekiz periyotta analiz edilebilir; gecikmeli gelen vadelilerde periyotlar 15 dakikadan başlar. Döviz kurları, altın, gümüş, platin, paladyum ve petrol gecikmesiz (anlık) gelir; doğal gaz, bakır, buğday ve kahve vadelileri 10 dakika gecikmelidir. Günlük kurlar Avrupa Merkez Bankası'nın referans kurundan gelebilir; bu veri yalnızca kapanış içerdiği için gün içi en yüksek/en düşük seviyeye dayanan göstergeler (ATR, Stokastik, Williams %R) günlük kur grafiğinde dar kalır. Kurlarda işlem hacmi verisi olmadığı için hacme dayanan göstergeler kullanılmaz.",
 
   "market.methodology":
     "Tüm göstergeler kendi sunucumuzda, açık kaynak formüllerle hesaplanır; dışarıdan hazır sinyal satın alınmaz. Skor, göstergelerin ağırlıklı oyundan üretilir ve aynı veriden her zaman aynı sonucu verir. Üretilen sinyaller yatırım tavsiyesi değildir.",
@@ -878,7 +878,7 @@ export const tr = {
 
   "market.abd.faq1.q": "Hisse verileri gerçek zamanlı mı?",
   "market.abd.faq1.a":
-    "Evet. ABD hisseleri ile S&P 500, Nasdaq ve Dow Jones endeksleri gecikmesiz (anlık) gelir; tabloda ● canlı işaretiyle gösterilir. Sinyaller 15 dakikalıktan haftalığa kadar beş periyotta üretilir.",
+    "Evet. ABD hisseleri ile S&P 500, Nasdaq ve Dow Jones endeksleri gecikmesiz (anlık) gelir; tabloda ● canlı işaretiyle gösterilir. Veri anlık olduğu için 1 dakikalıktan haftalığa kadar sekiz periyotta analiz yapılabilir.",
   "market.abd.faq2.q": "Hangi hisseler listeleniyor?",
   "market.abd.faq2.a":
     "Endeksler ve işlem hacmi en yüksek hisseler hazır listede gelir. Listede olmayan bir hisseyi arama kutusundan bulup açtığınızda analizi o an hesaplanır.",

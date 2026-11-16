@@ -45,8 +45,15 @@ export function intervalMinutes(interval: Interval): number {
 
 /* ────────────────────────── Piyasalar ────────────────────────── */
 
-/** Kripto dışı piyasaların periyotları (bkz. `MarketMeta.intervals`). */
-const GUN_ICI_VE_GUNLUK: Interval[] = ["15m", "1h", "4h", "1d", "1w"];
+/** Gecikmeli gelen varlıkların periyotları (bkz. `MarketMeta.intervals`). */
+export const GUN_ICI_VE_GUNLUK: Interval[] = ["15m", "1h", "4h", "1d", "1w"];
+
+/**
+ * Gecikmesiz gelen varlıkların periyotları: 1 dk'dan haftalığa hepsi.
+ * Gecikmeli veride 1 / 5 / 30 dakikalık mum anlamsız (son 15–20 mum henüz
+ * oluşmamış olur); anlık veride değil. Bkz. `anlik.ts`.
+ */
+export const TUM_PERIYOTLAR: Interval[] = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"];
 
 export type MarketId =
   | "kripto"
@@ -182,7 +189,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "kripto",
     labelKey: "market.kripto",
     slug: "kripto",
-    intervals: ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"],
+    intervals: TUM_PERIYOTLAR,
     currency: "USDT",
     alwaysOpen: true,
     gecikmeDk: 0,
@@ -191,7 +198,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "abd",
     labelKey: "market.abd",
     slug: "abd-borsasi",
-    intervals: GUN_ICI_VE_GUNLUK,
+    intervals: TUM_PERIYOTLAR,
     currency: "USD",
     alwaysOpen: false,
     gecikmeDk: 15,
@@ -211,7 +218,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     // Bu piyasa hem vadeli emtiayı (10 dk gecikmeli) hem kurları (gerçek
     // zamanlı) barındırıyor; kullanıcıyı yanıltmamak için kötü olan yazılır.
     slug: "dovizler",
-    intervals: GUN_ICI_VE_GUNLUK,
+    intervals: TUM_PERIYOTLAR,
     currency: "USD",
     alwaysOpen: false,
     gecikmeDk: 10,
