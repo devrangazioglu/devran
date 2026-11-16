@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
@@ -12,14 +12,7 @@ import { isBuySignal, isSellSignal } from "@/lib/analysis";
 import { getJson, type MarketsResponse, type ScanResponse, type ScanRow } from "@/lib/api-types";
 import { formatCompact, formatNumber, formatPrice, formatRelative } from "@/lib/format";
 import { displayTicker } from "@/lib/markets/instruments";
-import {
-  MARKETS,
-  AKTIF_MARKET_IDS,
-  parseInstrumentId,
-  type Interval,
-  type MarketId,
-  type Quote,
-} from "@/lib/markets/types";
+import { MARKETS, AKTIF_MARKET_IDS, parseInstrumentId, type Interval, type MarketId, type Quote, varsayilanPeriyot } from "@/lib/markets/types";
 
 const SCAN_SIZE = 30;
 
@@ -64,9 +57,16 @@ export default function PanelClient({
   }, [period, planPeriyotlar]);
 
   // Piyasa değişince o piyasanın desteklediği bir periyoda geç.
+  // Piyasa değişince o piyasanın varsayılan periyodu seçilir (bkz.
+  // `varsayilanPeriyot`): kriptodaki 4 saatten borsaya geçen kullanıcı, 30
+  // hisseyi gün içinde taratıp veri kaynağının hız sınırına takılmasın.
+  const oncekiPiyasa = useRef(market);
   useEffect(() => {
-    if (!MARKETS[market].intervals.includes(period)) {
-      setPeriod(MARKETS[market].intervals.includes("1d") ? "1d" : MARKETS[market].intervals[0]);
+    if (oncekiPiyasa.current !== market) {
+      oncekiPiyasa.current = market;
+      setPeriod((p) => varsayilanPeriyot(market, p));
+    } else if (!MARKETS[market].intervals.includes(period)) {
+      setPeriod(varsayilanPeriyot(market, period));
     }
   }, [market, period]);
 

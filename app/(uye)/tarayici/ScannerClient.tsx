@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
@@ -11,7 +11,7 @@ import { isBuySignal, isSellSignal } from "@/lib/analysis";
 import { patternName } from "@/lib/analysis-text";
 import { getJson, type ScanResponse, type ScanRow } from "@/lib/api-types";
 import { formatCompact, formatNumber, formatPrice, formatRelative } from "@/lib/format";
-import { MARKETS, AKTIF_MARKET_IDS, type Interval, type MarketId } from "@/lib/markets/types";
+import { MARKETS, AKTIF_MARKET_IDS, type Interval, type MarketId, varsayilanPeriyot } from "@/lib/markets/types";
 
 type Filter = "all" | "buy" | "sell" | "watch";
 type SortKey = "score" | "confidence" | "change" | "volume" | "rsi" | "fundamental";
@@ -64,9 +64,16 @@ export default function ScannerClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, planPeriyotlar]);
 
+  // Piyasa değişince o piyasanın varsayılan periyodu seçilir (bkz.
+  // `varsayilanPeriyot`): kriptodaki 4 saatten borsaya geçen kullanıcı, 30
+  // hisseyi gün içinde taratıp veri kaynağının hız sınırına takılmasın.
+  const oncekiPiyasa = useRef(market);
   useEffect(() => {
-    if (!MARKETS[market].intervals.includes(period)) {
-      setPeriod(MARKETS[market].intervals.includes("1d") ? "1d" : MARKETS[market].intervals[0]);
+    if (oncekiPiyasa.current !== market) {
+      oncekiPiyasa.current = market;
+      setPeriod((p) => varsayilanPeriyot(market, p));
+    } else if (!MARKETS[market].intervals.includes(period)) {
+      setPeriod(varsayilanPeriyot(market, period));
     }
   }, [market, period]);
 

@@ -30,11 +30,16 @@ export const maxDuration = 45;
 function higherTimeframes(market: MarketId, interval: Interval): Interval[] {
   const available = MARKETS[market].intervals;
   const index = available.indexOf(interval);
-  const higher = available.slice(index + 1, index + 4);
-  // Yeterli üst periyot yoksa alt periyotlarla tamamla.
-  if (higher.length < 3) {
-    const lower = available.slice(Math.max(index - (3 - higher.length), 0), index);
-    return [...higher, ...lower].slice(0, 3);
+  // Borsa ve emtiada günlük/haftalık sayfa veritabanından açılır; yanına üç
+  // gün içi periyot eklemek her açılışta veri kaynağına altı istek (periyot +
+  // endeks) demekti ve kaynak dakikada ~20 istekle sınırlı. Orada ikiyle
+  // yetinilir.
+  const adet = market !== "kripto" && (interval === "1d" || interval === "1w") ? 2 : 3;
+  const higher = available.slice(index + 1, index + 1 + adet);
+  // Yeterli üst periyot yoksa alt periyotlarla tamamla (yakın olandan başla).
+  if (higher.length < adet) {
+    const lower = available.slice(Math.max(index - (adet - higher.length), 0), index).reverse();
+    return [...higher, ...lower].slice(0, adet);
   }
   return higher;
 }

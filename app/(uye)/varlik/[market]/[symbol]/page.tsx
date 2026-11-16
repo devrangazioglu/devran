@@ -3,7 +3,13 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { kullanicidanDurum } from "@/lib/credits";
 import { getInstrument, normalizeSymbol } from "@/lib/markets/provider";
-import { instrumentId, marketAktif, MARKETS } from "@/lib/markets/types";
+import {
+  instrumentId,
+  marketAktif,
+  MARKETS,
+  varsayilanPeriyot,
+  type Interval,
+} from "@/lib/markets/types";
 import { DEFAULT_SETTINGS, findUserByEmail } from "@/lib/users";
 import AssetClient from "./AssetClient";
 
@@ -44,9 +50,13 @@ export default async function AssetPage({
 
   const supported = MARKETS[marketParam].intervals;
   const requested = interval && supported.includes(interval as never) ? interval : null;
-  const preferred = supported.includes(settings.defaultInterval as never)
-    ? settings.defaultInterval
-    : supported[supported.length - 2];
+  // Borsa ve emtia günlükle açılır (veritabanından, kaynağa gitmeden); gün
+  // içi periyot sayfada seçilebilir. Ayarlardaki varsayılan periyot yalnızca
+  // kriptoda uygulanır. Bkz. `varsayilanPeriyot`.
+  const preferred =
+    marketParam === "kripto" && supported.includes(settings.defaultInterval as never)
+      ? settings.defaultInterval
+      : varsayilanPeriyot(marketParam, settings.defaultInterval as Interval);
 
   return (
     <AssetClient

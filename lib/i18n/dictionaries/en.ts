@@ -681,10 +681,10 @@ export const en: Dictionary = {
     "The US market trades on weekdays during set hours, so a signal produced after the close can change at the next open. The list contains the indices and the most traded stocks. For each stock, trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stochastic), volatility (Bollinger, ATR) and volume indicators each cast a vote; the signal is the weighted average of those votes.",
   "market.bist.aboutTitle": "Technical analysis for BIST stocks",
   "market.bist.about":
-    "Signals for Borsa Istanbul stocks are produced from daily closing data. The table lists the BIST 100 and BIST 30 indices along with the most traded stocks. Each score runs from −100 to +100: +45 and above is a strong buy, −45 and below a strong sell, and the band in between marks an undecided market, shown as WAIT.",
+    "Signals for Borsa Istanbul stocks are produced on six timeframes from 15 minutes to weekly; prices are delayed by 15 minutes. The table lists the BIST 100 and BIST 30 indices along with the most traded stocks. Each score runs from −100 to +100: +45 and above is a strong buy, −45 and below a strong sell, and the band in between marks an undecided market, shown as WAIT.",
   "market.emtia.aboutTitle": "Technical analysis for forex, gold and oil",
   "market.emtia.about":
-    "Exchange rates come from the European Central Bank's daily reference rates. That series carries closing values only, so indicators that depend on the intraday high and low (ATR, Stochastic, Williams %R) stay narrow here, while close-based ones (RSI, MACD, EMA, Bollinger) work fully. Gold, silver and oil use full candle data.",
+    "Signals for currencies, gold, silver and oil are produced on six timeframes from 15 minutes to weekly. Exchange rates are real time; commodity futures are delayed by 10 minutes. Daily exchange rates may come from the European Central Bank's reference rates, which carry closing values only, so indicators that depend on the intraday high and low (ATR, Stochastic, Williams %R) stay narrow on the daily currency chart. Currencies carry no volume data, so volume-based indicators are not used for them.",
 
   "market.methodology":
     "Every indicator is computed on our own servers from open formulas; no ready-made signals are bought from anyone. The score comes from a weighted vote of the indicators and always returns the same result for the same data. These signals are not investment advice.",
@@ -701,7 +701,7 @@ export const en: Dictionary = {
 
   "market.abd.faq1.q": "Is the stock data real time?",
   "market.abd.faq1.a":
-    "The free data tier provides daily closing data, not live intraday prices. Each row states when its data was last updated.",
+    "No, prices are delayed by 15 minutes; there is no free real-time exchange data. Signals are produced on six timeframes from 15 minutes to weekly. Each row shows when its data was last updated.",
   "market.abd.faq2.q": "Which stocks are listed?",
   "market.abd.faq2.a":
     "The indices and the most traded stocks come in the ready-made list. Any stock outside it can be found through search, and its analysis is computed the moment you open it.",

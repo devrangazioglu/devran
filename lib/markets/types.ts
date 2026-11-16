@@ -84,9 +84,11 @@ export type MarketMeta = {
   /**
    * Bu piyasada desteklenen zaman dilimleri.
    *
-   * Kripto dışı piyasalarda yalnızca günlük ve haftalık sunulur: gün içi veri
-   * veren tek kaynak bulut sunucularını sınırlıyor, dolayısıyla o periyotları
-   * arayüzde göstermek çalışmayan bir seçenek sunmak olurdu.
+   * Kripto dışı piyasalarda gün içi periyotlar aktarıcı üzerinden geliyor
+   * (ölçüldü 2026-11-16, `scripts/kaynak-tara.ts`: BIST, ABD, vadeli emtia ve
+   * kurlarda 15 dk / 1 sa / 4 sa için 300'er mum). 1 ve 5 dakika bilerek yok:
+   * hisse fiyatı 15 dakika gecikmeli geliyor, 1 dakikalık grafikte bu 15 mum
+   * geride olmak demek ve sinyal anlamını yitirir.
    */
   intervals: Interval[];
   /** Fiyatların varsayılan para birimi. */
@@ -129,7 +131,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "abd",
     labelKey: "market.abd",
     slug: "abd-borsasi",
-    intervals: ["1d", "1w"],
+    intervals: ["15m", "30m", "1h", "4h", "1d", "1w"],
     currency: "USD",
     alwaysOpen: false,
     gecikmeDk: 15,
@@ -138,7 +140,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "bist",
     labelKey: "market.bist",
     slug: "turkiye-borsasi",
-    intervals: ["1d", "1w"],
+    intervals: ["15m", "30m", "1h", "4h", "1d", "1w"],
     currency: "TRY",
     alwaysOpen: false,
     gecikmeDk: 15,
@@ -149,12 +151,25 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     // Bu piyasa hem vadeli emtiayı (10 dk gecikmeli) hem kurları (gerçek
     // zamanlı) barındırıyor; kullanıcıyı yanıltmamak için kötü olan yazılır.
     slug: "dovizler",
-    intervals: ["1d", "1w"],
+    intervals: ["15m", "30m", "1h", "4h", "1d", "1w"],
     currency: "USD",
     alwaysOpen: false,
     gecikmeDk: 10,
   },
 };
+
+/**
+ * Piyasaya geçildiğinde seçilecek periyot.
+ *
+ * Borsa ve emtiada günlük: günlük mumlar her gece veritabanına yazılıyor ve
+ * veri kaynağına hiç gidilmiyor. Gün içi periyotlar her açılışta kaynaktan
+ * çekilir ve kaynak dakikada ~20 istekle sınırlı; 30 hisselik bir tarama bu
+ * sınıra takılır. Kullanıcı gün içini kendisi seçebilir, varsayılan olmaz.
+ */
+export function varsayilanPeriyot(market: MarketId, mevcut: Interval): Interval {
+  if (market === "kripto") return MARKETS.kripto.intervals.includes(mevcut) ? mevcut : "4h";
+  return "1d";
+}
 
 /** Yalnızca açık piyasaları çözer; kapalı bir piyasanın adresi 404 olur. */
 export function marketBySlug(slug: string): MarketMeta | null {
