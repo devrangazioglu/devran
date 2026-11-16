@@ -15,7 +15,8 @@
     "besle": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/besle.js",
     "kaynak-tara": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/kaynak-tara.js",
     "motor-karsilastir": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/motor-karsilastir.js",
-    "ulke-tara": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/ulke-tara.js"
+    "ulke-tara": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/ulke-tara.js",
+    "anlik-tara": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/anlik-tara.js"
   },
   "dependencies": {
     "next": "^15.3.3",

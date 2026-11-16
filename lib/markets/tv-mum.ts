@@ -21,7 +21,7 @@
  * kapanır ve uygulama eski yola (Yahoo) döner.
  */
 
-import { MarketDataError, type Candle, type Interval } from "./types";
+import { intervalMinutes, MarketDataError, type Candle, type Interval } from "./types";
 
 const ADRES = process.env.TV_MUM_ADRES ?? "wss://data.tradingview.com/socket.io/websocket";
 
@@ -80,8 +80,7 @@ type SeriSatiri = { i: number; v: number[] };
 
 /** `timescale_update` gövdesinden mumları çıkarır. */
 export function mumlariCoz(satirlar: SeriSatiri[], interval: Interval): Candle[] {
-  const sureMs =
-    interval === "1w" ? 7 * 86_400_000 : interval === "1d" ? 86_400_000 : 60_000;
+  const sureMs = intervalMinutes(interval) * 60_000;
   const mumlar: Candle[] = [];
   for (const { v } of satirlar) {
     const [zaman, acilis, yuksek, dusuk, kapanis, hacim] = v;
@@ -202,5 +201,138 @@ export async function fetchTvCandles(
     ws.addEventListener("close", () =>
       kapat(mumlar.length > 0 ? null : new MarketDataError(`${tamAd}: bağlantı erken kapandı.`, 502)),
     );
+  });
+}
+
+/* ────────────────────────── Anlık fiyat (quote oturumu) ────────────────────────── */
+
+export type TvAnlik = {
+  fiyat: number;
+  degisim: number | null;
+  degisimYuzde: number | null;
+  yuksek: number | null;
+  dusuk: number | null;
+  hacim: number | null;
+  /** Kaynağın bildirdiği güncelleme biçimi: "streaming" gecikmesiz demek. */
+  guncelleme: string | null;
+  /** Son işlemin zamanı (ms). */
+  zaman: number | null;
+};
+
+/**
+ * Birden çok sembolün son fiyatını tek bağlantıda alır (quote oturumu).
+ *
+ * Tarayıcı ucu (`tradingview.ts`) fiyatı borsanın gecikmesiyle veriyor; bazı
+ * semboller ise kaynakta gecikmesiz yayınlanıyor (ABD hisseleri için Cboe
+ * BZX, TVC endeks ve emtia beslemeleri, döviz). Bunlar burada, bir pakette
+ * çekilir. Gelmeyen sembol sonuçta yoktur; çağıran gecikmeli fiyata düşer.
+ */
+export async function fetchTvAnlik(
+  tamAdlar: string[],
+  zamanAsimiMs = 8_000,
+): Promise<Map<string, TvAnlik>> {
+  if (!tvMumAcik()) throw new MarketDataError("Grafik akışı kapalı.", 503);
+  const istenen = [...new Set(tamAdlar)];
+  if (istenen.length === 0) return new Map();
+
+  const Ws = WebSocket as unknown as new (
+    url: string,
+    init?: { headers?: Record<string, string> },
+  ) => WebSocket;
+
+  return new Promise((resolve) => {
+    const ws = new Ws(ADRES, {
+      headers: {
+        origin: "https://www.tradingview.com",
+        "user-agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      },
+    });
+    const oturum = rastgele("qs");
+    const ham = new Map<string, Record<string, unknown>>();
+    const biten = new Set<string>();
+    let bitti = false;
+
+    const kapat = () => {
+      if (bitti) return;
+      bitti = true;
+      clearTimeout(zamanlayici);
+      try {
+        ws.close();
+      } catch {
+        // zaten kapalı
+      }
+      const sonuc = new Map<string, TvAnlik>();
+      for (const [ad, v] of ham) {
+        const sayi = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : null);
+        const fiyat = sayi(v.lp);
+        if (fiyat === null) continue;
+        sonuc.set(ad, {
+          fiyat,
+          degisim: sayi(v.ch),
+          degisimYuzde: sayi(v.chp),
+          yuksek: sayi(v.high_price),
+          dusuk: sayi(v.low_price),
+          hacim: sayi(v.volume),
+          guncelleme: typeof v.update_mode === "string" ? v.update_mode : null,
+          zaman: sayi(v.lp_time) !== null ? (v.lp_time as number) * 1000 : null,
+        });
+      }
+      resolve(sonuc);
+    };
+
+    // Zaman aşımında elde ne varsa döner: yarım liste, hiç liste olmamasından iyi.
+    const zamanlayici = setTimeout(kapat, zamanAsimiMs);
+
+    ws.addEventListener("open", () => {
+      ws.send(mesaj("set_auth_token", ["unauthorized_user_token"]));
+      ws.send(mesaj("quote_create_session", [oturum]));
+      ws.send(
+        mesaj("quote_set_fields", [
+          oturum,
+          "lp",
+          "ch",
+          "chp",
+          "high_price",
+          "low_price",
+          "volume",
+          "update_mode",
+          "lp_time",
+        ]),
+      );
+      ws.send(mesaj("quote_add_symbols", [oturum, ...istenen]));
+    });
+
+    ws.addEventListener("message", (olay: MessageEvent) => {
+      const paket = typeof olay.data === "string" ? olay.data : String(olay.data);
+      for (const govde of paketiAyir(paket)) {
+        if (govde.startsWith("~h~")) {
+          ws.send(cerceve(govde));
+          continue;
+        }
+        let veri: { m?: string; p?: unknown[] };
+        try {
+          veri = JSON.parse(govde);
+        } catch {
+          continue;
+        }
+        if (veri.m === "qsd") {
+          const parca = veri.p?.[1] as { n?: string; s?: string; v?: Record<string, unknown> } | undefined;
+          if (!parca?.n) continue;
+          if (parca.s !== "ok") {
+            biten.add(parca.n);
+          } else if (parca.v) {
+            ham.set(parca.n, { ...(ham.get(parca.n) ?? {}), ...parca.v });
+          }
+        } else if (veri.m === "quote_completed") {
+          const ad = veri.p?.[1];
+          if (typeof ad === "string") biten.add(ad);
+        }
+        if (istenen.every((ad) => biten.has(ad))) kapat();
+      }
+    });
+
+    ws.addEventListener("error", kapat);
+    ws.addEventListener("close", kapat);
   });
 }

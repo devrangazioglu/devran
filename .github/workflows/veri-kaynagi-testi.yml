@@ -28,6 +28,12 @@ jobs:
 
       - run: npm ci
 
+      # Hangi semboller gecikmesiz geliyor (update_mode = streaming), gün içi
+      # mumlar (15 dk / 1 sa / 4 sa) geliyor mu?
+      - name: Anlık veri ve gün içi mumlar
+        run: npm run anlik-tara
+        continue-on-error: true
+
       # Mum geçmişinin asıl kaynağı (grafik akışı) Vercel'de de çalışıyor mu,
       # yeni ülke sayfaları canlı veriyle açılıyor mu?
       - name: Yayında grafik akışı ve ülke sayfaları
