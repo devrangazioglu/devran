@@ -33,7 +33,7 @@
 
 import { ENDEKS_ANLIK, EMTIA_ANLIK } from "./anlik";
 import { BORSALAR, borsa as borsaTanimi } from "./borsalar";
-import { fetchTvAnlik, tvMumAcik, type TvAnlik } from "./tv-mum";
+import { fetchTvAnlik, hacimSayisi, tvMumAcik, type TvAnlik } from "./tv-mum";
 import { instrumentId, MARKETS, MarketDataError, type MarketId, type Quote } from "./types";
 
 const BASE = process.env.TRADINGVIEW_API_BASE ?? "https://scanner.tradingview.com";
@@ -346,7 +346,7 @@ async function borsaTaramasi(
         degisim: typeof degisim === "number" ? degisim : 0,
         yuksek: typeof yuksek === "number" ? yuksek : kapanis,
         dusuk: typeof dusuk === "number" ? dusuk : kapanis,
-        hacim: typeof hacim === "number" ? hacim : 0,
+        hacim: hacimSayisi(hacim) ?? 0,
         paraBirimi: typeof paraBirimi === "string" ? paraBirimi : null,
       }),
     );
@@ -403,7 +403,7 @@ async function tarama(
         degisim: typeof degisim === "number" ? degisim : 0,
         yuksek: typeof yuksek === "number" ? yuksek : kapanis,
         dusuk: typeof dusuk === "number" ? dusuk : kapanis,
-        hacim: typeof hacim === "number" ? hacim : 0,
+        hacim: hacimSayisi(hacim) ?? 0,
         paraBirimi: typeof paraBirimi === "string" ? paraBirimi : null,
       }),
     );
@@ -441,7 +441,7 @@ async function tekSembol(
         yuksek: typeof govde.high === "number" ? govde.high : govde.close,
         dusuk: typeof govde.low === "number" ? govde.low : govde.close,
         // Endekslerde hacim alanı boş gelebiliyor (DXY'de null).
-        hacim: typeof govde.volume === "number" ? govde.volume : 0,
+        hacim: hacimSayisi(govde.volume) ?? 0,
         // Endekslerde para birimi null geliyor; katalogdaki değer korunur.
         paraBirimi: typeof govde.currency === "string" ? govde.currency : null,
       }),

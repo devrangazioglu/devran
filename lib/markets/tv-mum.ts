@@ -94,9 +94,9 @@ export function mumlariCoz(satirlar: SeriSatiri[], interval: Interval): Candle[]
       high: yuksek,
       low: dusuk,
       close: kapanis,
-      volume: typeof hacim === "number" && Number.isFinite(hacim) ? hacim : 0,
+      volume: hacimSayisi(hacim) ?? 0,
       closeTime: openTime + sureMs - 1,
-      quoteVolume: (typeof hacim === "number" ? hacim : 0) * kapanis,
+      quoteVolume: (hacimSayisi(hacim) ?? 0) * kapanis,
       trades: 0,
     });
   }
@@ -220,6 +220,16 @@ export type TvAnlik = {
 };
 
 /**
+ * Quote oturumunun hacim alanı. Hacmi olmayan endekslerde (TVC:NI225,
+ * TVC:DAX…) kaynak boş bırakmak yerine 1e100 gibi bir yer tutucu yolluyor;
+ * fiyatla çarpılınca paneldeki "toplam hacim" 10^104 mertebesine çıkıyordu.
+ * Gerçek bir günlük hacim 1e15'e yaklaşmaz, üstü "hacim yok" sayılır.
+ */
+export function hacimSayisi(x: unknown): number | null {
+  return typeof x === "number" && Number.isFinite(x) && x >= 0 && x < 1e15 ? x : null;
+}
+
+/**
  * Birden çok sembolün son fiyatını tek bağlantıda alır (quote oturumu).
  *
  * Tarayıcı ucu (`tradingview.ts`) fiyatı borsanın gecikmesiyle veriyor; bazı
@@ -273,7 +283,7 @@ export async function fetchTvAnlik(
           degisimYuzde: sayi(v.chp),
           yuksek: sayi(v.high_price),
           dusuk: sayi(v.low_price),
-          hacim: sayi(v.volume),
+          hacim: hacimSayisi(v.volume),
           guncelleme: typeof v.update_mode === "string" ? v.update_mode : null,
           zaman: sayi(v.lp_time) !== null ? (v.lp_time as number) * 1000 : null,
         });

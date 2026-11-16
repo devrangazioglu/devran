@@ -133,7 +133,13 @@ export default function PanelClient({
   const quotes = markets?.quotes ?? [];
   const rising = quotes.filter((q) => q.changePercent > 0).length;
   const falling = quotes.filter((q) => q.changePercent < 0).length;
-  const totalVolume = quotes.reduce((sum, q) => sum + q.volume, 0);
+  // Endekslerin hacmi hisselerin toplamıdır, ayrıca eklenirse iki kez sayılır.
+  // Bozuk bir değer (sonsuz, negatif) toplamı anlamsızlaştırmasın diye atlanır.
+  const totalVolume = quotes.reduce(
+    (sum, q) =>
+      q.kind !== "endeks" && Number.isFinite(q.volume) && q.volume > 0 ? sum + q.volume : sum,
+    0,
+  );
   const leaders = quotes.slice(0, 2);
 
   const rows = scan?.rows ?? [];

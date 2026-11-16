@@ -13,7 +13,7 @@ import { BORSALAR, borsa, yahooBorsasindanPiyasa } from "../lib/markets/borsalar
 import { displayTicker, staticInstruments } from "../lib/markets/instruments";
 import { kiyasEndeksi } from "../lib/markets/baglam";
 import { tvTamAd } from "../lib/markets/tradingview";
-import { mumlariCoz, paketiAyir } from "../lib/markets/tv-mum";
+import { hacimSayisi, mumlariCoz, paketiAyir } from "../lib/markets/tv-mum";
 import { DUNYA_MARKET_IDS, hisseBorsasi, MARKETS, marketBySlug, type MarketId } from "../lib/markets/types";
 
 test("her dünya borsasının tanımı, listesi ve endeksi var", () => {
@@ -174,4 +174,15 @@ test("360° bakış: gruplar ayrılır, verisi olmayan açı boş kalır, uyum s
   assert.equal(b.uyum, 3 / 5);
   assert.equal(b.enGuclu?.anahtar, "structure");
   assert.equal(b.enZayif?.anahtar, "momentum");
+});
+
+test("endekslerin yer tutucu hacmi (1e100) hacim sayılmaz", () => {
+  // Kaynak hacmi olmayan endekslerde 1e100 yolluyor; fiyatla çarpılınca
+  // paneldeki toplam hacim 10^104 oluyordu.
+  assert.equal(hacimSayisi(1e100), null);
+  assert.equal(hacimSayisi(Infinity), null);
+  assert.equal(hacimSayisi(-5), null);
+  assert.equal(hacimSayisi("12"), null);
+  assert.equal(hacimSayisi(835_420_586), 835_420_586);
+  assert.equal(hacimSayisi(0), 0);
 });
