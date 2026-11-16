@@ -137,89 +137,131 @@ function jsonOzet(alanlar: string[]) {
   };
 }
 
-const SUTUN = ["name", "close", "change", "high", "low", "volume", "update_mode", "currency"];
+/**
+ * Yedinci tur: temel analiz verisi.
+ *
+ * Soru: aynı tarayıcı bilanço oranlarını da veriyor mu? Veriyorsa temel analiz
+ * (değerleme, kârlılık, büyüme, borçluluk) anahtarsız yapılabilir; vermiyorsa
+ * yapılamaz ve yapılıyormuş gibi gösterilmemeli. Alanlar tek tek denenir,
+ * çünkü bilinmeyen tek bir alan bütün isteği düşürüyor.
+ */
+const TEMEL_ALANLAR = [
+  "sector",
+  "industry",
+  "market_cap_basic",
+  "price_earnings_ttm",
+  "price_book_fq",
+  "price_book_ratio",
+  "price_sales_current",
+  "price_sales_ratio",
+  "price_free_cash_flow_ttm",
+  "enterprise_value_ebitda_ttm",
+  "earnings_per_share_diluted_ttm",
+  "earnings_per_share_diluted_yoy_growth_ttm",
+  "total_revenue_ttm",
+  "total_revenue_yoy_growth_ttm",
+  "net_income_yoy_growth_ttm",
+  "return_on_equity",
+  "return_on_equity_fq",
+  "return_on_assets",
+  "return_on_invested_capital",
+  "gross_margin",
+  "gross_margin_ttm",
+  "operating_margin",
+  "operating_margin_ttm",
+  "net_margin",
+  "net_margin_ttm",
+  "after_tax_margin",
+  "debt_to_equity",
+  "debt_to_equity_fq",
+  "current_ratio",
+  "current_ratio_fq",
+  "quick_ratio",
+  "dividend_yield_recent",
+  "dividends_yield_current",
+  "dividends_yield",
+  "beta_1_year",
+  "Perf.W",
+  "Perf.1M",
+  "Perf.3M",
+  "Perf.6M",
+  "Perf.Y",
+  "price_52_week_high",
+  "price_52_week_low",
+  "Recommend.All",
+  "recommendation_mark",
+  "price_target_average",
+  "fundamental_currency_code",
+  "fiscal_period_current",
+  "earnings_release_date",
+];
 
 async function tara(): Promise<void> {
-  console.log("Ücretsiz veri kaynakları ölçülüyor…\n");
+  console.log("Temel analiz alanları ölçülüyor…\n");
 
-  /* ── 1) Bütün emtia tek istekte gelebilir mi? ── */
-  await dene("tv emtia süzgeç", "emtia", "https://scanner.tradingview.com/futures/scan", tradingview(2), {
-    govde: {
-      filter: [
-        {
-          left: "name",
-          operation: "in_range",
-          right: ["GC1!", "SI1!", "PL1!", "PA1!", "HG1!", "CL1!", "BZ1!", "NG1!", "ZW1!", "KC1!"],
+  const semboller = ["BIST:THYAO", "BIST:GARAN", "NASDAQ:AAPL"];
+  const gecen = new Set<string>();
+  const tablo: Record<string, Record<string, unknown>> = {};
+
+  for (const alan of TEMEL_ALANLAR) {
+    tablo[alan] = {};
+    for (const sembol of semboller) {
+      const s = await dene(
+        `alan ${alan}`,
+        sembol,
+        `https://scanner.tradingview.com/symbol?symbol=${encodeURIComponent(sembol)}&fields=${encodeURIComponent(alan)}`,
+        (govde) => {
+          const veri = JSON.parse(govde) as Record<string, unknown>;
+          tablo[alan][sembol] = veri[alan];
+          return JSON.stringify(veri[alan]);
         },
-      ],
-      columns: SUTUN,
-      sort: { sortBy: "name", sortOrder: "asc" },
-      range: [0, 30],
-    },
-    baslik: TV_BASLIK,
-  });
+        { baslik: TV_BASLIK, sessiz: true },
+      );
+      if (s.ok && tablo[alan][sembol] !== undefined && tablo[alan][sembol] !== null) gecen.add(alan);
+      if (!s.ok) tablo[alan][sembol] = `✗ ${s.durum}`;
+    }
+  }
 
-  /* ── 2) Döviz tarayıcısı ── */
-  await dene("tv döviz", "doviz", "https://scanner.tradingview.com/forex/scan", tradingview(3), {
-    govde: {
-      columns: SUTUN,
-      sort: { sortBy: "volume", sortOrder: "desc" },
-      range: [0, 10],
-    },
-    baslik: TV_BASLIK,
-  });
-
-  await dene("tv döviz süzgeç", "doviz", "https://scanner.tradingview.com/forex/scan", tradingview(4), {
-    govde: {
-      filter: [
-        {
-          left: "name",
-          operation: "in_range",
-          right: ["USDTRY", "EURTRY", "GBPTRY", "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD"],
-        },
-      ],
-      columns: SUTUN,
-      sort: { sortBy: "name", sortOrder: "asc" },
-      range: [0, 20],
-    },
-    baslik: TV_BASLIK,
-  });
-
-  /* ── 3) Endeksler: tek sembol uç noktasından gelir mi? ── */
-  for (const sembol of ["SP:SPX", "NASDAQ:IXIC", "TVC:DXY", "BIST:XU100", "DJ:DJI"]) {
-    await dene(
-      `tv ${sembol}`,
-      "endeks",
-      `https://scanner.tradingview.com/symbol?symbol=${encodeURIComponent(sembol)}&fields=` +
-        encodeURIComponent("close,change,high,low,volume,update_mode,currency"),
-      (govde) => JSON.stringify(JSON.parse(govde)).slice(0, 190),
-      { baslik: TV_BASLIK },
+  console.log(`${"alan".padEnd(44)}${semboller.map((s) => s.padEnd(26)).join("")}`);
+  console.log("─".repeat(125));
+  for (const alan of TEMEL_ALANLAR) {
+    console.log(
+      `${(gecen.has(alan) ? "✓ " : "✗ ") + alan.padEnd(42)}${semboller
+        .map((s) => String(JSON.stringify(tablo[alan][s]) ?? "yok").slice(0, 24).padEnd(26))
+        .join("")}`,
     );
   }
 
-  /* ── 4) truncgil: hangi kalemler var? ── */
-  await dene(
-    "truncgil",
-    "doviz",
-    "https://finans.truncgil.com/today.json",
-    (govde) => {
-      const veri = JSON.parse(govde) as Record<string, unknown>;
-      const anahtarlar = Object.keys(veri);
-      const ilgi = anahtarlar.filter((a) =>
-        /USD|EUR|GBP|GRAM|ALTIN|CEYREK|JPY|CHF|CAD|AUD/i.test(a),
-      );
-      return `${anahtarlar.length} kalem · ilgili: ${ilgi.slice(0, 14).join(",")} · GRAM ALTIN=${JSON.stringify(
-        veri["gram-altin"] ?? veri["GRAM ALTIN"] ?? veri["Gram Altın"],
-      )}`.slice(0, 300);
-    },
-  );
-
-  await dene(
-    "frankfurter",
-    "doviz",
-    "https://api.frankfurter.app/latest?from=USD&to=TRY,EUR",
-    jsonOzet(["date", "rates"]),
-  );
+  // Bütün borsa tek istekte temel alanlarla gelir mi? (sektör ortancası için)
+  const sutunlar = ["name", ...[...gecen].slice(0, 24)];
+  for (const [yol, borsa] of [
+    ["turkey", ["BIST"]],
+    ["america", ["NASDAQ", "NYSE"]],
+  ] as const) {
+    await dene(`tarama ${yol}`, "temel", `https://scanner.tradingview.com/${yol}/scan`, (govde) => {
+      const veri = JSON.parse(govde) as { totalCount?: number; data?: { s: string; d: unknown[] }[] };
+      const satirlar = veri.data ?? [];
+      if (satirlar.length === 0) throw new Error("boş data dizisi");
+      const sektorIndex = sutunlar.indexOf("sector");
+      const sektorler = new Set(satirlar.map((s) => (sektorIndex >= 0 ? s.d[sektorIndex] : null)));
+      return `${satirlar.length}/${veri.totalCount} satır · ${Math.round(govde.length / 1024)} KB · ${sektorler.size} sektör · örnek: ${[
+        ...sektorler,
+      ]
+        .slice(0, 8)
+        .join(", ")}`;
+    }, {
+      govde: {
+        filter: [
+          { left: "exchange", operation: "in_range", right: borsa },
+          { left: "type", operation: "equal", right: "stock" },
+        ],
+        columns: sutunlar,
+        sort: { sortBy: "market_cap_basic", sortOrder: "desc" },
+        range: [0, 1500],
+      },
+      baslik: TV_BASLIK,
+    });
+  }
 
   /* ────────────────────── Rapor ────────────────────── */
 
