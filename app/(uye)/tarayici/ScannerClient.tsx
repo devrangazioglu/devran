@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
+import Secim from "@/components/Secim";
 import { AssetAvatar, Change, MarketBadge, Score, SignalBadge } from "@/components/ui";
 import { isBuySignal, isSellSignal } from "@/lib/analysis";
 import { patternName } from "@/lib/analysis-text";
@@ -153,15 +154,15 @@ export default function ScannerClient({
               </button>
             ))}
           </div>
-          <select className="select" value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
-            {[10, 20, 30, 40, 60, 100]
+          <Secim
+            value={limit}
+            onChange={setLimit}
+            ariaLabel={t("settings.scanLimit")}
+            hizalama="son"
+            options={[10, 20, 30, 40, 60, 100]
               .filter((value) => !planTaramaSiniri || value <= planTaramaSiniri)
-              .map((value) => (
-                <option key={value} value={value}>
-                  {t("scan.assetCount", { count: value })}
-                </option>
-              ))}
-          </select>
+              .map((value) => ({ value, label: t("scan.assetCount", { count: value }) }))}
+          />
           <button className="btn btn-primary btn-sm" onClick={() => void run()} disabled={loading}>
             {loading ? <span className="spinner" /> : null}
             {loading ? t("scan.scanning") : t("scan.rescan")}
@@ -222,13 +223,18 @@ export default function ScannerClient({
             </button>
           ))}
         </div>
-        <select className="select" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-          <option value="score">{t("scan.sortScore")}</option>
-          <option value="confidence">{t("scan.sortConfidence")}</option>
-          <option value="change">{t("scan.sortChange")}</option>
-          <option value="volume">{t("scan.sortVolume")}</option>
-          <option value="rsi">{t("scan.sortRsi")}</option>
-        </select>
+        <Secim<SortKey>
+          value={sort}
+          onChange={setSort}
+          ariaLabel={t("scan.sortLabel")}
+          options={[
+            { value: "score", label: t("scan.sortScore") },
+            { value: "confidence", label: t("scan.sortConfidence") },
+            { value: "change", label: t("scan.sortChange") },
+            { value: "volume", label: t("scan.sortVolume") },
+            { value: "rsi", label: t("scan.sortRsi") },
+          ]}
+        />
         <label className="pill" style={{ cursor: "pointer" }}>
           <input
             type="checkbox"

@@ -528,7 +528,7 @@ export default function AssetClient({
                     <div className="check-row" key={check.id}>
                       <div>
                         <div className="name">{t(check.labelKey as "ind.rsi")}</div>
-                        <div className="note">{renderNote(t, check)}</div>
+                        <div className="note">{renderNote(t, check, intl)}</div>
                       </div>
                       <div className="value mono dim" style={{ fontSize: 13 }}>
                         {renderValue(check.value, intl)}

@@ -7,12 +7,26 @@ import type { IndicatorCheck, ValuePart } from "./analysis";
 import { formatNumber, formatPercent, formatPrice } from "./format";
 import type { DictionaryKey, Params, Translator } from "./i18n";
 
-/** Gösterge açıklamasını çevirir; iç anahtarları (ör. yön) da çözer. */
-export function renderNote(t: Translator, check: IndicatorCheck): string {
-  const params: Params = { ...(check.noteParams ?? {}) };
-  if (typeof params.directionKey === "string") {
-    params.direction = t(`note.volume.${params.directionKey}` as DictionaryKey);
-    delete params.directionKey;
+/**
+ * Gösterge açıklamasını çevirir; iç anahtarları (ör. yön) da çözer.
+ *
+ * Sayısal parametreler burada, gösterilen dilin ayırıcılarıyla biçimlenir.
+ * Motor önceden biçimlenmiş metin verdiğinde Türkçe arayüzde "RSI 27.5" gibi
+ * noktalı sayılar çıkıyor, aynı satırın yanındaki değer ise "27,5" yazıyordu.
+ */
+export function renderNote(t: Translator, check: IndicatorCheck, intl: string = "tr-TR"): string {
+  const params: Params = {};
+  for (const [key, value] of Object.entries(check.noteParams ?? {})) {
+    if (key === "directionKey" && typeof value === "string") {
+      params.direction = t(`note.volume.${value}` as DictionaryKey);
+    } else if (typeof value === "string") {
+      params[key] = value;
+    } else if (typeof value === "number") {
+      // Çıplak sayı: tam sayıysa ondalıksız, değilse en çok iki basamak.
+      params[key] = value.toLocaleString(intl, { maximumFractionDigits: 2 });
+    } else {
+      params[key] = renderValue([value], intl);
+    }
   }
   return t(check.noteKey as DictionaryKey, params);
 }
@@ -63,7 +77,7 @@ export function categoryLabel(t: Translator, category: string): string {
 export function groupChecks(
   checks: IndicatorCheck[],
 ): { category: string; items: IndicatorCheck[] }[] {
-  const order = ["trend", "momentum", "volatility", "volume"];
+  const order = ["trend", "structure", "momentum", "volatility", "volume"];
   return order
     .map((category) => ({ category, items: checks.filter((c) => c.category === category) }))
     .filter((group) => group.items.length > 0);

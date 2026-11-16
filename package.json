@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsc -p tsconfig.test.json && node --test \".test-build/tests/**/*.test.js\"",
     "besle": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/besle.js",
-    "kaynak-tara": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/kaynak-tara.js"
+    "kaynak-tara": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/kaynak-tara.js",
+    "motor-karsilastir": "tsc -p tsconfig.scripts.json && node .scripts-build/scripts/motor-karsilastir.js"
   },
   "dependencies": {
     "next": "^15.3.3",

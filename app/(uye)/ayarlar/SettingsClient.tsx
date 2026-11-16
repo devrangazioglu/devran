@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useI18n } from "@/components/I18nProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import Secim from "@/components/Secim";
 import { formatDate } from "@/lib/format";
 import { INTERVALS, MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
 import type { UserSettings } from "@/lib/users";
@@ -71,57 +72,51 @@ export default function SettingsClient({
             {AKTIF_MARKET_IDS.length > 1 && (
               <div className="field">
                 <label htmlFor="market">{t("settings.defaultMarket")}</label>
-                <select
+                <Secim
                   id="market"
-                  className="select"
+                  genis
                   value={form.defaultMarket}
-                  onChange={(e) => setForm({ ...form, defaultMarket: e.target.value })}
-                >
-                  {AKTIF_MARKET_IDS.map((id) => (
-                    <option key={id} value={id}>
-                      {t(`market.${id}` as "market.kripto")}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(defaultMarket) => setForm({ ...form, defaultMarket })}
+                  options={AKTIF_MARKET_IDS.map((id) => ({
+                    value: id as string,
+                    label: t(`market.${id}` as "market.kripto"),
+                  }))}
+                />
               </div>
             )}
 
             <div className="field">
               <label htmlFor="interval">{t("settings.defaultInterval")}</label>
-              <select
+              <Secim
                 id="interval"
-                className="select"
+                genis
                 value={form.defaultInterval}
-                onChange={(e) => setForm({ ...form, defaultInterval: e.target.value })}
-              >
-                {INTERVALS.filter((item) =>
+                onChange={(defaultInterval) => setForm({ ...form, defaultInterval })}
+                options={INTERVALS.filter((item) =>
                   MARKETS[
                     (AKTIF_MARKET_IDS.includes(form.defaultMarket as never)
                       ? form.defaultMarket
                       : "kripto") as "kripto"
                   ].intervals.includes(item.value),
-                ).map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {t(`interval.${item.value}` as "interval.4h")} ({item.value})
-                  </option>
-                ))}
-              </select>
+                ).map((item) => ({
+                  value: item.value as string,
+                  label: `${t(`interval.${item.value}` as "interval.4h")} (${item.value})`,
+                }))}
+              />
             </div>
 
             <div className="field">
               <label htmlFor="scanLimit">{t("settings.scanLimit")}</label>
-              <select
+              <Secim
                 id="scanLimit"
-                className="select"
+                genis
                 value={form.scanLimit}
-                onChange={(e) => setForm({ ...form, scanLimit: Number(e.target.value) })}
-              >
-                {[10, 20, 30, 40, 60].map((value) => (
-                  <option key={value} value={value}>
-                    {t("scan.assetCount", { count: value })}
-                  </option>
-                ))}
-              </select>
+                onChange={(scanLimit) => setForm({ ...form, scanLimit })}
+                options={[10, 20, 30, 40, 60].map((value) => ({
+                  value,
+                  label: t("scan.assetCount", { count: value }),
+                }))}
+              />
               <span className="dim" style={{ fontSize: 12 }}>
                 {t("settings.scanLimitHint")}
               </span>

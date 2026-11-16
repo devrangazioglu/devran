@@ -236,8 +236,8 @@ export function buildCommentary(
 
   paragraf(
     t("commentary.flow.intro"),
-    obvCheck ? renderNote(t, obvCheck) : null,
-    volumeCheck ? renderNote(t, volumeCheck) : null,
+    obvCheck ? renderNote(t, obvCheck, intl) : null,
+    volumeCheck ? renderNote(t, volumeCheck, intl) : null,
     mfiCumle,
     t("commentary.flow.explain"),
   );
@@ -432,7 +432,7 @@ export function buildCommentary(
     .sort((a, b) => Math.abs(b.direction * b.weight) - Math.abs(a.direction * a.weight))
     .slice(0, 4);
   for (const check of strongest) {
-    highlights.push(`${t(check.labelKey as "ind.rsi")}: ${renderNote(t, check)}`);
+    highlights.push(`${t(check.labelKey as "ind.rsi")}: ${renderNote(t, check, intl)}`);
   }
   for (const pattern of analysis.patterns.slice(0, 3)) {
     highlights.push(

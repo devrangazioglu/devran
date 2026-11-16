@@ -120,7 +120,7 @@ test("her gösterge geçerli yön, ağırlık ve çeviri anahtarı taşır", () 
     assert.ok(check.weight > 0);
     assert.match(check.labelKey, /^ind\./);
     assert.match(check.noteKey, /^note\./);
-    assert.ok(["trend", "momentum", "volatility", "volume"].includes(check.category));
+    assert.ok(["trend", "structure", "momentum", "volatility", "volume"].includes(check.category));
     assert.ok(check.value.length > 0, `${check.id} için değer parçası yok`);
   }
 });

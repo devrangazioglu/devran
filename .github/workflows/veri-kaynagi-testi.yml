@@ -16,7 +16,7 @@ on:
 jobs:
   dene:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +38,13 @@ jobs:
       # gün içi veri var mı, veri kaç dakika gecikmeli.
       - name: Ücretsiz kaynakları tara
         run: npm run kaynak-tara
+
+      # Eski ve yeni sinyal motorunu aynı gerçek veride yarıştırır: kapsam,
+      # isabet, taban oran ve sinyalin ne sıklıkla döndüğü. "Daha tutarlı"
+      # iddiası buradaki sayılarla ölçülür.
+      - name: Sinyal motorlarını karşılaştır
+        run: npm run motor-karsilastir
+        continue-on-error: true
 
       # Asıl soru burada yanıtlanıyor: kaynak **Vercel'in** IP aralığından da
       # cevap veriyor mu? Yahoo vermiyordu ve bu, bütün tasarımı belirleyen

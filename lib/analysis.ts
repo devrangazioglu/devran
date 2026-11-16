@@ -5,8 +5,38 @@
  * aynı şekilde çalışır. Çıktıdaki metinler doğrudan cümle değil, çeviri
  * anahtarı + parametre olarak üretilir; böylece her dile çevrilebilir.
  *
+ * ── Neden "ikinci nesil" ─────────────────────────────────────────────
+ *
+ * İlk motor on altı göstergenin düz ağırlıklı ortalamasını alıyordu ve iki
+ * yapısal kusuru vardı:
+ *
+ *   1. Trend takipçileri (EMA, Supertrend, ADX) ile osilatörler (RSI,
+ *      Stokastik, Williams, Bollinger) **piyasa durumuna bakılmadan** birlikte
+ *      oylanıyordu. Güçlü bir düşüş trendinde osilatörler "aşırı satım" deyip
+ *      AL oyu verdiği için skor sıfıra sönüyor ve tam trendin en net olduğu
+ *      anda BEKLE çıkıyordu (ölçülen örnek: ADX 35, on gösterge SAT, skor
+ *      −12,8). Tersi de oluyordu: güçlü yükselişte "aşırı alım" SAT oyu.
+ *   2. Eşikler sabit yüzdeydi (ör. EMA farkı %1,2). Aynı fark dövizde dev,
+ *      kriptoda önemsizdir; sinyalin anlamı varlıktan varlığa değişiyordu.
+ *      Ayrıca RSI 69,9 → +0,48, RSI 70,0 → −0,85 gibi sıçramalar vardı: tek
+ *      kuruşluk fiyat hareketi sinyali ters çevirebiliyordu.
+ *
+ * Bu sürümde:
+ *   • Önce **rejim** ölçülür (trend mi, yatay mı; yönü ne). Osilatörler buna
+ *     göre okunur: yatay piyasada uç değer dönüş sinyalidir; trendde ise trend
+ *     yönündeki uç değer güç işaretidir, karşı yöndeki uç değer (yükselişte
+ *     aşırı satım) trende katılma fırsatıdır.
+ *   • Bütün uzaklıklar **ATR ile** ölçülür; sinyal oynaklıktan bağımsızdır.
+ *   • Eşik sıçramaları kaldırıldı; her yön fonksiyonu süreklidir.
+ *   • Gösterge olmayan yöntemler eklendi: fiyat yapısı (tepe/dip dizilimi),
+ *     kanal kırılımı, üst periyot uyumu, endekse göre göreli güç.
+ *   • Sinyal **kendi geçmişinde sınanır**: aynı motor geçmiş mumlarda
+ *     çalıştırılır ve "bu varlıkta bu sinyal kaç kez tuttu" ölçülür. Güven
+ *     yüzdesi bu ölçümü de içerir; tahmin değil sayımdır.
+ *
  * Not: Üretilen çıktı yatırım tavsiyesi değildir; kural tabanlı bir teknik
- * analiz özetidir.
+ * analiz özetidir. Hiçbir yöntem kesin sonuç vermez — geçmiş sınaması bunun
+ * ne kadar belirsiz olduğunu gizlemek yerine gösterir.
  */
 
 import type { Candle, DataSource, Instrument, Interval } from "./markets/types";
@@ -16,11 +46,9 @@ import {
   bollinger,
   cci,
   ema,
-  last,
   macd,
   mfi,
   obv,
-  prev,
   roc,
   rsi,
   sma,
@@ -28,12 +56,17 @@ import {
   supertrend,
   vwap,
   williamsR,
+  type AdxResult,
+  type BollingerResult,
+  type MacdResult,
   type Series,
+  type StochasticResult,
+  type SupertrendResult,
 } from "./indicators";
 
 export type Verdict = "BUY" | "SELL" | "NEUTRAL";
 export type SignalLabel = "STRONG_BUY" | "BUY" | "WAIT" | "SELL" | "STRONG_SELL";
-export type Category = "trend" | "momentum" | "volatility" | "volume";
+export type Category = "trend" | "structure" | "momentum" | "volatility" | "volume";
 
 /** Gösterge değerinin gösterime hazır parçaları (biçimlendirme arayüzde yapılır). */
 export type ValuePart =
@@ -54,7 +87,12 @@ export type IndicatorCheck = {
   weight: number;
   /** Açıklamanın çeviri anahtarı ve parametreleri. */
   noteKey: string;
-  noteParams?: Record<string, string | number>;
+  /**
+   * Sayılar ham verilir; biçimlendirme (ondalık ayırıcı, basamak) gösterilen
+   * dile göre arayüzde yapılır. Önceden biçimlenmiş metin vermek, Türkçe
+   * arayüzde "27.5" gibi noktalı sayılar çıkarıyordu.
+   */
+  noteParams?: Record<string, string | number | ValuePart>;
 };
 
 export type Pattern = {
@@ -125,6 +163,44 @@ export type ChartSeries = {
   macdHistogram: Series;
 };
 
+/** Piyasanın o anki durumu: göstergelerin nasıl okunacağını bu belirler. */
+export type Regime = {
+  /** 0 = tümüyle yatay, 1 = güçlü trend. */
+  trendiness: number;
+  /** −1 (aşağı) … +1 (yukarı). */
+  direction: number;
+  key: "regime.up" | "regime.down" | "regime.range" | "regime.transition";
+};
+
+/** Geçmiş sınamasında bir yönün (alış ya da satış) sonucu. */
+export type BacktestSide = {
+  /** Bu yönde sinyal verilen mum sayısı. */
+  signals: number;
+  /** Sinyalden `horizon` mum sonra fiyatın sinyal yönünde olduğu oran (0–1). */
+  hitRate: number;
+  /**
+   * Sinyalden bağımsız taban oran: rastgele bir mumdan sonra fiyatın aynı
+   * yöne gitme sıklığı. Yükselen bir piyasada her alış "tutar"; isabetin
+   * anlamı ancak bu oranla kıyaslanınca ortaya çıkar.
+   */
+  baseRate: number;
+  /** Taban orana göre üstünlük (0–1 ölçeğinde fark), küçük örnek için büzülmüş. */
+  edge: number;
+  /** Sinyal yönünde ortalama getiri, yüzde. */
+  avgReturn: number;
+  /** Örnek sayısı sonuç çıkarmaya yetiyor mu? */
+  reliable: boolean;
+};
+
+export type Backtest = {
+  /** Sonucun ölçüldüğü ufuk, mum sayısı. */
+  horizon: number;
+  /** Sınanan toplam mum sayısı. */
+  samples: number;
+  buy: BacktestSide | null;
+  sell: BacktestSide | null;
+};
+
 export type Analysis = {
   instrument: Instrument;
   interval: Interval;
@@ -144,9 +220,26 @@ export type Analysis = {
   trade: TradePlan;
   volatility: { atrPercent: number; regimeKey: string; squeeze: boolean };
   trendStrength: { adx: number | null; labelKey: string };
+  regime: Regime;
+  /** Veri yetmediğinde null. */
+  backtest: Backtest | null;
+};
+
+/** Analize dışarıdan verilen bağlam; hepsi isteğe bağlı. */
+export type AnalysisContext = {
+  /** Karşılaştırma endeksinin aynı periyottaki mumları (göreli güç için). */
+  benchmark?: { ticker: string; candles: Candle[] } | null;
+  /** Bir üst zaman dilimindeki rejim (çoklu zaman dilimi uyumu için). */
+  higher?: { interval: Interval; direction: number; trendiness: number } | null;
+  /** Geçmiş sınaması yapılsın mı (varsayılan: evet). */
+  backtest?: boolean;
 };
 
 /* ────────────────────────── Yardımcılar ────────────────────────── */
+
+/** Bu eşiklerin altında/üstünde sinyal AL ya da SAT sayılır. */
+const SIGNAL_THRESHOLD = 18;
+const STRONG_THRESHOLD = 45;
 
 function verdictOf(direction: number): Verdict {
   if (direction >= 0.15) return "BUY";
@@ -158,11 +251,21 @@ function clamp(value: number): number {
   return Math.max(-1, Math.min(1, value));
 }
 
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+/** Dizinin `i` konumundaki geçerli değeri (yoksa null). */
+function at(series: Series, i: number): number | null {
+  const v = series[i];
+  return v === null || v === undefined || !Number.isFinite(v) ? null : v;
+}
+
 export function signalFromScore(score: number): SignalLabel {
-  if (score >= 45) return "STRONG_BUY";
-  if (score >= 18) return "BUY";
-  if (score <= -45) return "STRONG_SELL";
-  if (score <= -18) return "SELL";
+  if (score >= STRONG_THRESHOLD) return "STRONG_BUY";
+  if (score >= SIGNAL_THRESHOLD) return "BUY";
+  if (score <= -STRONG_THRESHOLD) return "STRONG_SELL";
+  if (score <= -SIGNAL_THRESHOLD) return "SELL";
   return "WAIT";
 }
 
@@ -185,222 +288,580 @@ const num = (value: number, digits = 2): ValuePart => ({ kind: "number", value, 
 const pct = (value: number): ValuePart => ({ kind: "percent", value });
 const text = (value: string): ValuePart => ({ kind: "text", text: value });
 
-/* ────────────────────────── Ana analiz ────────────────────────── */
+/* ────────────────────────── Hazırlık ────────────────────────── */
 
-export function analyze(
-  instrument: Instrument,
-  interval: Interval,
-  candles: Candle[],
-  source: DataSource,
-): Analysis {
-  if (candles.length < 60) {
-    throw new Error("Analiz için yeterli mum verisi yok (en az 60 mum gerekir).");
-  }
+type Pivot = { index: number; price: number };
 
+/**
+ * Bütün seriler bir kez hesaplanır.
+ *
+ * Göstergelerin hepsi nedenseldir (i. değer yalnızca ≤ i mumlara bakar), bu
+ * yüzden geçmiş sınaması aynı serileri eski bir konumda okuyarak yapılabilir:
+ * her mum için baştan hesaplamak gerekmez ve geleceğe bakma hatası oluşmaz.
+ */
+type Prepared = {
+  candles: Candle[];
+  closes: number[];
+  highs: number[];
+  lows: number[];
+  volumes: number[];
+  ema9: Series;
+  ema21: Series;
+  ema50: Series;
+  ema200: Series;
+  sma20: Series;
+  rsi: Series;
+  macd: MacdResult;
+  bb: BollingerResult;
+  stoch: StochasticResult;
+  atr: Series;
+  adx: AdxResult;
+  cci: Series;
+  willr: Series;
+  mfi: Series;
+  obv: Series;
+  vwap: Series;
+  st: SupertrendResult;
+  roc: Series;
+  pivotHighs: Pivot[];
+  pivotLows: Pivot[];
+  /** Karşılaştırma endeksinin, her muma hizalanmış kapanışı. */
+  benchmark: (number | null)[] | null;
+  benchmarkTicker: string | null;
+  /** Hacim verisi var mı? (Döviz kurlarında yoktur.) */
+  hasVolume: boolean;
+};
+
+/** Bir tepe/dip, iki yanındaki bu kadar mumdan uçtaysa pivot sayılır. */
+const PIVOT_SPAN = 3;
+
+function prepare(candles: Candle[], context: AnalysisContext): Prepared {
   const closes = candles.map((c) => c.close);
   const highs = candles.map((c) => c.high);
   const lows = candles.map((c) => c.low);
   const volumes = candles.map((c) => c.volume);
-  const lastPrice = closes[closes.length - 1];
-  const previousClose = closes[closes.length - 2];
 
-  // ── Göstergeler ─────────────────────────────────────────────
-  const ema9 = ema(closes, 9);
-  const ema21 = ema(closes, 21);
-  const ema50 = ema(closes, 50);
-  const ema200 = ema(closes, 200);
-  const sma20 = sma(closes, 20);
-  const rsiSeries = rsi(closes, 14);
-  const macdResult = macd(closes);
-  const bb = bollinger(closes, 20, 2);
-  const stoch = stochastic(highs, lows, closes);
-  const atrSeries = atr(highs, lows, closes, 14);
-  const adxResult = adx(highs, lows, closes, 14);
-  const cciSeries = cci(highs, lows, closes, 20);
-  const willr = williamsR(highs, lows, closes, 14);
-  const mfiSeries = mfi(highs, lows, closes, volumes, 14);
-  const obvSeries = obv(closes, volumes);
-  const vwapSeries = vwap(highs, lows, closes, volumes, 20);
-  const st = supertrend(highs, lows, closes, 10, 3);
-  const rocSeries = roc(closes, 10);
+  const pivotHighs: Pivot[] = [];
+  const pivotLows: Pivot[] = [];
+  for (let i = PIVOT_SPAN; i < candles.length - PIVOT_SPAN; i++) {
+    let isHigh = true;
+    let isLow = true;
+    for (let j = i - PIVOT_SPAN; j <= i + PIVOT_SPAN; j++) {
+      if (j === i) continue;
+      if (highs[j] >= highs[i]) isHigh = false;
+      if (lows[j] <= lows[i]) isLow = false;
+    }
+    if (isHigh) pivotHighs.push({ index: i, price: highs[i] });
+    if (isLow) pivotLows.push({ index: i, price: lows[i] });
+  }
 
-  const snapshot: IndicatorSnapshot = {
-    rsi: last(rsiSeries),
-    macd: last(macdResult.macd),
-    macdSignal: last(macdResult.signal),
-    macdHistogram: last(macdResult.histogram),
-    ema9: last(ema9),
-    ema21: last(ema21),
-    ema50: last(ema50),
-    ema200: last(ema200),
-    sma20: last(sma20),
-    bbUpper: last(bb.upper),
-    bbMiddle: last(bb.middle),
-    bbLower: last(bb.lower),
-    bbPercentB: last(bb.percentB),
-    bbBandwidth: last(bb.bandwidth),
-    stochK: last(stoch.k),
-    stochD: last(stoch.d),
-    atr: last(atrSeries),
-    adx: last(adxResult.adx),
-    plusDI: last(adxResult.plusDI),
-    minusDI: last(adxResult.minusDI),
-    cci: last(cciSeries),
-    williamsR: last(willr),
-    mfi: last(mfiSeries),
-    obv: last(obvSeries),
-    vwap: last(vwapSeries),
-    supertrend: last(st.value),
-    supertrendDirection: lastDirection(st.direction),
+  return {
+    candles,
+    closes,
+    highs,
+    lows,
+    volumes,
+    ema9: ema(closes, 9),
+    ema21: ema(closes, 21),
+    ema50: ema(closes, 50),
+    ema200: ema(closes, 200),
+    sma20: sma(closes, 20),
+    rsi: rsi(closes, 14),
+    macd: macd(closes),
+    bb: bollinger(closes, 20, 2),
+    stoch: stochastic(highs, lows, closes),
+    atr: atr(highs, lows, closes, 14),
+    adx: adx(highs, lows, closes, 14),
+    cci: cci(highs, lows, closes, 20),
+    willr: williamsR(highs, lows, closes, 14),
+    mfi: mfi(highs, lows, closes, volumes, 14),
+    obv: obv(closes, volumes),
+    vwap: vwap(highs, lows, closes, volumes, 20),
+    st: supertrend(highs, lows, closes, 10, 3),
+    roc: roc(closes, 10),
+    pivotHighs,
+    pivotLows,
+    benchmark: context.benchmark ? alignBenchmark(candles, context.benchmark.candles) : null,
+    benchmarkTicker: context.benchmark?.ticker ?? null,
+    hasVolume: volumes.slice(-40).some((v) => v > 0),
   };
+}
+
+/**
+ * Endeks kapanışlarını varlığın mumlarına hizalar.
+ *
+ * İki serinin takvimi birebir aynı olmayabilir (tatil, eksik gün); her mum
+ * için o ana kadarki son endeks kapanışı alınır. Aradaki boşluk bir haftayı
+ * aşıyorsa değer kullanılmaz: bayat bir endeksle kıyas, kıyas değildir.
+ */
+function alignBenchmark(candles: Candle[], benchmark: Candle[]): (number | null)[] {
+  const out: (number | null)[] = new Array(candles.length).fill(null);
+  if (benchmark.length === 0) return out;
+  const maxGap = 7 * 86_400_000;
+  let j = 0;
+  for (let i = 0; i < candles.length; i++) {
+    const time = candles[i].openTime;
+    while (j + 1 < benchmark.length && benchmark[j + 1].openTime <= time) j++;
+    const candidate = benchmark[j];
+    if (candidate.openTime <= time && time - candidate.openTime <= maxGap) {
+      out[i] = candidate.close;
+    }
+  }
+  return out;
+}
+
+/* ────────────────────────── Fiyat yapısı ve rejim ────────────────────────── */
+
+type Structure = {
+  /** −1 (alçalan tepe/dip) … +1 (yükselen tepe/dip). */
+  direction: number;
+  higherHigh: boolean;
+  higherLow: boolean;
+};
+
+/** `i` anında kesinleşmiş son iki pivotu döndürür (eskiden yeniye). */
+function lastTwoPivots(pivots: Pivot[], i: number): [Pivot, Pivot] | null {
+  // Bir pivot ancak sağındaki PIVOT_SPAN mum kapandıktan sonra bilinir.
+  const known = i - PIVOT_SPAN;
+  let newer: Pivot | null = null;
+  for (let k = pivots.length - 1; k >= 0; k--) {
+    if (pivots[k].index > known) continue;
+    if (!newer) newer = pivots[k];
+    else return [pivots[k], newer];
+  }
+  return null;
+}
+
+/**
+ * Tepe ve diplerin dizilimi (Dow kuramının özü): yükselen tepe + yükselen dip
+ * yükseliş, alçalan tepe + alçalan dip düşüş yapısıdır. Hiçbir ortalamaya ya
+ * da osilatöre dayanmaz; doğrudan fiyatın kendisini okur.
+ */
+function structureAt(p: Prepared, i: number, atrValue: number): Structure | null {
+  const highs = lastTwoPivots(p.pivotHighs, i);
+  const lows = lastTwoPivots(p.pivotLows, i);
+  if (!highs || !lows || atrValue <= 0) return null;
+
+  const dHigh = (highs[1].price - highs[0].price) / atrValue;
+  const dLow = (lows[1].price - lows[0].price) / atrValue;
+  let direction = 0.5 * clamp(dHigh / 1.5) + 0.5 * clamp(dLow / 1.5);
+
+  // Fiyat son tepeyi/dibi şimdiden aştıysa yapı o yönde güçleniyor demektir.
+  const close = p.closes[i];
+  if (close > highs[1].price) direction += 0.2;
+  else if (close < lows[1].price) direction -= 0.2;
+
+  return { direction: clamp(direction), higherHigh: dHigh > 0, higherLow: dLow > 0 };
+}
+
+/** Kaufman verimlilik oranı: net yol / kat edilen yol (0 = testere, 1 = düz çizgi). */
+function efficiencyRatio(closes: number[], i: number, period: number): number | null {
+  if (i < period) return null;
+  let path = 0;
+  for (let k = i - period + 1; k <= i; k++) path += Math.abs(closes[k] - closes[k - 1]);
+  if (path === 0) return 0;
+  return Math.abs(closes[i] - closes[i - period]) / path;
+}
+
+function regimeAt(p: Prepared, i: number, atrValue: number, structure: Structure | null): Regime {
+  const close = p.closes[i];
+
+  // ── Trend var mı? ADX ile verimlilik oranı birbirini tamamlar: ADX geç
+  // tepki verir ama kararlıdır, verimlilik oranı hızlıdır ama gürültülüdür.
+  const adxValue = at(p.adx.adx, i);
+  const er = efficiencyRatio(p.closes, i, 20);
+  const fromAdx = adxValue === null ? null : clamp01((adxValue - 15) / 20);
+  const fromEr = er === null ? null : clamp01((er - 0.12) / 0.33);
+  const trendiness =
+    fromAdx !== null && fromEr !== null
+      ? 0.6 * fromAdx + 0.4 * fromEr
+      : (fromAdx ?? fromEr ?? 0.5);
+
+  // ── Hangi yöne? Dört bağımsız okumanın ağırlıklı ortalaması.
+  const parts: [number, number][] = [];
+  const e21 = at(p.ema21, i);
+  const e50 = at(p.ema50, i);
+  if (e21 !== null && e50 !== null) {
+    parts.push([clamp((e21 - e50) / (1.5 * atrValue)), 0.3]);
+    parts.push([clamp((close - e50) / (2.5 * atrValue)), 0.25]);
+  }
+  const plus = at(p.adx.plusDI, i);
+  const minus = at(p.adx.minusDI, i);
+  if (plus !== null && minus !== null) parts.push([clamp((plus - minus) / 20), 0.2]);
+  if (structure) parts.push([structure.direction, 0.25]);
+
+  const weight = parts.reduce((sum, [, w]) => sum + w, 0);
+  const direction = weight === 0 ? 0 : parts.reduce((sum, [v, w]) => sum + v * w, 0) / weight;
+
+  let key: Regime["key"];
+  if (trendiness >= 0.5 && Math.abs(direction) >= 0.25) {
+    key = direction > 0 ? "regime.up" : "regime.down";
+  } else if (trendiness <= 0.3) {
+    key = "regime.range";
+  } else {
+    key = "regime.transition";
+  }
+
+  return { trendiness, direction, key };
+}
+
+/* ────────────────────────── Osilatör okuması ────────────────────────── */
+
+/**
+ * Bir osilatörü rejime göre yöne çevirir.
+ *
+ * `lo`/`hi` aşırı satım/alım eşikleridir. İki okuma hesaplanır:
+ *   • dönüş okuması — uçlara yaklaştıkça karşı yöne oy (yatay piyasanın mantığı)
+ *   • momentum okuması — orta çizginin üstü alıcı, altı satıcı
+ *
+ * Dönüş okuması trendle aynı yöndeyse (yükselişte aşırı satım = geri çekilme)
+ * olduğu gibi kullanılır: trende katılmak için en iyi andır. Trende karşıysa
+ * (yükselişte aşırı alım) trendin gücü ölçüsünde momentum okumasına kayar;
+ * güçlü bir trendde aşırı alım satış sinyali değil, güç işaretidir.
+ *
+ * Fonksiyon süreklidir: eşiklerde sıçrama yoktur.
+ */
+function readOscillator(
+  value: number,
+  lo: number,
+  hi: number,
+  regime: Regime,
+  conviction: number,
+): { direction: number; noteKey: string } {
+  const mid = (lo + hi) / 2;
+  const half = (hi - lo) / 2;
+  const position = (value - mid) / half; // −1 = alt eşik, +1 = üst eşik
+
+  const raw = clamp(-position);
+  const reversion = Math.sign(raw) * Math.pow(Math.abs(raw), 1.6) * 0.9;
+  const momentum = clamp(position) * 0.6;
+
+  const aligned = reversion * regime.direction >= 0;
+  const direction = aligned
+    ? reversion
+    : (1 - conviction) * reversion + 0.5 * conviction * momentum;
+
+  const verdict = verdictOf(direction);
+  const up = regime.direction > 0;
+  let noteKey: string;
+  if (position <= -1) {
+    noteKey =
+      up && conviction >= 0.35
+        ? "note.osc.pullbackUp"
+        : !up && conviction >= 0.5
+          ? "note.osc.weakDown"
+          : "note.osc.oversoldRange";
+  } else if (position >= 1) {
+    noteKey =
+      !up && conviction >= 0.35
+        ? "note.osc.rallyDown"
+        : up && conviction >= 0.5
+          ? "note.osc.strongUp"
+          : "note.osc.overboughtRange";
+  } else if (verdict === "BUY") {
+    noteKey = position > 0 ? "note.osc.bull" : "note.osc.dipBuy";
+  } else if (verdict === "SELL") {
+    noteKey = position < 0 ? "note.osc.bear" : "note.osc.topSell";
+  } else {
+    noteKey = "note.osc.neutral";
+  }
+
+  return { direction: clamp(direction), noteKey };
+}
+
+/* ────────────────────────── Değerlendirme ────────────────────────── */
+
+type Evaluation = {
+  checks: IndicatorCheck[];
+  score: number;
+  regime: Regime;
+  /** Skorla aynı yönde oy veren göstergelerin ağırlık payı (0–1). */
+  agreement: number;
+};
+
+/** Son 20 mumun (bu mum hariç) ortalama hacmine oran. */
+function volumeRatioAt(volumes: number[], i: number): number | null {
+  if (i < 20) return null;
+  let sum = 0;
+  for (let k = i - 20; k < i; k++) sum += volumes[k];
+  const average = sum / 20;
+  if (average === 0) return null;
+  return volumes[i] / average;
+}
+
+/**
+ * Motorun çekirdeği: `i` mumunun kapanışında, yalnızca o ana kadarki veriyle
+ * göstergeleri okur ve skoru üretir. Hem canlı analiz hem geçmiş sınaması bu
+ * fonksiyonu çağırır; ikisinin farklı mantık kullanması, sınamayı anlamsız
+ * kılardı.
+ */
+function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Evaluation {
+  const close = p.closes[i];
+  const previousClose = p.closes[i - 1] ?? close;
+  const atrValue = at(p.atr, i) ?? close * 0.02;
+  const atrPercent = (atrValue / close) * 100;
+
+  const structure = structureAt(p, i, atrValue);
+  const regime = regimeAt(p, i, atrValue, structure);
+  const t = regime.trendiness;
+  // Trendin hem varlığına hem yönünün netliğine bağlı tek sayı.
+  const conviction = t * clamp01(Math.abs(regime.direction) / 0.4);
+
+  // Rejime göre ağırlık: trendde trend takipçileri, yatayda osilatörler öne alınır.
+  const trendWeight = (base: number) => base * (0.55 + 0.9 * t);
+  const oscWeight = (base: number) => base * (1.3 - 0.6 * t);
+  const momentumWeight = (base: number) => base * (0.8 + 0.4 * t);
 
   const checks: IndicatorCheck[] = [];
-  const push = (check: IndicatorCheck) => checks.push(check);
+  const push = (check: Omit<IndicatorCheck, "verdict">) =>
+    checks.push({ ...check, verdict: verdictOf(check.direction) });
 
   // ── Trend ────────────────────────────────────────────────────
-  if (snapshot.ema9 !== null && snapshot.ema21 !== null) {
-    const spread = ((snapshot.ema9 - snapshot.ema21) / snapshot.ema21) * 100;
-    const direction = clamp(spread / 1.2);
+  const ema9 = at(p.ema9, i);
+  const ema21 = at(p.ema21, i);
+  const ema50 = at(p.ema50, i);
+  const ema200 = at(p.ema200, i);
+
+  if (ema9 !== null && ema21 !== null) {
+    const spread = ((ema9 - ema21) / ema21) * 100;
     push({
       id: "ema-cross",
       category: "trend",
       labelKey: "ind.emaCross",
-      value: [price(snapshot.ema9), text("/"), price(snapshot.ema21)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 1.2,
+      value: [price(ema9), text("/"), price(ema21)],
+      direction: clamp((ema9 - ema21) / (0.6 * atrValue)),
+      weight: trendWeight(1.0),
       noteKey: spread > 0 ? "note.emaCross.up" : "note.emaCross.down",
-      noteParams: { spread: Math.abs(spread).toFixed(2) },
+      noteParams: { spread: num(Math.abs(spread)) },
     });
   }
 
-  if (snapshot.ema50 !== null && snapshot.ema200 !== null) {
-    const spread = ((snapshot.ema50 - snapshot.ema200) / snapshot.ema200) * 100;
-    const direction = clamp(spread / 5);
+  if (ema50 !== null && ema200 !== null) {
     push({
       id: "ema-50-200",
       category: "trend",
       labelKey: "ind.ema50200",
-      value: [price(snapshot.ema50), text("/"), price(snapshot.ema200)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 1.5,
-      noteKey: spread > 0 ? "note.ema50200.golden" : "note.ema50200.death",
+      value: [price(ema50), text("/"), price(ema200)],
+      direction: clamp((ema50 - ema200) / (3 * atrValue)),
+      weight: trendWeight(1.3),
+      noteKey: ema50 > ema200 ? "note.ema50200.golden" : "note.ema50200.death",
     });
   }
 
-  if (snapshot.ema200 !== null) {
-    const distance = ((lastPrice - snapshot.ema200) / snapshot.ema200) * 100;
-    const direction = clamp(distance / 8);
+  if (ema200 !== null) {
+    const distance = ((close - ema200) / ema200) * 100;
     push({
       id: "price-ema200",
       category: "trend",
       labelKey: "ind.priceEma200",
       value: [pct(distance)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 1.1,
+      direction: clamp((close - ema200) / (4 * atrValue)),
+      weight: trendWeight(1.0),
       noteKey: distance > 0 ? "note.priceEma200.above" : "note.priceEma200.below",
     });
   }
 
-  if (snapshot.supertrendDirection !== null && snapshot.supertrend !== null) {
-    const up = snapshot.supertrendDirection === 1;
+  const stValue = at(p.st.value, i);
+  const stDirection = p.st.direction[i] ?? null;
+  if (stValue !== null && stDirection !== null) {
+    const up = stDirection === 1;
     push({
       id: "supertrend",
       category: "trend",
       labelKey: "ind.supertrend",
-      value: [price(snapshot.supertrend)],
+      value: [price(stValue)],
       direction: up ? 0.8 : -0.8,
-      verdict: up ? "BUY" : "SELL",
-      weight: 1.4,
+      weight: trendWeight(1.3),
       noteKey: up ? "note.supertrend.up" : "note.supertrend.down",
-      noteParams: { level: snapshot.supertrend.toPrecision(6) },
+      noteParams: { level: price(stValue) },
     });
   }
 
-  if (snapshot.adx !== null && snapshot.plusDI !== null && snapshot.minusDI !== null) {
-    const diSpread = snapshot.plusDI - snapshot.minusDI;
-    const strength = Math.min(snapshot.adx / 40, 1);
-    const direction = clamp((diSpread / 25) * strength * 1.6);
+  const adxValue = at(p.adx.adx, i);
+  const plusDI = at(p.adx.plusDI, i);
+  const minusDI = at(p.adx.minusDI, i);
+  if (adxValue !== null && plusDI !== null && minusDI !== null) {
+    const diSpread = plusDI - minusDI;
+    const strength = Math.min(adxValue / 40, 1);
     push({
       id: "adx",
       category: "trend",
       labelKey: "ind.adx",
-      value: [
-        num(snapshot.adx, 1),
-        text("+DI"),
-        num(snapshot.plusDI, 1),
-        text("-DI"),
-        num(snapshot.minusDI, 1),
-      ],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 1.3,
-      noteKey:
-        snapshot.adx < 20 ? "note.adx.weak" : diSpread > 0 ? "note.adx.up" : "note.adx.down",
-      noteParams: { adx: snapshot.adx.toFixed(0) },
+      value: [num(adxValue, 1), text("+DI"), num(plusDI, 1), text("-DI"), num(minusDI, 1)],
+      direction: clamp((diSpread / 25) * strength * 1.6),
+      weight: trendWeight(1.2),
+      noteKey: adxValue < 20 ? "note.adx.weak" : diSpread > 0 ? "note.adx.up" : "note.adx.down",
+      noteParams: { adx: num(adxValue, 0) },
     });
   }
 
-  if (snapshot.vwap !== null) {
-    const distance = ((lastPrice - snapshot.vwap) / snapshot.vwap) * 100;
-    const direction = clamp(distance / 3);
+  const vwapValue = at(p.vwap, i);
+  if (p.hasVolume && vwapValue !== null) {
     push({
       id: "vwap",
       category: "trend",
       labelKey: "ind.vwap",
-      value: [price(snapshot.vwap)],
+      value: [price(vwapValue)],
+      direction: clamp((close - vwapValue) / (1.2 * atrValue)),
+      weight: trendWeight(0.7),
+      noteKey: close > vwapValue ? "note.vwap.above" : "note.vwap.below",
+    });
+  }
+
+  // ── Fiyat yapısı (gösterge dışı yöntemler) ───────────────────
+  if (structure) {
+    push({
+      id: "structure",
+      category: "structure",
+      labelKey: "ind.structure",
+      value: [text(structure.higherHigh ? "HH" : "LH"), text("/"), text(structure.higherLow ? "HL" : "LL")],
+      direction: structure.direction,
+      weight: 1.4,
+      noteKey:
+        structure.direction >= 0.3
+          ? "note.structure.up"
+          : structure.direction <= -0.3
+            ? "note.structure.down"
+            : "note.structure.mixed",
+    });
+  }
+
+  const volumeRatio = p.hasVolume ? volumeRatioAt(p.volumes, i) : null;
+
+  if (i >= 20) {
+    let channelHigh = -Infinity;
+    let channelLow = Infinity;
+    for (let k = i - 20; k < i; k++) {
+      if (p.highs[k] > channelHigh) channelHigh = p.highs[k];
+      if (p.lows[k] < channelLow) channelLow = p.lows[k];
+    }
+    const range = channelHigh - channelLow;
+    if (range > 0) {
+      const withVolume = volumeRatio !== null && volumeRatio >= 1.3;
+      const position = (close - channelLow) / range; // 0 = dip, 1 = tepe
+      let direction: number;
+      let noteKey: string;
+      if (close > channelHigh) {
+        direction = withVolume ? 1 : 0.7;
+        noteKey = withVolume ? "note.breakout.upVolume" : "note.breakout.up";
+      } else if (close < channelLow) {
+        direction = withVolume ? -1 : -0.7;
+        noteKey = withVolume ? "note.breakout.downVolume" : "note.breakout.down";
+      } else {
+        // Kanalın içinde: yalnızca trend varken hafif bir yön anlamı taşır.
+        direction = clamp((position - 0.5) * 2) * 0.35 * t;
+        noteKey = "note.breakout.inside";
+      }
+      push({
+        id: "breakout",
+        category: "structure",
+        labelKey: "ind.breakout",
+        value: [price(channelLow), text("–"), price(channelHigh)],
+        direction,
+        weight: 1.1,
+        noteKey,
+        noteParams: { percent: num(clamp01(position) * 100, 0) },
+      });
+    }
+  }
+
+  if (higher) {
+    // Üst periyodun yönü; orada trend zayıfsa etkisi de zayıf olur.
+    const direction = clamp(higher.direction * (0.5 + 0.5 * higher.trendiness) * 1.3);
+    push({
+      id: "higher-tf",
+      category: "structure",
+      labelKey: "ind.higherTf",
+      value: [text(higher.interval)],
       direction,
-      verdict: verdictOf(direction),
-      weight: 0.8,
-      noteKey: distance > 0 ? "note.vwap.above" : "note.vwap.below",
+      weight: 1.5,
+      noteKey:
+        direction >= 0.15
+          ? "note.higherTf.up"
+          : direction <= -0.15
+            ? "note.higherTf.down"
+            : "note.higherTf.flat",
+      noteParams: { interval: higher.interval },
+    });
+  }
+
+  if (p.benchmark && p.benchmarkTicker && i >= 60) {
+    const now = p.benchmark[i];
+    const b20 = p.benchmark[i - 20];
+    const b60 = p.benchmark[i - 60];
+    if (now !== null && b20 !== null && b60 !== null && b20 > 0 && b60 > 0) {
+      const rs20 = (close / p.closes[i - 20] - now / b20) * 100;
+      const rs60 = (close / p.closes[i - 60] - now / b60) * 100;
+      const combined = 0.5 * rs20 + 0.5 * rs60;
+      // Ölçek oynaklığa bağlı: sakin bir hissede 4 puanlık fark büyüktür.
+      const scale = Math.max(4, 5 * atrPercent);
+      const direction = clamp(combined / scale);
+      push({
+        id: "rel-strength",
+        category: "structure",
+        labelKey: "ind.relStrength",
+        value: [pct(combined)],
+        direction,
+        weight: 1.0,
+        noteKey:
+          direction >= 0.15
+            ? "note.relStrength.out"
+            : direction <= -0.15
+              ? "note.relStrength.under"
+              : "note.relStrength.inline",
+        noteParams: { benchmark: p.benchmarkTicker, diff: num(Math.abs(combined), 1) },
+      });
+    }
+  }
+
+  const patternBias = patternBiasAt(p, i, regime, conviction);
+  if (patternBias) {
+    push({
+      id: "patterns",
+      category: "structure",
+      labelKey: "ind.patterns",
+      value: [num(patternBias.count, 0)],
+      direction: patternBias.direction,
+      weight: 0.7,
+      noteKey: patternBias.direction > 0 ? "note.patterns.bull" : "note.patterns.bear",
+      noteParams: { count: patternBias.count },
     });
   }
 
   // ── Momentum ─────────────────────────────────────────────────
-  if (snapshot.rsi !== null) {
-    const value = snapshot.rsi;
-    let direction: number;
-    let noteKey: string;
-    if (value <= 30) {
-      direction = 0.85;
-      noteKey = "note.rsi.oversold";
-    } else if (value >= 70) {
-      direction = -0.85;
-      noteKey = "note.rsi.overbought";
-    } else {
-      direction = clamp((value - 50) / 25) * 0.6;
-      noteKey = value > 50 ? "note.rsi.bull" : "note.rsi.bear";
-    }
+  const rsiValue = at(p.rsi, i);
+  if (rsiValue !== null) {
+    const read = readOscillator(rsiValue, 30, 70, regime, conviction);
     push({
       id: "rsi",
       category: "momentum",
       labelKey: "ind.rsi",
-      value: [num(value, 1)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 1.5,
-      noteKey,
-      noteParams: { rsi: value.toFixed(1) },
+      value: [num(rsiValue, 1)],
+      direction: read.direction,
+      weight: oscWeight(1.3),
+      noteKey: read.noteKey,
+      noteParams: { value: num(rsiValue, 1) },
     });
   }
 
-  if (snapshot.macd !== null && snapshot.macdSignal !== null && snapshot.macdHistogram !== null) {
-    const previousHistogram = prev(macdResult.histogram, 1) ?? 0;
-    const rising = snapshot.macdHistogram > previousHistogram;
-    const above = snapshot.macd > snapshot.macdSignal;
-    const magnitude = Math.abs(snapshot.macdHistogram) / (lastPrice * 0.004 || 1);
-    let direction = clamp((above ? 1 : -1) * Math.min(0.4 + magnitude * 0.5, 1));
+  const macdValue = at(p.macd.macd, i);
+  const macdSignal = at(p.macd.signal, i);
+  const histogram = at(p.macd.histogram, i);
+  if (macdValue !== null && macdSignal !== null && histogram !== null) {
+    const previousHistogram = at(p.macd.histogram, i - 1) ?? 0;
+    const rising = histogram > previousHistogram;
+    const above = macdValue > macdSignal;
+    const magnitude = Math.abs(histogram) / (0.3 * atrValue);
+    let direction = (above ? 1 : -1) * Math.min(0.4 + magnitude * 0.5, 1);
+    // Çizginin üstünde ama zayıflıyorsa (ya da tersi) oy azaltılır.
     if (above !== rising) direction *= 0.6;
     push({
       id: "macd",
       category: "momentum",
       labelKey: "ind.macd",
-      value: [num(snapshot.macd, 4), text("/"), num(snapshot.macdSignal, 4)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 1.5,
+      value: [num(macdValue, 4), text("/"), num(macdSignal, 4)],
+      direction: clamp(direction),
+      weight: momentumWeight(1.3),
       noteKey: above
         ? rising
           ? "note.macd.aboveRising"
@@ -411,151 +872,293 @@ export function analyze(
     });
   }
 
-  if (snapshot.stochK !== null && snapshot.stochD !== null) {
-    const k = snapshot.stochK;
-    const direction = k <= 20 ? 0.7 : k >= 80 ? -0.7 : clamp((k - 50) / 30) * 0.5;
+  const stochK = at(p.stoch.k, i);
+  const stochD = at(p.stoch.d, i);
+  if (stochK !== null && stochD !== null) {
+    const read = readOscillator(stochK, 20, 80, regime, conviction);
     push({
       id: "stochastic",
       category: "momentum",
       labelKey: "ind.stoch",
-      value: [num(k, 1), text("/"), num(snapshot.stochD, 1)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 1.0,
-      noteKey: k <= 20 ? "note.stoch.low" : k >= 80 ? "note.stoch.high" : "note.stoch.mid",
-      noteParams: { k: k.toFixed(0) },
+      value: [num(stochK, 1), text("/"), num(stochD, 1)],
+      direction: read.direction,
+      weight: oscWeight(0.8),
+      noteKey: read.noteKey,
+      noteParams: { value: num(stochK, 0) },
     });
   }
 
-  if (snapshot.cci !== null) {
-    const value = snapshot.cci;
-    const direction = clamp(value / 200) * (Math.abs(value) > 100 ? 1 : 0.6);
+  const cciValue = at(p.cci, i);
+  if (cciValue !== null) {
+    const read = readOscillator(cciValue, -100, 100, regime, conviction);
     push({
       id: "cci",
       category: "momentum",
       labelKey: "ind.cci",
-      value: [num(value, 1)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 0.8,
-      noteKey: value > 100 ? "note.cci.high" : value < -100 ? "note.cci.low" : "note.cci.mid",
+      value: [num(cciValue, 1)],
+      direction: read.direction,
+      weight: oscWeight(0.6),
+      noteKey: read.noteKey,
+      noteParams: { value: num(cciValue, 0) },
     });
   }
 
-  if (snapshot.williamsR !== null) {
-    const value = snapshot.williamsR;
-    const direction = value <= -80 ? 0.6 : value >= -20 ? -0.6 : clamp((value + 50) / 30) * 0.4;
+  const williams = at(p.willr, i);
+  if (williams !== null) {
+    const read = readOscillator(williams, -80, -20, regime, conviction);
     push({
       id: "williams",
       category: "momentum",
       labelKey: "ind.williams",
-      value: [num(value, 1)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 0.6,
-      noteKey:
-        value <= -80
-          ? "note.williams.oversold"
-          : value >= -20
-            ? "note.williams.overbought"
-            : "note.williams.neutral",
+      value: [num(williams, 1)],
+      direction: read.direction,
+      weight: oscWeight(0.5),
+      noteKey: read.noteKey,
+      noteParams: { value: num(williams, 0) },
     });
   }
 
-  const rocValue = last(rocSeries);
+  const rocValue = at(p.roc, i);
   if (rocValue !== null) {
-    const direction = clamp(rocValue / 8);
     push({
       id: "roc",
       category: "momentum",
       labelKey: "ind.roc",
       value: [pct(rocValue)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 0.7,
-      noteKey: "note.roc.value",
-      noteParams: { roc: rocValue.toFixed(2) },
+      direction: clamp(rocValue / (3 * atrPercent)),
+      weight: momentumWeight(0.7),
+      noteKey: rocValue >= 0 ? "note.roc.up" : "note.roc.down",
+      noteParams: { roc: num(Math.abs(rocValue)) },
     });
   }
 
   // ── Volatilite ───────────────────────────────────────────────
-  if (snapshot.bbPercentB !== null) {
-    const b = snapshot.bbPercentB;
-    const direction = b <= 0.05 ? 0.7 : b >= 0.95 ? -0.7 : clamp((b - 0.5) * 1.2) * 0.5;
+  const percentB = at(p.bb.percentB, i);
+  if (percentB !== null) {
+    const read = readOscillator(percentB * 100, 5, 95, regime, conviction);
     push({
       id: "bollinger",
       category: "volatility",
       labelKey: "ind.bollinger",
-      value: [num(b * 100, 1)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 1.0,
-      noteKey: b <= 0.05 ? "note.bb.lower" : b >= 0.95 ? "note.bb.upper" : "note.bb.mid",
-      noteParams: { percent: (b * 100).toFixed(0) },
+      value: [num(percentB * 100, 1)],
+      direction: read.direction,
+      weight: oscWeight(0.8),
+      noteKey: read.noteKey,
+      noteParams: { value: num(percentB * 100, 0) },
     });
   }
 
   // ── Hacim ────────────────────────────────────────────────────
-  const obvSlope = slopePercent(obvSeries, 14);
-  if (obvSlope !== null) {
-    const direction = clamp(obvSlope / 15);
-    push({
-      id: "obv",
-      category: "volume",
-      labelKey: "ind.obv",
-      value: [pct(obvSlope)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 1.0,
-      noteKey: obvSlope > 0 ? "note.obv.up" : "note.obv.down",
-    });
-  }
+  // Hacim verisi olmayan varlıklarda (döviz kurları) bu bölüm atlanır. Sıfır
+  // hacimle hesaplanan MFI sabit 100 çıkıyor ve her zaman "aşırı alım" oyu
+  // veriyordu: var olmayan bir veriden sinyal üretmekti.
+  if (p.hasVolume && i >= 14) {
+    const obvNow = at(p.obv, i);
+    const obvPast = at(p.obv, i - 14);
+    let traded = 0;
+    for (let k = i - 13; k <= i; k++) traded += p.volumes[k];
+    if (obvNow !== null && obvPast !== null && traded > 0) {
+      // Son 14 mumda işlem gören hacmin net olarak ne kadarı alıcı tarafta?
+      const flow = (obvNow - obvPast) / traded;
+      push({
+        id: "obv",
+        category: "volume",
+        labelKey: "ind.obv",
+        value: [pct(flow * 100)],
+        direction: clamp(flow * 2.5),
+        weight: 1.0,
+        noteKey: flow > 0 ? "note.obv.up" : "note.obv.down",
+      });
+    }
 
-  if (snapshot.mfi !== null) {
-    const value = snapshot.mfi;
-    const direction = value <= 20 ? 0.7 : value >= 80 ? -0.7 : clamp((value - 50) / 30) * 0.5;
-    push({
-      id: "mfi",
-      category: "volume",
-      labelKey: "ind.mfi",
-      value: [num(value, 1)],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 0.9,
-      noteKey: value <= 20 ? "note.mfi.low" : value >= 80 ? "note.mfi.high" : "note.mfi.mid",
-      noteParams: { mfi: value.toFixed(0) },
-    });
-  }
+    const mfiValue = at(p.mfi, i);
+    if (mfiValue !== null) {
+      const read = readOscillator(mfiValue, 20, 80, regime, conviction);
+      push({
+        id: "mfi",
+        category: "volume",
+        labelKey: "ind.mfi",
+        value: [num(mfiValue, 1)],
+        direction: read.direction,
+        weight: oscWeight(0.7),
+        noteKey: read.noteKey,
+        noteParams: { value: num(mfiValue, 0) },
+      });
+    }
 
-  const volumeRatio = volumeSurge(volumes);
-  if (volumeRatio !== null) {
-    const priceUp = lastPrice >= previousClose;
-    const surge = volumeRatio > 1.5;
-    const direction = surge
-      ? priceUp
-        ? 0.6
-        : -0.6
-      : clamp((volumeRatio - 1) * (priceUp ? 0.4 : -0.4));
-    push({
-      id: "volume",
-      category: "volume",
-      labelKey: "ind.volume",
-      value: [num(volumeRatio, 2), text("×")],
-      direction,
-      verdict: verdictOf(direction),
-      weight: 0.6,
-      noteKey: surge ? "note.volume.surge" : "note.volume.normal",
-      noteParams: surge
-        ? { ratio: volumeRatio.toFixed(1), directionKey: priceUp ? "up" : "down" }
-        : undefined,
-    });
+    if (volumeRatio !== null) {
+      const priceUp = close >= previousClose;
+      const surge = volumeRatio > 1.5;
+      const direction = surge
+        ? priceUp
+          ? 0.6
+          : -0.6
+        : clamp((volumeRatio - 1) * (priceUp ? 0.4 : -0.4));
+      push({
+        id: "volume",
+        category: "volume",
+        labelKey: "ind.volume",
+        value: [num(volumeRatio, 2), text("×")],
+        direction,
+        weight: 0.6,
+        noteKey: surge ? "note.volume.surge" : "note.volume.normal",
+        noteParams: surge
+          ? { ratio: num(volumeRatio, 1), directionKey: priceUp ? "up" : "down" }
+          : undefined,
+      });
+    }
   }
 
   // ── Skor ─────────────────────────────────────────────────────
   const totalWeight = checks.reduce((sum, c) => sum + c.weight, 0);
   const weighted = checks.reduce((sum, c) => sum + c.weight * c.direction, 0);
   const score = totalWeight === 0 ? 0 : (weighted / totalWeight) * 100;
+
+  const agreement =
+    totalWeight === 0
+      ? 0
+      : checks
+          .filter((c) => c.direction !== 0 && Math.sign(c.direction) === Math.sign(score))
+          .reduce((sum, c) => sum + c.weight, 0) / totalWeight;
+
+  return { checks, score, regime, agreement };
+}
+
+/* ────────────────────────── Geçmiş sınaması ────────────────────────── */
+
+/** Sinyalin sonucu kaç mum sonra ölçülür. */
+const BACKTEST_HORIZON = 10;
+/** Göstergelerin ısınması için atlanan baş mumlar. */
+const BACKTEST_WARMUP = 80;
+/** Bu sayının altındaki sinyalle sonuç çıkarılmaz. */
+const BACKTEST_MIN_SIGNALS = 12;
+/** Büzme katsayısı: bu kadar "hayali" taban gözlem eklenir. */
+const BACKTEST_SHRINK = 10;
+
+/**
+ * Motoru bu varlığın kendi geçmişinde çalıştırır.
+ *
+ * Her geçmiş mum için "o gün ne derdi" hesaplanır ve `BACKTEST_HORIZON` mum
+ * sonraki fiyatla karşılaştırılır. Üç dürüstlük kuralı:
+ *
+ *   1. Geleceğe bakılmaz: `evaluate` yalnızca ≤ i mumları okur; pivotlar
+ *      ancak kesinleştikten sonra kullanılır.
+ *   2. İsabet tek başına verilmez, **taban oranla** birlikte verilir.
+ *      Yükselen bir piyasada her alış sinyali "tutar"; anlamlı olan, sinyalin
+ *      rastgele bir mumdan ne kadar iyi olduğudur.
+ *   3. Küçük örnek büzülür: 5 sinyalin 5'i tuttu diye %100 denmez; sonuç
+ *      taban orana doğru çekilir ve `reliable` bayrağı kapalı kalır.
+ *
+ * Sınırı da bilinmeli: ardışık mumların sinyalleri birbirinden bağımsız
+ * değildir ve tek bir varlığın birkaç yüz mumu küçük bir örnektir. Bu ölçüm
+ * bir garanti değil, motorun bu varlıkta nasıl davrandığının özetidir.
+ */
+function runBacktest(p: Prepared): Backtest | null {
+  const end = p.closes.length - 1 - BACKTEST_HORIZON;
+  if (end - BACKTEST_WARMUP < 40) return null;
+
+  let samples = 0;
+  let ups = 0;
+  let downs = 0;
+  const buy = { signals: 0, hits: 0, sum: 0 };
+  const sell = { signals: 0, hits: 0, sum: 0 };
+
+  for (let i = BACKTEST_WARMUP; i <= end; i++) {
+    // Üst periyot bağlamı geçmişe hizalanamadığı için sınamada kullanılmaz;
+    // canlı skor bu yüzden sınanandan biraz daha fazla bilgi içerir.
+    const { score } = evaluate(p, i, null);
+    const forward = (p.closes[i + BACKTEST_HORIZON] / p.closes[i] - 1) * 100;
+
+    samples++;
+    if (forward > 0) ups++;
+    else if (forward < 0) downs++;
+
+    if (score >= SIGNAL_THRESHOLD) {
+      buy.signals++;
+      buy.sum += forward;
+      if (forward > 0) buy.hits++;
+    } else if (score <= -SIGNAL_THRESHOLD) {
+      sell.signals++;
+      sell.sum -= forward;
+      if (forward < 0) sell.hits++;
+    }
+  }
+
+  const side = (
+    raw: { signals: number; hits: number; sum: number },
+    baseRate: number,
+  ): BacktestSide | null => {
+    if (raw.signals === 0) return null;
+    const shrunk = (raw.hits + BACKTEST_SHRINK * baseRate) / (raw.signals + BACKTEST_SHRINK);
+    return {
+      signals: raw.signals,
+      hitRate: raw.hits / raw.signals,
+      baseRate,
+      edge: shrunk - baseRate,
+      avgReturn: raw.sum / raw.signals,
+      reliable: raw.signals >= BACKTEST_MIN_SIGNALS,
+    };
+  };
+
+  return {
+    horizon: BACKTEST_HORIZON,
+    samples,
+    buy: side(buy, ups / samples),
+    sell: side(sell, downs / samples),
+  };
+}
+
+/* ────────────────────────── Ana analiz ────────────────────────── */
+
+export function analyze(
+  instrument: Instrument,
+  interval: Interval,
+  candles: Candle[],
+  source: DataSource,
+  context: AnalysisContext = {},
+): Analysis {
+  if (candles.length < 60) {
+    throw new Error("Analiz için yeterli mum verisi yok (en az 60 mum gerekir).");
+  }
+
+  const p = prepare(candles, context);
+  const i = candles.length - 1;
+  const lastPrice = p.closes[i];
+  const previousClose = p.closes[i - 1];
+
+  const { checks, score, regime, agreement } = evaluate(p, i, context.higher ?? null);
   const signal = signalFromScore(score);
+  const backtest = context.backtest === false ? null : runBacktest(p);
+
+  const snapshot: IndicatorSnapshot = {
+    rsi: at(p.rsi, i),
+    macd: at(p.macd.macd, i),
+    macdSignal: at(p.macd.signal, i),
+    macdHistogram: at(p.macd.histogram, i),
+    ema9: at(p.ema9, i),
+    ema21: at(p.ema21, i),
+    ema50: at(p.ema50, i),
+    ema200: at(p.ema200, i),
+    sma20: at(p.sma20, i),
+    bbUpper: at(p.bb.upper, i),
+    bbMiddle: at(p.bb.middle, i),
+    bbLower: at(p.bb.lower, i),
+    bbPercentB: at(p.bb.percentB, i),
+    bbBandwidth: at(p.bb.bandwidth, i),
+    stochK: at(p.stoch.k, i),
+    stochD: at(p.stoch.d, i),
+    atr: at(p.atr, i),
+    adx: at(p.adx.adx, i),
+    plusDI: at(p.adx.plusDI, i),
+    minusDI: at(p.adx.minusDI, i),
+    cci: at(p.cci, i),
+    williamsR: at(p.willr, i),
+    mfi: p.hasVolume ? at(p.mfi, i) : null,
+    obv: p.hasVolume ? at(p.obv, i) : null,
+    vwap: p.hasVolume ? at(p.vwap, i) : null,
+    supertrend: at(p.st.value, i),
+    supertrendDirection: p.st.direction[i] ?? null,
+  };
 
   const tally = {
     buy: checks.filter((c) => c.verdict === "BUY").length,
@@ -563,33 +1166,24 @@ export function analyze(
     neutral: checks.filter((c) => c.verdict === "NEUTRAL").length,
   };
 
-  const agreement =
-    totalWeight === 0
-      ? 0
-      : checks
-          .filter((c) => Math.sign(c.direction) === Math.sign(score) && c.direction !== 0)
-          .reduce((sum, c) => sum + c.weight, 0) / totalWeight;
-  const adxBoost = snapshot.adx === null ? 0 : Math.min(snapshot.adx, 40) / 40;
-  const confidence = Math.round(
-    Math.min(100, Math.abs(score) * 0.55 + agreement * 45 + adxBoost * 12),
-  );
+  const confidence = confidenceOf({
+    score,
+    agreement,
+    regime,
+    higher: context.higher ?? null,
+    backtest,
+  });
 
   // ── Formasyonlar ve seviyeler ────────────────────────────────
-  const patterns = detectPatterns(candles, {
-    rsiSeries,
-    macdResult,
-    ema50,
-    ema200,
-    bbBandwidth: bb.bandwidth,
-  });
+  const patterns = patternsAt(p, i);
   const levels = findLevels(candles, lastPrice);
 
   // ── İşlem planı ──────────────────────────────────────────────
   const atrValue = snapshot.atr ?? lastPrice * 0.02;
   const atrPercent = (atrValue / lastPrice) * 100;
   const side: "LONG" | "SHORT" = score >= 0 ? "LONG" : "SHORT";
-  const swingLow = Math.min(...lows.slice(-12));
-  const swingHigh = Math.max(...highs.slice(-12));
+  const swingLow = Math.min(...p.lows.slice(-12));
+  const swingHigh = Math.max(...p.highs.slice(-12));
 
   const stopLoss =
     side === "LONG"
@@ -619,7 +1213,7 @@ export function analyze(
   };
 
   const bandwidth = snapshot.bbBandwidth ?? 0;
-  const bandwidthHistory = bb.bandwidth.filter((v): v is number => v !== null).slice(-60);
+  const bandwidthHistory = p.bb.bandwidth.filter((v): v is number => v !== null).slice(-60);
   const bandwidthMin = bandwidthHistory.length ? Math.min(...bandwidthHistory) : bandwidth;
   const squeeze = bandwidth > 0 && bandwidth <= bandwidthMin * 1.2;
 
@@ -657,7 +1251,62 @@ export function analyze(
                 ? "trend.developing"
                 : "trend.weak",
     },
+    regime: {
+      trendiness: Number(regime.trendiness.toFixed(3)),
+      direction: Number(regime.direction.toFixed(3)),
+      key: regime.key,
+    },
+    backtest,
   };
+}
+
+/**
+ * Güven yüzdesi: sinyalin ne kadar sağlam temele oturduğunun bileşik ölçüsü.
+ *
+ * Beş bileşen, olanların ağırlıklı ortalaması alınır:
+ *   • skorun büyüklüğü          — sinyal ne kadar net
+ *   • göstergelerin uyumu       — kaçı aynı şeyi söylüyor
+ *   • rejimin netliği           — belirgin trend ya da belirgin yatay; geçiş
+ *                                 dönemlerinde her yöntem daha sık yanılır
+ *   • üst periyot uyumu         — büyük resim aynı yönde mi (verildiyse)
+ *   • geçmiş sınaması           — bu sinyal bu varlıkta geçmişte taban
+ *                                 orandan iyi miydi (örnek yetiyorsa)
+ *
+ * Son iki bileşen her zaman bulunmaz; bulunmadığında yokmuş gibi davranılır,
+ * sıfır sayılmaz — eksik veri kötü veri değildir.
+ */
+function confidenceOf(input: {
+  score: number;
+  agreement: number;
+  regime: Regime;
+  higher: AnalysisContext["higher"];
+  backtest: Backtest | null;
+}): number {
+  const { score, agreement, regime, higher, backtest } = input;
+  const parts: [number, number][] = [
+    [Math.min(1, Math.abs(score) / 55), 0.3],
+    [agreement, 0.25],
+    [Math.abs(2 * regime.trendiness - 1), 0.1],
+  ];
+
+  if (higher) {
+    const higherDirection = higher.direction * (0.5 + 0.5 * higher.trendiness);
+    const sameSide = Math.sign(higherDirection) === Math.sign(score);
+    parts.push([
+      Math.abs(higherDirection) < 0.15 ? 0.5 : sameSide ? 1 : 0,
+      0.15,
+    ]);
+  }
+
+  const side = score >= 0 ? backtest?.buy : backtest?.sell;
+  if (side && side.reliable) {
+    // +0,20 üstünlük tam puan, −0,20 sıfır puan.
+    parts.push([clamp01(0.5 + side.edge * 2.5), 0.2]);
+  }
+
+  const weight = parts.reduce((sum, [, w]) => sum + w, 0);
+  const value = parts.reduce((sum, [v, w]) => sum + v * w, 0) / weight;
+  return Math.round(clamp01(value) * 100);
 }
 
 /** Grafikte çizilecek serileri hesaplar. */
@@ -678,49 +1327,20 @@ export function chartSeries(candles: Candle[]): ChartSeries {
   };
 }
 
-function lastDirection(directions: (1 | -1 | null)[]): 1 | -1 | null {
-  for (let i = directions.length - 1; i >= 0; i--) {
-    if (directions[i] !== null) return directions[i];
-  }
-  return null;
-}
-
-/** Son `period` mumdaki yüzde eğim (OBV gibi ölçeksiz seriler için). */
-function slopePercent(series: Series, period: number): number | null {
-  const current = last(series);
-  const past = prev(series, period);
-  if (current === null || past === null) return null;
-  const base = Math.abs(past);
-  if (base < 1e-9) return current > 0 ? 100 : current < 0 ? -100 : 0;
-  return ((current - past) / base) * 100;
-}
-
-/** Son mumun hacminin, önceki 20 mumun ortalamasına oranı. */
-function volumeSurge(volumes: number[]): number | null {
-  if (volumes.length < 21) return null;
-  const window = volumes.slice(-21, -1);
-  const average = window.reduce((sum, v) => sum + v, 0) / window.length;
-  if (average === 0) return null;
-  return volumes[volumes.length - 1] / average;
-}
-
 /* ────────────────────────── Formasyonlar ────────────────────────── */
 
-function detectPatterns(
-  candles: Candle[],
-  context: {
-    rsiSeries: Series;
-    macdResult: { macd: Series; signal: Series; histogram: Series };
-    ema50: Series;
-    ema200: Series;
-    bbBandwidth: Series;
-  },
-): Pattern[] {
+/**
+ * `i` mumunun kapanışında görülen formasyonlar.
+ *
+ * Konuma bağlı yazıldı (dizinin sonuna değil `i`'ye bakar) çünkü geçmiş
+ * sınaması aynı fonksiyonu eski mumlar için çağırıyor.
+ */
+function patternsAt(p: Prepared, i: number): Pattern[] {
   const patterns: Pattern[] = [];
-  const n = candles.length;
-  const c1 = candles[n - 1];
-  const c2 = candles[n - 2];
-  const c3 = candles[n - 3];
+  if (i < 2) return patterns;
+  const c1 = p.candles[i];
+  const c2 = p.candles[i - 1];
+  const c3 = p.candles[i - 2];
 
   const body = (c: Candle) => Math.abs(c.close - c.open);
   const range = (c: Candle) => Math.max(c.high - c.low, 1e-12);
@@ -750,22 +1370,25 @@ function detectPatterns(
     patterns.push({ id: "evening-star", bias: "SELL" });
   }
 
-  const cross = recentCross(context.ema50, context.ema200, 5);
+  const cross = recentCross(p.ema50, p.ema200, 5, i);
   if (cross === "up") patterns.push({ id: "golden-cross", bias: "BUY" });
   else if (cross === "down") patterns.push({ id: "death-cross", bias: "SELL" });
 
-  const macdCross = recentCross(context.macdResult.macd, context.macdResult.signal, 3);
+  const macdCross = recentCross(p.macd.macd, p.macd.signal, 3, i);
   if (macdCross === "up") patterns.push({ id: "macd-cross-up", bias: "BUY" });
   else if (macdCross === "down") patterns.push({ id: "macd-cross-down", bias: "SELL" });
 
-  const divergence = detectDivergence(candles, context.rsiSeries);
+  const divergence = divergenceAt(p, i);
   if (divergence) patterns.push(divergence);
 
-  const bandwidths = context.bbBandwidth.filter((v): v is number => v !== null);
+  const bandwidths: number[] = [];
+  for (let k = Math.max(0, i - 59); k <= i; k++) {
+    const v = at(p.bb.bandwidth, k);
+    if (v !== null) bandwidths.push(v);
+  }
   if (bandwidths.length > 40) {
     const current = bandwidths[bandwidths.length - 1];
-    const window = bandwidths.slice(-60);
-    if (current <= Math.min(...window) * 1.15) {
+    if (current <= Math.min(...bandwidths) * 1.15) {
       patterns.push({ id: "bb-squeeze", bias: "NEUTRAL" });
     }
   }
@@ -773,19 +1396,63 @@ function detectPatterns(
   return patterns;
 }
 
-/** İki serinin son `lookback` mumda kesişip kesişmediği. */
-function recentCross(fast: Series, slow: Series, lookback: number): "up" | "down" | null {
+/**
+ * Formasyonların skora katkısı.
+ *
+ * Kesişimler burada sayılmaz: EMA ve MACD kesişimleri zaten kendi
+ * göstergelerinde oylanıyor, ikinci kez saymak aynı bilgiye çift oy vermek
+ * olurdu. Güçlü bir trende karşı oluşan tek mumluk formasyonların oyu
+ * azaltılır; trendi tek mum döndürmez.
+ */
+const PATTERN_STRENGTH: Record<string, number> = {
+  "bullish-engulfing": 0.5,
+  "bearish-engulfing": 0.5,
+  hammer: 0.4,
+  "shooting-star": 0.4,
+  "morning-star": 0.6,
+  "evening-star": 0.6,
+  "bullish-divergence": 0.7,
+  "bearish-divergence": 0.7,
+};
+
+function patternBiasAt(
+  p: Prepared,
+  i: number,
+  regime: Regime,
+  conviction: number,
+): { direction: number; count: number } | null {
+  let total = 0;
+  let count = 0;
+  for (const pattern of patternsAt(p, i)) {
+    const strength = PATTERN_STRENGTH[pattern.id];
+    if (!strength || pattern.bias === "NEUTRAL") continue;
+    const sign = pattern.bias === "BUY" ? 1 : -1;
+    const againstTrend = sign * regime.direction < 0;
+    total += sign * strength * (againstTrend ? 1 - 0.5 * conviction : 1);
+    count++;
+  }
+  if (count === 0 || Math.abs(total) < 0.05) return null;
+  return { direction: clamp(total), count };
+}
+
+/** İki serinin `i`'den geriye `lookback` mum içinde kesişip kesişmediği. */
+function recentCross(
+  fast: Series,
+  slow: Series,
+  lookback: number,
+  i: number,
+): "up" | "down" | null {
   const points: { fast: number; slow: number }[] = [];
-  for (let i = fast.length - 1; i >= 0 && points.length < lookback + 1; i--) {
-    const f = fast[i];
-    const s = slow[i];
+  for (let k = i; k >= 0 && points.length < lookback + 1; k--) {
+    const f = at(fast, k);
+    const s = at(slow, k);
     if (f === null || s === null) continue;
     points.unshift({ fast: f, slow: s });
   }
   if (points.length < 2) return null;
-  for (let i = 1; i < points.length; i++) {
-    const before = points[i - 1].fast - points[i - 1].slow;
-    const after = points[i].fast - points[i].slow;
+  for (let k = 1; k < points.length; k++) {
+    const before = points[k - 1].fast - points[k - 1].slow;
+    const after = points[k].fast - points[k].slow;
     if (before <= 0 && after > 0) return "up";
     if (before >= 0 && after < 0) return "down";
   }
@@ -793,40 +1460,43 @@ function recentCross(fast: Series, slow: Series, lookback: number): "up" | "down
 }
 
 /** Fiyat ile RSI arasında pozitif/negatif uyumsuzluk arar. */
-function detectDivergence(candles: Candle[], rsiSeries: Series): Pattern | null {
+function divergenceAt(p: Prepared, i: number): Pattern | null {
   const window = 40;
-  if (candles.length < window + 5) return null;
-  const slice = candles.slice(-window);
-  const rsiSlice = rsiSeries.slice(-window);
+  if (i < window + 4) return null;
+  const start = i - window + 1;
 
-  let lowIndex = 0;
-  let highIndex = 0;
-  for (let i = 1; i < slice.length - 3; i++) {
-    if (slice[i].low < slice[lowIndex].low) lowIndex = i;
-    if (slice[i].high > slice[highIndex].high) highIndex = i;
+  let lowIndex = start;
+  let highIndex = start;
+  // Son üç mum karşılaştırmanın "şimdi" tarafıdır; uç nokta aramasına girmez.
+  for (let k = start + 1; k <= i - 3; k++) {
+    if (p.lows[k] < p.lows[lowIndex]) lowIndex = k;
+    if (p.highs[k] > p.highs[highIndex]) highIndex = k;
   }
 
-  const lastIndex = slice.length - 1;
-  const recentLow = Math.min(...slice.slice(-6).map((c) => c.low));
-  const recentHigh = Math.max(...slice.slice(-6).map((c) => c.high));
-  const rsiNow = rsiSlice[lastIndex];
-  const rsiAtLow = rsiSlice[lowIndex];
-  const rsiAtHigh = rsiSlice[highIndex];
+  let recentLow = Infinity;
+  let recentHigh = -Infinity;
+  for (let k = i - 5; k <= i; k++) {
+    if (p.lows[k] < recentLow) recentLow = p.lows[k];
+    if (p.highs[k] > recentHigh) recentHigh = p.highs[k];
+  }
 
+  const rsiNow = at(p.rsi, i);
+  const rsiAtLow = at(p.rsi, lowIndex);
+  const rsiAtHigh = at(p.rsi, highIndex);
   if (rsiNow === null) return null;
 
   if (
     rsiAtLow !== null &&
-    lowIndex < slice.length - 6 &&
-    recentLow <= slice[lowIndex].low * 1.005 &&
+    lowIndex < i - 5 &&
+    recentLow <= p.lows[lowIndex] * 1.005 &&
     rsiNow > rsiAtLow + 4
   ) {
     return { id: "bullish-divergence", bias: "BUY" };
   }
   if (
     rsiAtHigh !== null &&
-    highIndex < slice.length - 6 &&
-    recentHigh >= slice[highIndex].high * 0.995 &&
+    highIndex < i - 5 &&
+    recentHigh >= p.highs[highIndex] * 0.995 &&
     rsiNow < rsiAtHigh - 4
   ) {
     return { id: "bearish-divergence", bias: "SELL" };
