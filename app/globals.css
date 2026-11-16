@@ -931,6 +931,62 @@ textarea {
   margin-top: 2px;
 }
 
+/* ── Doğruluk sayfası ── */
+
+.dogru-buyuk {
+  font-size: 44px;
+  font-weight: 600;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.dogru-kiyas {
+  display: grid;
+  gap: 12px;
+}
+
+.dogru-kiyas > div {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.9fr) minmax(0, 1.4fr) auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.dogru-liste {
+  display: grid;
+}
+
+.dogru-satir {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) auto minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(0, 0.6fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.dogru-satir:first-child {
+  border-top: 0;
+}
+
+@media (max-width: 620px) {
+  .dogru-kiyas > div {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .dogru-kiyas .meter {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .dogru-satir {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+}
+
 .field {
   display: grid;
   gap: 7px;

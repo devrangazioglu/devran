@@ -47,6 +47,7 @@ export const zh: Partial<Dictionary> = {
   "nav.goPanel": "进入面板",
   "nav.scanner": "信号扫描器",
   "nav.watchlist": "自选列表",
+  "nav.accuracy": "准确率",
   "nav.settings": "设置",
   "nav.logout": "退出",
   "nav.markets": "市场",

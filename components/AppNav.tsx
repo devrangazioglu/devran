@@ -27,6 +27,7 @@ export default async function AppNav() {
     { href: "/panel", label: t("nav.panel") },
     { href: "/tarayici", label: t("nav.scanner") },
     { href: "/takip", label: t("nav.watchlist") },
+    { href: "/dogruluk", label: t("nav.accuracy") },
     { href: "/abonelik", label: t("nav.subscription") },
     { href: "/ayarlar", label: t("nav.settings") },
   ];

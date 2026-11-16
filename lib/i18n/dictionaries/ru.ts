@@ -48,6 +48,7 @@ export const ru: Partial<Dictionary> = {
   "nav.goPanel": "Перейти в панель",
   "nav.scanner": "Сканер сигналов",
   "nav.watchlist": "Мой список",
+  "nav.accuracy": "Точность",
   "nav.settings": "Настройки",
   "nav.logout": "Выйти",
   "nav.markets": "Рынки",

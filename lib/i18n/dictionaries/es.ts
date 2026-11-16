@@ -48,6 +48,7 @@ export const es: Partial<Dictionary> = {
   "nav.goPanel": "Ir al panel",
   "nav.scanner": "Escáner de señales",
   "nav.watchlist": "Mi lista",
+  "nav.accuracy": "Precisión",
   "nav.settings": "Ajustes",
   "nav.logout": "Salir",
   "nav.markets": "Mercados",

@@ -48,6 +48,7 @@ export const ar: Partial<Dictionary> = {
   "nav.goPanel": "الانتقال إلى اللوحة",
   "nav.scanner": "ماسح الإشارات",
   "nav.watchlist": "قائمتي",
+  "nav.accuracy": "الدقة",
   "nav.settings": "الإعدادات",
   "nav.logout": "خروج",
   "nav.markets": "الأسواق",

@@ -48,6 +48,7 @@ export const de: Partial<Dictionary> = {
   "nav.goPanel": "Zum Dashboard",
   "nav.scanner": "Signal-Scanner",
   "nav.watchlist": "Watchlist",
+  "nav.accuracy": "Trefferquote",
   "nav.settings": "Einstellungen",
   "nav.logout": "Abmelden",
   "nav.markets": "Märkte",

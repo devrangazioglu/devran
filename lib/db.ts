@@ -145,6 +145,27 @@ const SCHEMA = `
 
   create index if not exists piyasa_onbellek_biter on piyasa_onbellek (biter);
 
+  -- Canlı doğruluk ölçümü: her gün sabit bir varlık listesinin sinyali yazılır,
+  -- 10 işlem günü sonra gerçekleşen fiyat eklenir (bkz. lib/sinyal-gunlugu.ts).
+  create table if not exists sinyal_gunlugu (
+    id           text primary key,
+    tarih        text   not null,
+    market       text   not null,
+    symbol       text   not null,
+    ticker       text   not null,
+    sinyal       text   not null,
+    skor         real   not null,
+    guven        integer not null,
+    fiyat        double precision not null,
+    mum_zamani   bigint not null,
+    kaydedildi   bigint not null,
+    sonuc_fiyat  double precision,
+    sonuc_zamani bigint,
+    getiri       real
+  );
+
+  create index if not exists sinyal_gunlugu_tarih on sinyal_gunlugu (tarih);
+
   create table if not exists piyasa_kota (
     anahtar text primary key,
     sayac   integer not null default 0,
