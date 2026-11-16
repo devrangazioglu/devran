@@ -28,12 +28,6 @@ jobs:
 
       - run: npm ci
 
-      # Yeni ülke borsaları: tarayıcıda var mı, Yahoo mum geçmişi veriyor mu,
-      # sembol eşlemesi doğru mu (iki kaynağın fiyatı tutuyor mu).
-      - name: Ülke borsalarını ölç
-        run: npm run ulke-tara
-        continue-on-error: true
-
       # Mum geçmişinin asıl kaynağı (grafik akışı) Vercel'de de çalışıyor mu,
       # yeni ülke sayfaları canlı veriyle açılıyor mu?
       - name: Yayında grafik akışı ve ülke sayfaları
@@ -43,16 +37,23 @@ jobs:
         run: |
           echo "── /api/tani (grafik akışı) ──"
           curl -sS -m 60 "$SITE/api/tani" | head -c 600; echo
-          for yol in piyasa/japonya-borsasi piyasa/almanya-borsasi piyasa/ingiltere-borsasi piyasa/cin-borsasi; do
-            sayfa="$(curl -sS -m 60 "$SITE/$yol" || true)"
-            satir="$(printf %s "$sayfa" | grep -o '/varlik/[a-z]*/[A-Z0-9.^=-]*' | sort -u | wc -l)"
+          for ulke in cin japonya hong-kong hindistan ingiltere almanya fransa kanada kore tayvan suudi-arabistan; do
+            sayfa="$(curl -sS -m 60 "$SITE/piyasa/$ulke-borsasi" || true)"
+            semboller="$(printf %s "$sayfa" | grep -o '/varlik/[a-z]*/[A-Za-z0-9.%^=-]*' | sort -u)"
             demo="$(printf %s "$sayfa" | grep -c 'demo veri gösteriliyor' || true)"
-            echo "$yol → $satir varlık satırı, demo: $demo"
+            echo "$ulke → $(printf %s "$semboller" | grep -c . ) varlık satırı, demo: $demo"
+            echo "   $(printf %s "$semboller" | sed 's#.*/##' | tr '\n' ' ')"
           done
           for v in "japonya&symbol=7203.T" "almanya&symbol=SAP.DE" "bist&symbol=THYAO.IS" "abd&symbol=AAPL"; do
             kod="$(curl -sS -m 60 -o yanit.json -w '%{http_code}' "$SITE/api/analyze?market=$v&interval=1d" || true)"
             echo "analyze $v → HTTP $kod $(head -c 300 yanit.json)"
           done
+
+      # Yeni ülke borsaları: tarayıcıda var mı, Yahoo mum geçmişi veriyor mu,
+      # sembol eşlemesi doğru mu (iki kaynağın fiyatı tutuyor mu).
+      - name: Ülke borsalarını ölç
+        run: npm run ulke-tara
+        continue-on-error: true
 
       # Bu adım bir dönem hata veriyordu (kaynak bu makineyi de engelliyordu)
       # ve hatayı yutmak zorundaydık. Artık aktarıcı üzerinden 6/6 geçiyor, bu
