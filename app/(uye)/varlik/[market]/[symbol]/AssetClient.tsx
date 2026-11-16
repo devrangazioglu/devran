@@ -336,37 +336,31 @@ export default function AssetClient({
             />
           </div>
 
-          {/* ── Bağlam: piyasa durumu ve geçmiş sınaması ── */}
-          <div className="grid-2 kart-sirasi">
-            <Reveal>
-              <RejimKarti analysis={analysis} />
-            </Reveal>
-            <Reveal delay={60}>
-              <SinamaKarti analysis={analysis} />
-            </Reveal>
-          </div>
-
-          {/* ── Olasılık ve seri istatistikleri ── */}
-          <div className="grid-2 kart-sirasi">
-            <Reveal>
-              <OlasilikKarti analysis={analysis} />
-            </Reveal>
-            <Reveal delay={60}>
-              <IstatistikKarti analysis={analysis} />
-            </Reveal>
-          </div>
-
           {data.fundamentals && (
             <Reveal>
               <TemelKarti fundamentals={data.fundamentals} overallKey={data.overallKey} />
             </Reveal>
           )}
 
-          {/* ── Yorum + plan ────────────────────────────── */}
-          {/* Kartlar iki sütuna akar (CSS sütunları): yorum kartı katlanınca kısa
-              kalıyor, eski düzende (geniş sol sütun + sağda kart yığını) solda
-              büyük bir boşluk açılıyordu. */}
+          {/* ── Bağlam, istatistik, yorum ve plan ───────── */}
+          {/* Bütün kartlar tek bir iki sütunlu akışta (CSS sütunları). Önceden
+              piyasa durumu / sınama ve olasılık / istatistik ikişerli satırlardı:
+              satırdaki kısa kart uzunun boyuna esnetiliyor ve altında boş alan
+              kalıyordu. Tek akışta her kart kendi boyunda, sütunlar da
+              birbirine yakın uzunlukta biter. */}
           <div className="kart-sutunlari">
+            <Reveal>
+              <RejimKarti analysis={analysis} />
+            </Reveal>
+            <Reveal>
+              <SinamaKarti analysis={analysis} />
+            </Reveal>
+            <Reveal>
+              <OlasilikKarti analysis={analysis} />
+            </Reveal>
+            <Reveal>
+              <IstatistikKarti analysis={analysis} />
+            </Reveal>
             <Reveal>
               <div className="card">
                 <div className="card-title">

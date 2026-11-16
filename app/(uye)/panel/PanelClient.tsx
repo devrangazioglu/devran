@@ -251,7 +251,10 @@ export default function PanelClient({
         </SpotlightCard>
       </Reveal>
 
-      <div className="grid-2" style={{ margin: "22px 0" }}>
+      {/* Kartlar kendi boylarında kalır (üste hizalı): satış listesi uzunken
+          takip kartı onun boyuna esnetilip içi boş görünüyordu. Takip listesi
+          boşsa satış kartı tek başına tam genişlikte durur. */}
+      <div className={watchlist.length > 0 ? "grid-2 ust-hizali" : ""} style={{ margin: "22px 0" }}>
         <div className="card">
           <div className="card-title">{t("panel.topSellTitle")}</div>
           {loadingScan ? (

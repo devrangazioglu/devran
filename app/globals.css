@@ -192,10 +192,23 @@ textarea {
 
 /* Dar masaüstünde e-posta menüyü sıkıştırır; kimliği zaten çıkış düğmesi
    ve panel bağlamı taşıyor. */
-@media (max-width: 1180px) {
+@media (max-width: 1440px) {
   .nav-email {
     display: none;
   }
+}
+
+/* Geniş ekranda da uzun bir adres menüyü sağa taşırmasın. */
+.nav-email {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Izgarada kartlar kendi boyunda kalır; kısa kart uzunun boyuna esnetilmez. */
+.ust-hizali {
+  align-items: start;
 }
 
 .nav-links a:hover,
