@@ -814,10 +814,10 @@ export const tr = {
     "Amerikan borsası hafta içi belirli saatlerde açıktır; kapanış sonrası üretilen sinyaller bir sonraki seansın açılışında değişebilir. Listede endeksler ve işlem hacmi en yüksek hisseler bulunur. Her hisse için trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stokastik), volatilite (Bollinger, ATR) ve hacim göstergeleri ayrı ayrı oy verir; sinyal bu oyların ağırlıklı ortalamasıdır.",
   "market.bist.aboutTitle": "BIST hisselerinde teknik analiz",
   "market.bist.about":
-    "Borsa İstanbul hisseleri için sinyaller 15 dakikadan haftalığa kadar altı periyotta üretilir; fiyatlar 15 dakika gecikmelidir. Tabloda BIST 100 ve BIST 30 endeksleriyle birlikte işlem hacmi yüksek hisseler yer alır. Her hisse için hesaplanan skor −100 ile +100 arasındadır: +45 ve üzeri güçlü alış, −45 ve altı güçlü satış sayılır; arada kalan bölge kararsız piyasayı gösterir ve BEKLE olarak işaretlenir.",
+    "Borsa İstanbul hisseleri için sinyaller günlük ve haftalık grafikte üretilir; fiyatlar 15 dakika gecikmelidir. Tabloda BIST 100 ve BIST 30 endeksleriyle birlikte işlem hacmi yüksek hisseler yer alır. Her hisse için hesaplanan skor −100 ile +100 arasındadır: +45 ve üzeri güçlü alış, −45 ve altı güçlü satış sayılır; arada kalan bölge kararsız piyasayı gösterir ve BEKLE olarak işaretlenir.",
   "market.emtia.aboutTitle": "Döviz, altın ve petrolde teknik analiz",
   "market.emtia.about":
-    "Döviz, altın, gümüş ve petrol için sinyaller 15 dakikadan haftalığa kadar altı periyotta üretilir. Döviz kurları gerçek zamanlı, vadeli emtia fiyatları 10 dakika gecikmelidir. Günlük kurlar Avrupa Merkez Bankası'nın referans kurundan gelebilir; bu veri yalnızca kapanış içerdiği için gün içi en yüksek/en düşük seviyeye dayanan göstergeler (ATR, Stokastik, Williams %R) günlük kur grafiğinde dar kalır. Kurlarda işlem hacmi verisi olmadığı için hacme dayanan göstergeler kullanılmaz.",
+    "Döviz, altın, gümüş ve petrol için sinyaller günlük ve haftalık grafikte üretilir. Döviz kurları gerçek zamanlı, vadeli emtia fiyatları 10 dakika gecikmelidir. Günlük kurlar Avrupa Merkez Bankası'nın referans kurundan gelebilir; bu veri yalnızca kapanış içerdiği için gün içi en yüksek/en düşük seviyeye dayanan göstergeler (ATR, Stokastik, Williams %R) günlük kur grafiğinde dar kalır. Kurlarda işlem hacmi verisi olmadığı için hacme dayanan göstergeler kullanılmaz.",
 
   "market.methodology":
     "Tüm göstergeler kendi sunucumuzda, açık kaynak formüllerle hesaplanır; dışarıdan hazır sinyal satın alınmaz. Skor, göstergelerin ağırlıklı oyundan üretilir ve aynı veriden her zaman aynı sonucu verir. Üretilen sinyaller yatırım tavsiyesi değildir.",
@@ -834,7 +834,7 @@ export const tr = {
 
   "market.abd.faq1.q": "Hisse verileri gerçek zamanlı mı?",
   "market.abd.faq1.a":
-    "Hayır, fiyatlar 15 dakika gecikmelidir; ücretsiz ve gerçek zamanlı borsa verisi yoktur. Sinyaller 15 dakikadan haftalığa kadar altı periyotta üretilir. Her satırda verinin ne zaman güncellendiği yazar.",
+    "Hayır, fiyatlar 15 dakika gecikmelidir; ücretsiz ve gerçek zamanlı borsa verisi yoktur. Sinyaller günlük ve haftalık grafikte üretilir. Her satırda verinin ne zaman güncellendiği yazar.",
   "market.abd.faq2.q": "Hangi hisseler listeleniyor?",
   "market.abd.faq2.a":
     "Endeksler ve işlem hacmi en yüksek hisseler hazır listede gelir. Listede olmayan bir hisseyi arama kutusundan bulup açtığınızda analizi o an hesaplanır.",

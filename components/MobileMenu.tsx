@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useI18n } from "./I18nProvider";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -19,12 +20,16 @@ export default function MobileMenu({
   /** Menü altına eklenecek düğmeler (giriş/çıkış gibi). */
   footer?: React.ReactNode;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
+  // Portal yalnızca tarayıcıda kurulabilir (sunucuda document yok).
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
-  // Sayfa değişince menü kapanır.
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => setMounted(true), []);
+
+  // Sayfa ya da dil değişince menü kapanır.
+  useEffect(() => setOpen(false), [pathname, locale]);
 
   // Menü açıkken arka plan kaymasın.
   useEffect(() => {
@@ -46,7 +51,11 @@ export default function MobileMenu({
         <span />
       </button>
 
-      {open && (
+      {/* Menü <body>'ye taşınır: üst çubuktaki bulanıklık efekti
+          (backdrop-filter) "position: fixed" öğeler için yeni bir kap oluşturur.
+          Menü çubuğun içinde kaldığında tam ekran değil, 68 piksellik çubuğun
+          içine sıkışıyor; bağlantılar ve dil listesi görünmüyordu. */}
+      {open && mounted && createPortal(
         <div className="drawer" role="dialog" aria-modal="true">
           <div className="drawer-head">
             <LanguageSwitcher />
@@ -69,7 +78,8 @@ export default function MobileMenu({
           </nav>
 
           {footer && <div className="drawer-footer">{footer}</div>}
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

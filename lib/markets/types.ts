@@ -84,11 +84,15 @@ export type MarketMeta = {
   /**
    * Bu piyasada desteklenen zaman dilimleri.
    *
-   * Kripto dışı piyasalarda gün içi periyotlar aktarıcı üzerinden geliyor
-   * (ölçüldü 2026-11-16, `scripts/kaynak-tara.ts`: BIST, ABD, vadeli emtia ve
-   * kurlarda 15 dk / 1 sa / 4 sa için 300'er mum). 1 ve 5 dakika bilerek yok:
-   * hisse fiyatı 15 dakika gecikmeli geliyor, 1 dakikalık grafikte bu 15 mum
-   * geride olmak demek ve sinyal anlamını yitirir.
+   * Kripto dışı piyasalarda yalnızca günlük ve haftalık sunulur.
+   *
+   * Gün içi periyotlar bir süre açıldı (2026-11-16) ve geri alındı: veri
+   * geliyordu (ölçüldü, `scripts/kaynak-tara.ts`) ama her açılışta ücretsiz
+   * aktarıcıya gidiyor ve aktarıcı dakikada ~20 istekle sınırlı. Birkaç
+   * kullanıcı aynı anda baktığında sınır doluyor ve sayfa "veri kotası dolu"
+   * hatasıyla açılıyordu. Günlük mumlar ise günde bir kez çekilip
+   * paylaşılıyor ve bu sınıra takılmıyor. Ücretli ya da sınırsız bir kaynak
+   * eklenmeden gün içi periyotlar açılmamalı.
    */
   intervals: Interval[];
   /** Fiyatların varsayılan para birimi. */
@@ -131,7 +135,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "abd",
     labelKey: "market.abd",
     slug: "abd-borsasi",
-    intervals: ["15m", "30m", "1h", "4h", "1d", "1w"],
+    intervals: ["1d", "1w"],
     currency: "USD",
     alwaysOpen: false,
     gecikmeDk: 15,
@@ -140,7 +144,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "bist",
     labelKey: "market.bist",
     slug: "turkiye-borsasi",
-    intervals: ["15m", "30m", "1h", "4h", "1d", "1w"],
+    intervals: ["1d", "1w"],
     currency: "TRY",
     alwaysOpen: false,
     gecikmeDk: 15,
@@ -151,7 +155,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     // Bu piyasa hem vadeli emtiayı (10 dk gecikmeli) hem kurları (gerçek
     // zamanlı) barındırıyor; kullanıcıyı yanıltmamak için kötü olan yazılır.
     slug: "dovizler",
-    intervals: ["15m", "30m", "1h", "4h", "1d", "1w"],
+    intervals: ["1d", "1w"],
     currency: "USD",
     alwaysOpen: false,
     gecikmeDk: 10,

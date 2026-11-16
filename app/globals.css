@@ -2080,6 +2080,13 @@ canvas {
   overflow: hidden;
 }
 
+/* Menüde dil seçici sol üstte durur; liste sağa doğru açılmalı, yoksa
+   ekranın solundan taşar. */
+.drawer .lang-menu {
+  inset-inline-end: auto;
+  inset-inline-start: 0;
+}
+
 .lang-menu button {
   display: flex;
   align-items: center;
