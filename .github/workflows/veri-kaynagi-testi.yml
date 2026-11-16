@@ -21,6 +21,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Fiyat listelerindeki hacimler: paneldeki "toplam hacim" bir satırın
+      # bozuk hacmiyle anlamsız büyüyebiliyor. En büyük hacimli satırlar basılır.
+      - name: Fiyat listesi hacimleri
+        continue-on-error: true
+        env:
+          SITE: https://analiz-brown.vercel.app
+        run: |
+          for p in abd bist emtia dovizler kripto japonya almanya ingiltere; do
+            curl -sS -m 60 "$SITE/api/markets?market=$p&limit=40" -o liste.json || true
+            node -e 'const d=JSON.parse(require("fs").readFileSync("liste.json","utf8"));const q=(d.quotes||[]).slice().sort((a,b)=>b.volume-a.volume);const top=q.reduce((s,x)=>s+x.volume,0);console.log(process.argv[1],d.source||d.error,"toplam",top);for(const x of q.slice(0,4))console.log("   ",x.symbol,x.kind,x.price,x.volume,x.anlik)' "$p" || true
+          done
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
