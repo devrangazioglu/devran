@@ -65,10 +65,16 @@ export type Plan = {
   vurgu?: string;
 };
 
-/** Kısa periyotlar daha çok istek ve daha çok gürültü demek; üst planlara ait. */
-const TEMEL_PERIYOTLAR: Interval[] = ["1h", "4h", "1d", "1w"];
-const ORTA_PERIYOTLAR: Interval[] = ["15m", "30m", ...TEMEL_PERIYOTLAR];
-const TUM_PERIYOTLAR: Interval[] = ["1m", "5m", ...ORTA_PERIYOTLAR];
+/**
+ * Bütün planlarda bütün periyotlar açık.
+ *
+ * Periyotlar bir dönem plana göre kilitliydi (ücretsiz planda 1 saatten kısa
+ * periyot yoktu). Kaldırıldı: planlar kredi, tarama ve takip sınırıyla
+ * ayrışıyor; kısa periyotlar daha çok istek harcar ama o da krediden düşer.
+ * Hangi periyodun hangi piyasada bulunduğu ayrı bir konudur ve veri
+ * kaynağına bağlıdır (bkz. `MARKETS[...].intervals`).
+ */
+const TUM_PERIYOTLAR: Interval[] = ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"];
 
 export const PLANS: Record<PlanId, Plan> = {
   ucretsiz: {
@@ -80,7 +86,7 @@ export const PLANS: Record<PlanId, Plan> = {
     aylikKredi: 90,
     taramaSiniri: 10,
     takipSiniri: 10,
-    periyotlar: TEMEL_PERIYOTLAR,
+    periyotlar: TUM_PERIYOTLAR,
   },
   basic: {
     id: "basic",
@@ -90,7 +96,7 @@ export const PLANS: Record<PlanId, Plan> = {
     aylikKredi: 600,
     taramaSiniri: 30,
     takipSiniri: 50,
-    periyotlar: ORTA_PERIYOTLAR,
+    periyotlar: TUM_PERIYOTLAR,
   },
   premium: {
     id: "premium",
@@ -101,7 +107,6 @@ export const PLANS: Record<PlanId, Plan> = {
     taramaSiniri: 60,
     takipSiniri: 200,
     periyotlar: TUM_PERIYOTLAR,
-    vurgu: "plan.vurgu.dakikalik",
   },
   ultimate: {
     id: "ultimate",

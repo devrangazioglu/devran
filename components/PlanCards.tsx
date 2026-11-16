@@ -135,7 +135,12 @@ export default function PlanCards({
                 </li>
                 <li>{t("plans.scanLine", { count: plan.taramaSiniri })}</li>
                 <li>{t("plans.watchLine", { count: plan.takipSiniri })}</li>
-                <li>{t("plans.intervalLine", { list: plan.periyotlar.join(", ") })}</li>
+                {/* Bütün planlarda aynı aralık; sekiz periyodu tek tek saymak kartı uzatıyordu. */}
+                <li>
+                  {t("plans.intervalLine", {
+                    list: `${plan.periyotlar[0]} – ${plan.periyotlar[plan.periyotlar.length - 1]}`,
+                  })}
+                </li>
                 {plan.vurgu && <li>{t(plan.vurgu as "plan.vurgu.oncelik")}</li>}
               </ul>
 
