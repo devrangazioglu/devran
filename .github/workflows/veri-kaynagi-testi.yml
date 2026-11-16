@@ -28,6 +28,12 @@ jobs:
 
       - run: npm ci
 
+      # Yeni ülke borsaları: tarayıcıda var mı, Yahoo mum geçmişi veriyor mu,
+      # sembol eşlemesi doğru mu (iki kaynağın fiyatı tutuyor mu).
+      - name: Ülke borsalarını ölç
+        run: npm run ulke-tara
+        continue-on-error: true
+
       # Bu adım bir dönem hata veriyordu (kaynak bu makineyi de engelliyordu)
       # ve hatayı yutmak zorundaydık. Artık aktarıcı üzerinden 6/6 geçiyor, bu
       # yüzden hata yutulmuyor: bozulursa görünsün.
