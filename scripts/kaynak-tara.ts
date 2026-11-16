@@ -29,6 +29,7 @@
  */
 
 import { getFundamentals } from "../lib/markets/temel";
+import { fetchChart } from "../lib/markets/yahoo";
 
 type Sonuc = {
   kaynak: string;
@@ -287,6 +288,31 @@ async function tara(): Promise<void> {
 
   // Yukarıdaki istekler alanların geldiğini ölçer; bu bölüm uygulamanın
   // kendi modülünü gerçek veriyle çalıştırır: eşleme, emsal seçimi, puanlama.
+  /* ────────────────────── Gün içi mumlar (uygulamanın veri yolu) ────────────────────── */
+
+  // Borsa ve emtiada gün içi periyotları açmadan önce: uygulamanın kendi
+  // `fetchChart`'ı (gerekirse aktarıcı üzerinden) bu sembollerde gün içi mum
+  // getirebiliyor mu, kaç mum ve ne kadar taze? İstekler aktarıcının hız
+  // sınırının altında kalsın diye aralıklı atılır.
+  console.log("\nGün içi mumlar (uygulamanın veri yolu):");
+  for (const symbol of ["THYAO.IS", "XU100.IS", "AAPL", "^GSPC", "GC=F", "EURUSD=X"]) {
+    for (const periyot of ["15m", "1h", "4h"] as const) {
+      const bas = Date.now();
+      try {
+        const grafik = await fetchChart(symbol, periyot, 300);
+        const son = grafik.candles[grafik.candles.length - 1];
+        const yas = son ? Math.round((Date.now() - son.openTime) / 60_000) : -1;
+        console.log(
+          `✓ ${symbol.padEnd(9)} ${periyot.padEnd(4)} ${String(grafik.candles.length).padStart(4)} mum · ` +
+            `son mum ${son ? new Date(son.openTime).toISOString().slice(0, 16) : "—"} (${yas} dk önce) · ${Date.now() - bas}ms`,
+        );
+      } catch (error) {
+        console.log(`✗ ${symbol.padEnd(9)} ${periyot.padEnd(4)} ${error instanceof Error ? error.message.slice(0, 120) : error}`);
+      }
+      await new Promise((r) => setTimeout(r, 3_300));
+    }
+  }
+
   console.log("\nTemel analiz modülü (gerçek veri):");
   for (const [market, symbol] of [
     ["bist", "THYAO.IS"],
