@@ -1345,6 +1345,25 @@ th.num {
   gap: 14px;
 }
 
+/* Yan yana kartlar aynı yükseklikte dursun: Reveal sarmalayıcısı ızgara
+   hücresini doldurur, kart da sarmalayıcıyı. */
+.kart-sirasi > .reveal {
+  display: flex;
+}
+
+.kart-sirasi > .reveal > .card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dipnot kartın altına yaslanır; yan yana kartlarda çizgisi hizalı kalır. */
+.kart-dipnot {
+  font-size: 12px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
 .split {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);

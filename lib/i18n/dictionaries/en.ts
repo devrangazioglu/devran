@@ -1025,8 +1025,6 @@ export const en: Dictionary = {
     "The risk/reward ratio is low at {rr}:1; even with a high win rate, the expected return of this plan stays limited.",
   "risk.timeframeConflict":
     "These timeframes signal the opposite way: {list}. Trades that fight the higher period tend to be shorter-lived.",
-  "quant.title": "Probability and risk maths",
-  "quant.intro": "Numerical context that does not change the score: how far the price may move over the next {horizon} bars, which probability the same score matched in this asset's history, and the signal's mathematical expectancy.",
   "quant.probUp": "Probability of being higher after {horizon} bars",
   "quant.probNote": "The score was converted to a probability with logistic regression on this asset's history ({samples} samples). Base rate regardless of signal: {base}.",
   "quant.probFlat": "Higher scores did not coincide with rises more often in the past, so the probability barely differs from the base rate.",
@@ -1045,7 +1043,6 @@ export const en: Dictionary = {
   "quant.beta": "Beta ({ticker})",
   "quant.correlation": "Correlation with index",
   "quant.alpha": "Alpha (annualised)",
-  "quant.edgeTitle": "Historical expectancy of {side} signals",
   "quant.expectancy": "Expectancy per signal",
   "quant.winRate": "Win rate (signals)",
   "quant.payoff": "Avg win / avg loss",
@@ -1056,4 +1053,8 @@ export const en: Dictionary = {
   "quant.edgeUnavailable": "No signals formed in this direction in the past, so expectancy could not be computed.",
   "quant.positionHint": "The position is sized so that hitting the stop loss costs only 1% of capital. The Kelly fraction is an upper bound for this, not a target.",
   "quant.caveat": "The ranges assume normally distributed returns; in real markets sharp moves happen more often than this assumption implies. Probability and expectancy are counted from this asset's own history and are not guaranteed.",
+  "quant.titleProb": "Probability and price range",
+  "quant.titleStats": "Series statistics",
+  "quant.titleEdge": "Expectancy and position",
+  "quant.statsHint": "The Hurst exponent shows whether price tends to trend or revert to its mean; the z-score shows how many standard deviations it sits from the average. A beta above 1 means the asset moves more sharply than the index.",
 };

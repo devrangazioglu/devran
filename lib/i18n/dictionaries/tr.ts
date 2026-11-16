@@ -1049,8 +1049,6 @@ export const tr = {
     "Risk/ödül oranı {rr}:1 ile düşük; bu planda kazanma oranı yüksek olsa bile uzun vadede beklenen getiri sınırlı kalır.",
   "risk.timeframeConflict":
     "Şu zaman dilimleri ters yönde sinyal veriyor: {list}. Üst periyotla çelişen işlemler daha kısa ömürlü olur.",
-  "quant.title": "Olasılık ve risk matematiği",
-  "quant.intro": "Skoru değiştirmeyen sayısal bağlam: fiyatın önümüzdeki {horizon} mumda ne kadar oynayabileceği, aynı skorun bu varlıkta geçmişte hangi olasılığa denk geldiği ve sinyalin matematiksel beklentisi.",
   "quant.probUp": "{horizon} mum sonra yukarıda olma olasılığı",
   "quant.probNote": "Skor, bu varlığın geçmişinde lojistik regresyonla olasılığa çevrildi ({samples} örnek). Sinyalden bağımsız taban oran: {base}.",
   "quant.probFlat": "Geçmişte yüksek skor daha sık yükselişe denk gelmemiş; olasılık bu yüzden taban orandan pek ayrışmıyor.",
@@ -1069,7 +1067,6 @@ export const tr = {
   "quant.beta": "Beta ({ticker})",
   "quant.correlation": "Endeksle korelasyon",
   "quant.alpha": "Alfa (yıllık)",
-  "quant.edgeTitle": "{side} sinyallerinin geçmiş beklentisi",
   "quant.expectancy": "Sinyal başına beklenti",
   "quant.winRate": "Kazanma oranı (sinyal)",
   "quant.payoff": "Ort. kazanç / ort. kayıp",
@@ -1080,6 +1077,10 @@ export const tr = {
   "quant.edgeUnavailable": "Bu yönde geçmişte sinyal oluşmadığı için beklenti hesaplanamadı.",
   "quant.positionHint": "Pozisyon, zarar durdur seviyesine gelindiğinde sermayenin yalnızca %1'ini kaybettirecek büyüklüktür. Kelly kesri bunun için bir üst sınırdır, hedef değil.",
   "quant.caveat": "Bantlar getirilerin normal dağıldığını varsayar; gerçek piyasada sert hareketler bu varsayımın söylediğinden sık görülür. Olasılık ve beklenti bu varlığın kendi geçmişinden sayılmıştır, garanti değildir.",
+  "quant.titleProb": "Olasılık ve fiyat aralığı",
+  "quant.titleStats": "Seri istatistikleri",
+  "quant.titleEdge": "Beklenti ve pozisyon",
+  "quant.statsHint": "Hurst üssü fiyatın trend mi sürdürdüğünü yoksa ortalamaya mı döndüğünü, z-skor ortalamadan kaç standart sapma uzakta olduğunu gösterir. Beta 1'in üstündeyse varlık endeksten sert oynar.",
 } as const;
 
 export type DictionaryKey = keyof typeof tr;
