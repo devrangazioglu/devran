@@ -12,6 +12,8 @@
 
 import { NextResponse } from "next/server";
 
+import { fetchTvCandles, tvMumAcik } from "@/lib/markets/tv-mum";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -145,9 +147,26 @@ export async function GET(request: Request) {
     }
   }
 
+  // Grafik akışı (WebSocket): mum geçmişinin asıl kaynağı. Node 22'nin
+  // yerleşik WebSocket'ine dayanıyor; eski bir Node'da sessizce Yahoo'ya
+  // düşüldüğü için burada açıkça ölçülür.
+  const akisBasladi = Date.now();
+  let grafikAkisi: { durum: string; ms: number; mum?: number; son?: number };
+  try {
+    const { candles } = await fetchTvCandles("BIST:THYAO", "1d", 50);
+    grafikAkisi = { durum: "ok", ms: Date.now() - akisBasladi, mum: candles.length, son: candles.at(-1)?.close };
+  } catch (error) {
+    grafikAkisi = {
+      durum: tvMumAcik() ? (error instanceof Error ? error.message : String(error)) : "kapalı (WebSocket yok ya da devre dışı)",
+      ms: Date.now() - akisBasladi,
+    };
+  }
+
   return NextResponse.json(
     {
       commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "(yerel)",
+      node: process.version,
+      grafikAkisi,
       dal: process.env.VERCEL_GIT_COMMIT_REF ?? "(yerel)",
       bolge: process.env.VERCEL_REGION ?? "(yerel)",
       demoVeri: process.env.DEMO_DATA === "1",
