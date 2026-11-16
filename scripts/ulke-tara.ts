@@ -17,6 +17,7 @@
  *   npm run ulke-tara
  */
 
+import { fetchTvCandles } from "../lib/markets/tv-mum";
 import { fetchChart } from "../lib/markets/yahoo";
 
 const TV = "https://scanner.tradingview.com";
@@ -56,7 +57,7 @@ const ADAYLAR: Aday[] = [
   { ad: "Hindistan", yol: "india", borsalar: ["NSE"], yahoo: (a) => `${a}.NS`, endeksTv: ["NSE:NIFTY", "TVC:NIFTY"], endeksYahoo: "^NSEI" },
   { ad: "Kanada", yol: "canada", borsalar: ["TSX"], yahoo: (a) => `${a.replace(/\./g, "-")}.TO`, endeksTv: ["TSX:TSX", "TVC:TSX"], endeksYahoo: "^GSPTSE" },
   { ad: "Güney Kore", yol: "korea", borsalar: ["KRX"], yahoo: (a) => `${a}.KS`, endeksTv: ["KRX:KOSPI", "TVC:KOSPI"], endeksYahoo: "^KS11" },
-  { ad: "Tayvan", yol: "taiwan", borsalar: ["TWSE"], yahoo: (a) => `${a}.TW`, endeksTv: ["TWSE:TAIEX", "TVC:TAIEX"], endeksYahoo: "^TWII" },
+  { ad: "Tayvan", yol: "taiwan", borsalar: ["TWSE"], yahoo: (a) => `${a}.TW`, endeksTv: ["TWSE:IX0001", "TVC:TWII"], endeksYahoo: "^TWII" },
   { ad: "Suudi Arabistan", yol: "ksa", borsalar: ["TADAWUL"], yahoo: (a) => `${a}.SR`, endeksTv: ["TADAWUL:TASI", "TVC:TASI"], endeksYahoo: "^TASI.SR" },
 ];
 
@@ -126,9 +127,30 @@ async function yahoo(sembol: string, tvFiyat?: number): Promise<string> {
   }
 }
 
-const bekle = (ms: number) => new Promise((r) => setTimeout(r, ms));
+async function tvMum(tamAd: string, tvFiyat?: number): Promise<string> {
+  const basladi = Date.now();
+  try {
+    const { candles, currency } = await fetchTvCandles(tamAd, "1d", 300);
+    const son = candles.at(-1)!;
+    let fark = "";
+    if (tvFiyat) {
+      const yuzde = (Math.abs(son.close - tvFiyat) / tvFiyat) * 100;
+      fark = ` · tarayıcı ${tvFiyat} → fark %${yuzde.toFixed(1)}${yuzde > 8 ? " ⚠ ŞÜPHELİ" : ""}`;
+    }
+    const hafta = await fetchTvCandles(tamAd, "1w", 300).then((r) => r.candles.length).catch((e) => `✗ ${e.message}`);
+    return `${tamAd} ✓ ${candles.length} günlük / ${hafta} haftalık mum, son ${son.close} ${currency ?? ""} (${new Date(son.openTime).toISOString().slice(0, 10)}), ${Date.now() - basladi} ms${fark}`;
+  } catch (error) {
+    return `${tamAd} ✗ ${error instanceof Error ? error.message : String(error)} (${Date.now() - basladi} ms)`;
+  }
+}
+
 
 async function main() {
+  // Mevcut piyasalar da aynı yoldan gelebilir mi?
+  console.log("══ Mevcut piyasalar (grafik akışı) ══");
+  for (const tam of ["NASDAQ:AAPL", "NYSE:JPM", "SP:SPX", "BIST:THYAO", "BIST:XU100", "COMEX:GC1!", "FX:USDTRY", "TVC:DXY"]) {
+    console.log(`  ${await tvMum(tam)}`);
+  }
   for (const aday of ADAYLAR) {
     console.log(`\n══ ${aday.ad} (${aday.yol} · ${aday.borsalar.join("/")}) ══`);
     try {
@@ -142,18 +164,17 @@ async function main() {
           } · yahoo ${aday.yahoo(String(ad), String(borsa))}`,
         );
       }
-      // İlk üç hissede mum geçmişi ve sembol eşlemesi doğrulanır.
+      // İlk üç hissede mum geçmişi ve fiyat tutarlılığı (grafik akışı).
       for (const s of satirlar.slice(0, 3)) {
-        const [ad, , kapanis, , , , borsa] = s.d;
-        console.log(`  Yahoo: ${await yahoo(aday.yahoo(String(ad), String(borsa)), Number(kapanis))}`);
-        await bekle(3500);
+        console.log(`  TV mum: ${await tvMum(s.s, Number(s.d[2]))}`);
       }
+      const [ilkAd, , ilkKapanis, , , , ilkBorsa] = satirlar[0].d;
+      console.log(`  Yahoo: ${await yahoo(aday.yahoo(String(ilkAd), String(ilkBorsa)), Number(ilkKapanis))}`);
     } catch (error) {
       console.log(`Tarayıcı ✗ ${error instanceof Error ? error.message : String(error)}`);
     }
     for (const tam of aday.endeksTv) console.log(`  Endeks TV: ${await endeksTv(tam)}`);
-    console.log(`  Endeks Yahoo: ${await yahoo(aday.endeksYahoo)}`);
-    await bekle(3500);
+    for (const tam of aday.endeksTv) console.log(`  Endeks TV mum: ${await tvMum(tam)}`);
   }
 }
 
