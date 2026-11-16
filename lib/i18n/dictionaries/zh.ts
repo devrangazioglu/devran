@@ -7,7 +7,7 @@ export const zh: Partial<Dictionary> = {
   "common.loading": "加载中…",
   "common.refresh": "刷新",
   "common.search": "搜索",
-  "common.searchPlaceholder": "搜索资产（BTC、THYAO、AAPL、黄金…）",
+  "common.searchPlaceholder": "搜索：BTC、THYAO、AAPL…",
   "common.searchHint": "请至少输入 2 个字符",
   "common.noResults": "没有结果",
   "common.all": "全部",

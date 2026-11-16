@@ -33,7 +33,8 @@ concurrency:
 jobs:
   besle:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # İstekler aktarıcının hız sınırının altında, sırayla atılıyor (~12 dk).
+    timeout-minutes: 35
 
     steps:
       - uses: actions/checkout@v4

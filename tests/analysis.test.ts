@@ -20,7 +20,7 @@ function instrument(market: MarketId, symbol: string, ticker = symbol): Instrume
     name: ticker,
     ticker,
     currency: market === "bist" ? "TRY" : "USD",
-    kind: market === "kripto" ? "kripto" : "hisse",
+    kind: market === "kripto" ? "kripto" : market === "emtia" ? "emtia" : "hisse",
   };
 }
 
@@ -71,7 +71,8 @@ test("yükselen trendde alış sinyali üretir", () => {
 });
 
 test("düşen trendde satış sinyali üretir", () => {
-  const result = analyze(AAPL, "1d", FALLING, "canli");
+  // Emtia: trend takip profili. (Hisseler ayrı sınanıyor; aşağıya bakın.)
+  const result = analyze(GOLD, "1d", FALLING, "canli");
   assert.ok(result.score < -18, `beklenen negatif skor, gelen: ${result.score}`);
   assert.ok(["SELL", "STRONG_SELL"].includes(result.signal));
   assert.equal(result.trade.side, "SHORT");

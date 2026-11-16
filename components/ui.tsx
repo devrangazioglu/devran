@@ -131,7 +131,7 @@ export function ScoreGauge({
   signal: SignalLabel;
   size?: number;
 }) {
-  const { t } = useI18n();
+  const { t, intl } = useI18n();
   const radius = size / 2 - 12;
   const circumference = Math.PI * radius;
   const ratio = Math.min(Math.max((score + 100) / 200, 0), 1);
@@ -163,7 +163,7 @@ export function ScoreGauge({
         />
       </svg>
       <div className="gauge-value" style={{ top: size / 4 }}>
-        <b style={{ color }}>{score > 0 ? `+${score}` : score}</b>
+        <b style={{ color }}>{skorMetni(score, intl)}</b>
         <span>{t("common.score")} (−100 / +100)</span>
       </div>
     </div>
@@ -180,10 +180,22 @@ export function Meter({ value, tone = "var(--accent)" }: { value: number; tone?:
 
 /** Skoru renkli ve işaretli gösterir. */
 export function Score({ value }: { value: number }) {
+  const { intl } = useI18n();
   const tone = value > 0 ? "up" : value < 0 ? "down" : "muted";
-  return (
-    <span className={`mono ${tone}`}>
-      {value > 0 ? `+${value}` : value}
-    </span>
-  );
+  return <span className={`mono ${tone}`}>{skorMetni(value, intl)}</span>;
+}
+
+/**
+ * Skoru işaretiyle ve her zaman tek ondalıkla yazar.
+ *
+ * Önceden sayı olduğu gibi basılıyordu: aynı sütunda "+44.6" ile "+9" yan
+ * yana duruyor, üstelik ondalık ayırıcı sayfanın geri kalanındaki virgülle
+ * uyuşmuyordu.
+ */
+export function skorMetni(value: number, intl: string): string {
+  const metin = Math.abs(value).toLocaleString(intl, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  return value > 0 ? `+${metin}` : value < 0 ? `−${metin}` : metin;
 }

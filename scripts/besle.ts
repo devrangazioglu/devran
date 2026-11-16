@@ -51,9 +51,18 @@ const PERIYOTLAR: Interval[] = ["1d", "1w"];
  */
 const TAZELIK_MS = 26 * 60 * 60_000;
 
-/** Sağlayıcıyı yormamak için: aynı anda kaç sembol ve her tur arası bekleme. */
-const ESZAMANLI = 4;
-const TUR_ARASI_MS = 250;
+/**
+ * İstekler arası bekleme.
+ *
+ * Veri aktarıcı üzerinden geliyor ve aktarıcı dakikada yaklaşık 20 istekten
+ * sonra kısıtlıyor (ölçüldü: ardışık 24 istekten sonra hız sınırı). Besleme
+ * 100'ü aşkın sembol için ikişer istek atıyor; eski hâliyle (aynı anda dört
+ * sembol, 250 ms arayla) ilk dakikada sınıra çarpar ve geri kalan sembolleri
+ * boş geçerdi. İstekler bu yüzden sırayla ve sınırın altında bir hızla atılır:
+ * yaklaşık 12 dakika sürer, ama gece çalışan bir iş için süre değil eksiksiz
+ * bitmesi önemlidir.
+ */
+const ISTEK_ARASI_MS = 3_300;
 
 const bekle = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -122,27 +131,22 @@ async function piyasayiBesle(market: MarketId): Promise<Sonuc> {
   const hatalar: string[] = [];
   let basarili = 0;
 
-  for (let i = 0; i < instruments.length; i += ESZAMANLI) {
-    const parca = instruments.slice(i, i + ESZAMANLI);
-    await Promise.all(
-      parca.map(async (instrument) => {
-        for (const periyot of PERIYOTLAR) {
-          try {
-            const { candles, currency } = await mumlariCek(instrument.symbol, periyot);
-            // Birkaç mumluk yanıt genelde "sembol bulunamadı" demektir; yarım
-            // veriyle önbelleği kirletmektense o sembolü atlamak daha iyi.
-            if (candles.length < 30) throw new Error(`yetersiz veri (${candles.length} mum)`);
-            await kaydet(instrument, periyot, candles, currency);
-            if (periyot === "1d") basarili++;
-          } catch (error) {
-            hatalar.push(
-              `${instrument.symbol} ${periyot}: ${error instanceof Error ? error.message : "bilinmeyen"}`,
-            );
-          }
-        }
-      }),
-    );
-    if (i + ESZAMANLI < instruments.length) await bekle(TUR_ARASI_MS);
+  for (const instrument of instruments) {
+    for (const periyot of PERIYOTLAR) {
+      try {
+        const { candles, currency } = await mumlariCek(instrument.symbol, periyot);
+        // Birkaç mumluk yanıt genelde "sembol bulunamadı" demektir; yarım
+        // veriyle önbelleği kirletmektense o sembolü atlamak daha iyi.
+        if (candles.length < 30) throw new Error(`yetersiz veri (${candles.length} mum)`);
+        await kaydet(instrument, periyot, candles, currency);
+        if (periyot === "1d") basarili++;
+      } catch (error) {
+        hatalar.push(
+          `${instrument.symbol} ${periyot}: ${error instanceof Error ? error.message : "bilinmeyen"}`,
+        );
+      }
+      await bekle(ISTEK_ARASI_MS);
+    }
   }
 
   return { market, basarili, toplam: instruments.length, hatalar };
@@ -184,7 +188,7 @@ async function kaynagiDene(): Promise<void> {
     } catch (error) {
       console.log(`✗ ${ornek.symbol.padEnd(10)} ${error instanceof Error ? error.message : "bilinmeyen"}`);
     }
-    await bekle(TUR_ARASI_MS);
+    await bekle(ISTEK_ARASI_MS);
   }
 
   console.log(`\n${basarili}/${ornekler.length} sembol alınabildi.`);

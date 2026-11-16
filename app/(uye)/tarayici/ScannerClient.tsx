@@ -41,7 +41,11 @@ export default function ScannerClient({
     (AKTIF_MARKET_IDS.includes(defaultMarket as MarketId) ? defaultMarket : "kripto") as MarketId,
   );
   const [period, setPeriod] = useState<Interval>(defaultInterval as Interval);
-  const [limit, setLimit] = useState(defaultLimit);
+  // Ayarlardaki sayı planın tarama sınırını aşabilir (ücretsiz planda 10,
+  // ayarda 30). Sınırlanmazsa başlık "30 varlığı tarar" derken 10 taranıyordu.
+  const [limit, setLimit] = useState(
+    planTaramaSiniri ? Math.min(defaultLimit, planTaramaSiniri) : defaultLimit,
+  );
   const [filter, setFilter] = useState<Filter>("all");
   const [strongOnly, setStrongOnly] = useState(onlyStrong);
   const [sort, setSort] = useState<SortKey>("score");

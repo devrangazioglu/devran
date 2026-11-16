@@ -7,7 +7,7 @@ export const ru: Partial<Dictionary> = {
   "common.loading": "Загрузка…",
   "common.refresh": "Обновить",
   "common.search": "Поиск",
-  "common.searchPlaceholder": "Поиск активов (BTC, THYAO, AAPL, золото…)",
+  "common.searchPlaceholder": "Поиск: BTC, THYAO, AAPL…",
   "common.searchHint": "Введите минимум 2 символа",
   "common.noResults": "Ничего не найдено",
   "common.all": "Все",

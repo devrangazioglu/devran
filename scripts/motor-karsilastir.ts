@@ -174,6 +174,20 @@ function topla(a: Sayac, b: Sayac): void {
   }
 }
 
+/**
+ * Dönem bölmesi: `BOLME=ilk` ya da `BOLME=son` verilirse her varlığın yalnızca
+ * ilk ya da son yarısı ölçülür. Bir etki iki yarıda da aynı yönde çıkmıyorsa
+ * büyük olasılıkla gürültüdür; ağırlıklar ancak ikisinde de görünen etkilere
+ * göre ayarlanır.
+ */
+const BOLME = process.env.BOLME;
+function aralik(uzunluk: number): [number, number] {
+  const orta = ISINMA + Math.floor((uzunluk - ISINMA) / 2);
+  if (BOLME === "ilk") return [ISINMA, orta];
+  if (BOLME === "son") return [orta, uzunluk];
+  return [ISINMA, uzunluk];
+}
+
 const sinif = (skor: number) => (skor >= ESIK ? 1 : skor <= -ESIK ? -1 : 0);
 
 function olc(skorlar: (number | null)[], mumlar: Candle[]): Sayac {
@@ -187,7 +201,8 @@ function olc(skorlar: (number | null)[], mumlar: Candle[]): Sayac {
   );
 
   let onceki: number | null = null;
-  for (let i = ISINMA; i < mumlar.length; i++) {
+  const [bas, son] = aralik(mumlar.length);
+  for (let i = bas; i < son; i++) {
     const skor = skorlar[i];
     if (skor === null) continue;
     const c = sinif(skor);
@@ -290,13 +305,22 @@ async function main(): Promise<void> {
       name: hedef.symbol,
       ticker: hedef.symbol,
       currency: "USD",
-      kind: "hisse",
+      // Motor varlık sınıfına göre profil seçiyor; tür gerçek olmalı.
+      kind:
+        hedef.market === "kripto"
+          ? "kripto"
+          : hedef.market === "emtia"
+            ? hedef.symbol.endsWith("=X")
+              ? "doviz"
+              : "emtia"
+            : "hisse",
     };
     const endeks = hedef.endeks ? endeksler.get(hedef.endeks) : undefined;
 
     const eskiSkor: (number | null)[] = new Array(mumlar.length).fill(null);
     const yeniSkor: (number | null)[] = new Array(mumlar.length).fill(null);
-    for (let i = ISINMA; i < mumlar.length; i++) {
+    const [bas, son] = aralik(mumlar.length);
+    for (let i = bas; i < son; i++) {
       // Her iki motor da yalnızca o güne kadarki mumları görür. Canlıda
       // analiz en çok 300 mumla yapıldığı için pencere de 300 ile sınırlanır.
       const dilim = mumlar.slice(Math.max(0, i + 1 - 300), i + 1);

@@ -6,7 +6,7 @@ export const tr = {
   "common.loading": "Yükleniyor…",
   "common.refresh": "Yenile",
   "common.search": "Ara",
-  "common.searchPlaceholder": "Varlık ara (BTC, THYAO, AAPL, altın…)",
+  "common.searchPlaceholder": "Ara: BTC, THYAO, AAPL…",
   "common.searchHint": "En az 2 karakter yazın",
   "common.noResults": "Sonuç bulunamadı",
   "common.all": "Tümü",

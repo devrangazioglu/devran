@@ -229,7 +229,10 @@ export type Analysis = {
 export type AnalysisContext = {
   /** Karşılaştırma endeksinin aynı periyottaki mumları (göreli güç için). */
   benchmark?: { ticker: string; candles: Candle[] } | null;
-  /** Bir üst zaman dilimindeki rejim (çoklu zaman dilimi uyumu için). */
+  /**
+   * Bir üst zaman dilimindeki rejim. Verilmezse eldeki mumlar birleştirilerek
+   * hesaplanır (olağan yol); `null` verilirse üst periyot hiç kullanılmaz.
+   */
   higher?: { interval: Interval; direction: number; trendiness: number } | null;
   /** Geçmiş sınaması yapılsın mı (varsayılan: evet). */
   backtest?: boolean;
@@ -288,6 +291,125 @@ const num = (value: number, digits = 2): ValuePart => ({ kind: "number", value, 
 const pct = (value: number): ValuePart => ({ kind: "percent", value });
 const text = (value: string): ValuePart => ({ kind: "text", text: value });
 
+/* ────────────────────────── Varlık sınıfı profili ────────────────────────── */
+
+/**
+ * Göstergelerin ağırlığı ve okunuşu varlık sınıfına göre değişir.
+ *
+ * Bu bir tercih değil ölçüm sonucu (`scripts/motor-karsilastir.ts`, 36 varlık,
+ * 26.860 günlük mum, 2023–2026). Her göstergenin oyundan sonraki 10 mumluk
+ * getiri oynaklık birimiyle (σ) ölçüldü ve dönem ikiye bölünerek (`BOLME=ilk`,
+ * `BOLME=son`) etkinin iki yarıda da aynı yönde çıkıp çıkmadığına bakıldı.
+ * Yalnızca iki yarıda da görünen etkilere göre ayar yapıldı:
+ *
+ *                              ilk yarı    ikinci yarı
+ *   emtia/döviz  trend yönü     +0,25σ       +0,64σ     tutarlı → trend takibi
+ *                fiyat yapısı   +0,19σ       +0,51σ
+ *   kripto       EMA 9/21       +0,14σ       +0,27σ     tutarlı → kısa trend
+ *                EMA 50/200     −0,11σ       −0,43σ     tutarlı ters
+ *   hisse        RSI            +0,03σ       +0,15σ     aynı yön, zayıf
+ *                ortalamadan    +0,01σ       +0,20σ
+ *                uzaklaşma
+ *                trend yönü     +0,05σ       −0,19σ     TUTARSIZ
+ *                EMA 50/200     −0,01σ       −0,21σ
+ *
+ * Okuması: emtia, döviz ve kriptoda başlamış hareket sürüyor (vadeli ve
+ * dövizde bilinen "zaman serisi momentumu", Moskowitz–Ooi–Pedersen 2012).
+ * Hisselerde ise trend göstergeleri bir dönemde işe yarayıp diğerinde ters
+ * çalıştı; iki dönemde de aynı yönde kalan tek grup, fiyatın ortalamasına
+ * döneceğini varsayan göstergeler oldu (hisselerde bilinen "kısa vadeli geri
+ * dönüş", Jegadeesh 1990). Hisse profili bu yüzden trend göstergelerine az,
+ * uç değer göstergelerine çok ağırlık verir.
+ *
+ * Aynı sınama bir adayı da eledi: altı aylık momentum göstergesi bütün örnekte
+ * olumlu görünüyordu, ama kriptoda iki yarıda da ters, emtiada yarı yarıya
+ * çıktı. Motora eklenmedi.
+ *
+ * Ölçümün sınırları — bilinerek kullanılmalı:
+ *   • Bu ayarla bile hisselerde yön tahmini yazı turadan belirgin iyi değil
+ *     (10 mumda taban orana göre −0,7 … +1,4 puan). Kazanım, yanlış yönde
+ *     ısrar etmemek: önceki ağırlıklarla ikinci yarıda −3 … −5 puandı.
+ *   • Örnek iki borsanın da yükseldiği bir dönem; satış sinyallerinin ayı
+ *     piyasasındaki davranışı ölçülemedi.
+ *   • Hisseler bugünün büyük şirketleri: batanlar örnekte yok (hayatta kalma
+ *     yanlılığı). "Düşen hisse toparlanır" sonucu bu yüzden olduğundan iyimser.
+ *   • Ardışık mumlar bağımsız değil; farkların çoğu bir-iki standart hata.
+ */
+type Profile = {
+  /** Trend takip göstergelerinin ağırlık çarpanı. */
+  trend: number;
+  /** Osilatörlerin ağırlık çarpanı. */
+  oscillator: number;
+  /**
+   * Trendin osilatör okumasını ne kadar bastırdığı (0–1). 1: güçlü trendde
+   * uç değer dönüş sinyali sayılmaz; 0: her zaman dönüş sinyalidir.
+   */
+  trendOverride: number;
+  /** Kanal kırılımının ağırlık çarpanı. */
+  breakout: number;
+  /** "Ortalamadan aşırı uzaklaşma" göstergesinin ağırlığı (ters işlem). */
+  extension: number;
+  /**
+   * Uzun vadeli trend ölçülerinin (EMA 50/200, fiyat–EMA 200, üst periyot)
+   * ek çarpanı; `trend` çarpanının üstüne gelir.
+   */
+  longTrend: number;
+};
+
+/** Emtia, döviz, kripto: hareket sürer. */
+const TREND_PROFILE: Profile = {
+  trend: 1,
+  oscillator: 1,
+  trendOverride: 1,
+  breakout: 1,
+  extension: 0,
+  longTrend: 1,
+};
+
+/**
+ * Kripto: kısa vadeli trend sürüyor, uzun vadeli trend ölçüleri ise iki
+ * dönemde de ters çalıştı (EMA 50/200 −0,11σ ve −0,43σ; üst periyot −0,15σ
+ * ve −0,39σ). Örnek küçük — dört varlık ve hepsi birlikte hareket ediyor —
+ * bu yüzden bu ölçüler kapatılmaz, yalnızca ağırlıkları azaltılır.
+ */
+const CRYPTO_PROFILE: Profile = { ...TREND_PROFILE, longTrend: 0.4 };
+
+/** Hisse ve hisse endeksleri: kısa vadede ortalamaya döner. */
+const EQUITY_PROFILE: Profile = {
+  trend: 0.35,
+  oscillator: 1.4,
+  trendOverride: 0.25,
+  breakout: 0.25,
+  extension: 1.3,
+  longTrend: 1,
+};
+
+function blend(a: Profile, b: Profile, t: number): Profile {
+  const mix = (x: number, y: number) => x + (y - x) * t;
+  return {
+    trend: mix(a.trend, b.trend),
+    oscillator: mix(a.oscillator, b.oscillator),
+    trendOverride: mix(a.trendOverride, b.trendOverride),
+    breakout: mix(a.breakout, b.breakout),
+    extension: mix(a.extension, b.extension),
+    longTrend: mix(a.longTrend, b.longTrend),
+  };
+}
+
+/**
+ * Enstrüman ve periyoda göre profil.
+ *
+ * Hisselerdeki geri dönüş etkisi bir aya kadar olan vadelerde ölçülmüş bir
+ * etkidir; haftalık mumlarda on mumluk ufuk iki buçuk aya denk gelir ve orada
+ * ne geri dönüş ne momentum baskındır. Haftalıkta bu yüzden iki profilin
+ * ortası kullanılır — ölçülmemiş bir vadede taraf tutmamak için.
+ */
+function profileFor(instrument: Instrument, interval: Interval): Profile {
+  const equity = instrument.kind === "hisse" || instrument.kind === "endeks";
+  if (!equity) return instrument.kind === "kripto" ? CRYPTO_PROFILE : TREND_PROFILE;
+  return interval === "1w" ? blend(TREND_PROFILE, EQUITY_PROFILE, 0.5) : EQUITY_PROFILE;
+}
+
 /* ────────────────────────── Hazırlık ────────────────────────── */
 
 type Pivot = { index: number; price: number };
@@ -330,20 +452,20 @@ type Prepared = {
   benchmarkTicker: string | null;
   /** Hacim verisi var mı? (Döviz kurlarında yoktur.) */
   hasVolume: boolean;
+  profile: Profile;
+  /** Üst zaman dilimi tanımı; en üst periyotta null. */
+  higher: HigherSpec | null;
+  /** Dışarıdan verilmiş üst periyot rejimi (yalnızca son mum için geçerli). */
+  higherOverride: AnalysisContext["higher"];
 };
 
 /** Bir tepe/dip, iki yanındaki bu kadar mumdan uçtaysa pivot sayılır. */
 const PIVOT_SPAN = 3;
 
-function prepare(candles: Candle[], context: AnalysisContext): Prepared {
-  const closes = candles.map((c) => c.close);
-  const highs = candles.map((c) => c.high);
-  const lows = candles.map((c) => c.low);
-  const volumes = candles.map((c) => c.volume);
-
+function findPivots(highs: number[], lows: number[]): { pivotHighs: Pivot[]; pivotLows: Pivot[] } {
   const pivotHighs: Pivot[] = [];
   const pivotLows: Pivot[] = [];
-  for (let i = PIVOT_SPAN; i < candles.length - PIVOT_SPAN; i++) {
+  for (let i = PIVOT_SPAN; i < highs.length - PIVOT_SPAN; i++) {
     let isHigh = true;
     let isLow = true;
     for (let j = i - PIVOT_SPAN; j <= i + PIVOT_SPAN; j++) {
@@ -354,6 +476,21 @@ function prepare(candles: Candle[], context: AnalysisContext): Prepared {
     if (isHigh) pivotHighs.push({ index: i, price: highs[i] });
     if (isLow) pivotLows.push({ index: i, price: lows[i] });
   }
+  return { pivotHighs, pivotLows };
+}
+
+function prepare(
+  candles: Candle[],
+  context: AnalysisContext,
+  profile: Profile,
+  interval: Interval,
+): Prepared {
+  const closes = candles.map((c) => c.close);
+  const highs = candles.map((c) => c.high);
+  const lows = candles.map((c) => c.low);
+  const volumes = candles.map((c) => c.volume);
+
+  const { pivotHighs, pivotLows } = findPivots(highs, lows);
 
   return {
     candles,
@@ -384,6 +521,9 @@ function prepare(candles: Candle[], context: AnalysisContext): Prepared {
     benchmark: context.benchmark ? alignBenchmark(candles, context.benchmark.candles) : null,
     benchmarkTicker: context.benchmark?.ticker ?? null,
     hasVolume: volumes.slice(-40).some((v) => v > 0),
+    profile,
+    higher: HIGHER_TIMEFRAME[interval] ?? null,
+    higherOverride: context.higher,
   };
 }
 
@@ -437,7 +577,11 @@ function lastTwoPivots(pivots: Pivot[], i: number): [Pivot, Pivot] | null {
  * yükseliş, alçalan tepe + alçalan dip düşüş yapısıdır. Hiçbir ortalamaya ya
  * da osilatöre dayanmaz; doğrudan fiyatın kendisini okur.
  */
-function structureAt(p: Prepared, i: number, atrValue: number): Structure | null {
+function structureAt(
+  p: Pick<Prepared, "pivotHighs" | "pivotLows" | "closes">,
+  i: number,
+  atrValue: number,
+): Structure | null {
   const highs = lastTwoPivots(p.pivotHighs, i);
   const lows = lastTwoPivots(p.pivotLows, i);
   if (!highs || !lows || atrValue <= 0) return null;
@@ -463,7 +607,12 @@ function efficiencyRatio(closes: number[], i: number, period: number): number | 
   return Math.abs(closes[i] - closes[i - period]) / path;
 }
 
-function regimeAt(p: Prepared, i: number, atrValue: number, structure: Structure | null): Regime {
+function regimeAt(
+  p: Pick<Prepared, "closes" | "adx" | "ema21" | "ema50">,
+  i: number,
+  atrValue: number,
+  structure: Structure | null,
+): Regime {
   const close = p.closes[i];
 
   // ── Trend var mı? ADX ile verimlilik oranı birbirini tamamlar: ADX geç
@@ -503,6 +652,75 @@ function regimeAt(p: Prepared, i: number, atrValue: number, structure: Structure
   }
 
   return { trendiness, direction, key };
+}
+
+/* ────────────────────────── Üst zaman dilimi ────────────────────────── */
+
+type HigherSpec = { interval: Interval; factor: number };
+
+/**
+ * Her periyodun bir üstü ve onu elde etmek için birleştirilecek mum sayısı.
+ *
+ * Üst periyot ayrı bir veri isteğiyle değil, eldeki mumlar birleştirilerek
+ * hesaplanır. Üç nedeni var:
+ *   • Tutarlılık: tarayıcı, detay sayfası ve periyot özetleri aynı mumlardan
+ *     aynı skoru üretir. Ayrı istekle yapıldığında tarayıcı (istek sayısını
+ *     ikiye katlamamak için) üst periyodu atlıyor ve iki ekranda farklı skor
+ *     çıkıyordu.
+ *   • Geçmiş sınaması: üst periyot her geçmiş mum için o güne kadarki veriyle
+ *     yeniden kurulabilir; sınanan motor canlıdakiyle aynı olur.
+ *   • Kota: ücretsiz veri kaynağı dakikada ~20 isteğe izin veriyor.
+ * Bedeli: birleştirilen mumlar takvime değil son muma hizalıdır (beş günlük
+ * mum her zaman pazartesi–cuma haftası değildir). Trend yönü ve gücü gibi
+ * yavaş değişen büyüklükler için fark önemsizdir.
+ */
+const HIGHER_TIMEFRAME: Partial<Record<Interval, HigherSpec>> = {
+  "1m": { interval: "5m", factor: 5 },
+  "5m": { interval: "30m", factor: 6 },
+  "15m": { interval: "1h", factor: 4 },
+  "30m": { interval: "4h", factor: 8 },
+  "1h": { interval: "4h", factor: 4 },
+  "4h": { interval: "1d", factor: 6 },
+  "1d": { interval: "1w", factor: 5 },
+};
+
+/** Rejim okumak için gereken en az birleştirilmiş mum (ADX 14 için 2×14 + pay). */
+const HIGHER_MIN_BARS = 36;
+
+/** `i` anında, yalnızca ≤ i mumlardan kurulan üst periyot rejimi. */
+function higherAt(p: Prepared, i: number): NonNullable<AnalysisContext["higher"]> | null {
+  const spec = p.higher;
+  if (!spec) return null;
+  const count = Math.floor((i + 1) / spec.factor);
+  if (count < HIGHER_MIN_BARS) return null;
+
+  const highs: number[] = new Array(count);
+  const lows: number[] = new Array(count);
+  const closes: number[] = new Array(count);
+  // Gruplar sondan başa kurulur: son grup her zaman `i` mumunda biter.
+  for (let g = count - 1, end = i; g >= 0; g--, end -= spec.factor) {
+    let high = -Infinity;
+    let low = Infinity;
+    for (let k = end - spec.factor + 1; k <= end; k++) {
+      if (p.highs[k] > high) high = p.highs[k];
+      if (p.lows[k] < low) low = p.lows[k];
+    }
+    highs[g] = high;
+    lows[g] = low;
+    closes[g] = p.closes[end];
+  }
+
+  const last = count - 1;
+  const atrValue = at(atr(highs, lows, closes, 14), last) ?? closes[last] * 0.02;
+  const mini = {
+    closes,
+    adx: adx(highs, lows, closes, 14),
+    ema21: ema(closes, 21),
+    ema50: ema(closes, 50),
+    ...findPivots(highs, lows),
+  };
+  const regime = regimeAt(mini, last, atrValue, structureAt(mini, last, atrValue));
+  return { interval: spec.interval, direction: regime.direction, trendiness: regime.trendiness };
 }
 
 /* ────────────────────────── Osilatör okuması ────────────────────────── */
@@ -577,6 +795,8 @@ type Evaluation = {
   regime: Regime;
   /** Skorla aynı yönde oy veren göstergelerin ağırlık payı (0–1). */
   agreement: number;
+  /** Kullanılan üst periyot rejimi; yoksa null. */
+  higher: AnalysisContext["higher"];
 };
 
 /** Son 20 mumun (bu mum hariç) ortalama hacmine oran. */
@@ -595,7 +815,7 @@ function volumeRatioAt(volumes: number[], i: number): number | null {
  * fonksiyonu çağırır; ikisinin farklı mantık kullanması, sınamayı anlamsız
  * kılardı.
  */
-function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Evaluation {
+function evaluate(p: Prepared, i: number): Evaluation {
   const close = p.closes[i];
   const previousClose = p.closes[i - 1] ?? close;
   const atrValue = at(p.atr, i) ?? close * 0.02;
@@ -604,13 +824,25 @@ function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Ev
   const structure = structureAt(p, i, atrValue);
   const regime = regimeAt(p, i, atrValue, structure);
   const t = regime.trendiness;
-  // Trendin hem varlığına hem yönünün netliğine bağlı tek sayı.
-  const conviction = t * clamp01(Math.abs(regime.direction) / 0.4);
+  const profile = p.profile;
+  // Dışarıdan verilen üst periyot yalnızca son mum için geçerlidir; geçmiş
+  // mumlarda (sınama) her zaman o güne kadarki veriden kurulur.
+  const higher =
+    i === p.closes.length - 1 && p.higherOverride !== undefined
+      ? p.higherOverride
+      : higherAt(p, i);
+  // Trendin hem varlığına hem yönünün netliğine bağlı tek sayı; profil, trendin
+  // osilatör okumasını ne kadar bastıracağını belirler.
+  const conviction = t * clamp01(Math.abs(regime.direction) / 0.4) * profile.trendOverride;
 
-  // Rejime göre ağırlık: trendde trend takipçileri, yatayda osilatörler öne alınır.
-  const trendWeight = (base: number) => base * (0.55 + 0.9 * t);
-  const oscWeight = (base: number) => base * (1.3 - 0.6 * t);
-  const momentumWeight = (base: number) => base * (0.8 + 0.4 * t);
+  // Rejime göre ağırlık: trendde trend takipçileri, yatayda osilatörler öne
+  // alınır; varlık sınıfı profili bunun üstüne çarpan olarak gelir.
+  const trendWeight = (base: number) => base * (0.55 + 0.9 * t) * profile.trend;
+  const oscWeight = (base: number) => base * (1.3 - 0.6 * t) * profile.oscillator;
+  const momentumWeight = (base: number) => base * (0.8 + 0.4 * t) * profile.trend;
+  // Fiyat yapısı, üst periyot ve göreli güç de "hareket sürer" varsayımına
+  // dayanır; trend göstergeleriyle aynı çarpanı alırlar.
+  const structureWeight = (base: number) => base * profile.trend;
 
   const checks: IndicatorCheck[] = [];
   const push = (check: Omit<IndicatorCheck, "verdict">) =>
@@ -643,7 +875,7 @@ function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Ev
       labelKey: "ind.ema50200",
       value: [price(ema50), text("/"), price(ema200)],
       direction: clamp((ema50 - ema200) / (3 * atrValue)),
-      weight: trendWeight(1.3),
+      weight: trendWeight(1.3) * profile.longTrend,
       noteKey: ema50 > ema200 ? "note.ema50200.golden" : "note.ema50200.death",
     });
   }
@@ -656,7 +888,7 @@ function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Ev
       labelKey: "ind.priceEma200",
       value: [pct(distance)],
       direction: clamp((close - ema200) / (4 * atrValue)),
-      weight: trendWeight(1.0),
+      weight: trendWeight(1.0) * profile.longTrend,
       noteKey: distance > 0 ? "note.priceEma200.above" : "note.priceEma200.below",
     });
   }
@@ -716,7 +948,7 @@ function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Ev
       labelKey: "ind.structure",
       value: [text(structure.higherHigh ? "HH" : "LH"), text("/"), text(structure.higherLow ? "HL" : "LL")],
       direction: structure.direction,
-      weight: 1.4,
+      weight: structureWeight(1.4),
       noteKey:
         structure.direction >= 0.3
           ? "note.structure.up"
@@ -758,7 +990,7 @@ function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Ev
         labelKey: "ind.breakout",
         value: [price(channelLow), text("–"), price(channelHigh)],
         direction,
-        weight: 1.1,
+        weight: 1.1 * profile.breakout,
         noteKey,
         noteParams: { percent: num(clamp01(position) * 100, 0) },
       });
@@ -774,7 +1006,7 @@ function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Ev
       labelKey: "ind.higherTf",
       value: [text(higher.interval)],
       direction,
-      weight: 1.5,
+      weight: structureWeight(1.5) * profile.longTrend,
       noteKey:
         direction >= 0.15
           ? "note.higherTf.up"
@@ -802,7 +1034,7 @@ function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Ev
         labelKey: "ind.relStrength",
         value: [pct(combined)],
         direction,
-        weight: 1.0,
+        weight: structureWeight(1.0),
         noteKey:
           direction >= 0.15
             ? "note.relStrength.out"
@@ -948,6 +1180,30 @@ function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Ev
     });
   }
 
+  if (profile.extension > 0 && ema21 !== null) {
+    // Fiyatın kısa vadeli ortalamasından ATR cinsinden uzaklığı. Hisselerde
+    // ortalamadan fazla açılan fiyat geri çekilme eğilimindedir; bu gösterge
+    // "koşmuş fiyatı kovalama" ve "aşırı satılmışı satma" hatasını frenler.
+    // Bir ATR'ye kadar olan uzaklık olağan sayılır ve oy vermez.
+    const stretch = (close - ema21) / atrValue;
+    const magnitude = clamp01((Math.abs(stretch) - 1) / 2.5);
+    push({
+      id: "extension",
+      category: "volatility",
+      labelKey: "ind.extension",
+      value: [num(stretch, 1), text("ATR")],
+      direction: -Math.sign(stretch) * magnitude,
+      weight: 1.0 * profile.extension,
+      noteKey:
+        magnitude < 0.15
+          ? "note.extension.normal"
+          : stretch > 0
+            ? "note.extension.up"
+            : "note.extension.down",
+      noteParams: { atr: num(Math.abs(stretch), 1) },
+    });
+  }
+
   // ── Hacim ────────────────────────────────────────────────────
   // Hacim verisi olmayan varlıklarda (döviz kurları) bu bölüm atlanır. Sıfır
   // hacimle hesaplanan MFI sabit 100 çıkıyor ve her zaman "aşırı alım" oyu
@@ -1021,7 +1277,7 @@ function evaluate(p: Prepared, i: number, higher: AnalysisContext["higher"]): Ev
           .filter((c) => c.direction !== 0 && Math.sign(c.direction) === Math.sign(score))
           .reduce((sum, c) => sum + c.weight, 0) / totalWeight;
 
-  return { checks, score, regime, agreement };
+  return { checks, score, regime, agreement, higher: higher ?? null };
 }
 
 /* ────────────────────────── Geçmiş sınaması ────────────────────────── */
@@ -1064,9 +1320,7 @@ function runBacktest(p: Prepared): Backtest | null {
   const sell = { signals: 0, hits: 0, sum: 0 };
 
   for (let i = BACKTEST_WARMUP; i <= end; i++) {
-    // Üst periyot bağlamı geçmişe hizalanamadığı için sınamada kullanılmaz;
-    // canlı skor bu yüzden sınanandan biraz daha fazla bilgi içerir.
-    const { score } = evaluate(p, i, null);
+    const { score } = evaluate(p, i);
     const forward = (p.closes[i + BACKTEST_HORIZON] / p.closes[i] - 1) * 100;
 
     samples++;
@@ -1121,12 +1375,12 @@ export function analyze(
     throw new Error("Analiz için yeterli mum verisi yok (en az 60 mum gerekir).");
   }
 
-  const p = prepare(candles, context);
+  const p = prepare(candles, context, profileFor(instrument, interval), interval);
   const i = candles.length - 1;
   const lastPrice = p.closes[i];
   const previousClose = p.closes[i - 1];
 
-  const { checks, score, regime, agreement } = evaluate(p, i, context.higher ?? null);
+  const { checks, score, regime, agreement, higher } = evaluate(p, i);
   const signal = signalFromScore(score);
   const backtest = context.backtest === false ? null : runBacktest(p);
 
@@ -1170,7 +1424,7 @@ export function analyze(
     score,
     agreement,
     regime,
-    higher: context.higher ?? null,
+    higher,
     backtest,
   });
 
