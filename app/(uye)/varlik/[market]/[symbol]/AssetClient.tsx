@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { RejimKarti, SinamaKarti, TemelKarti } from "@/components/AnalizKartlari";
+import { KantKarti, RejimKarti, SinamaKarti, TemelKarti } from "@/components/AnalizKartlari";
 import { Aciklama, SadeOzetKarti } from "@/components/SadeOzet";
 import CandleChart, { type Gorunum } from "@/components/CandleChart";
 import HataNotu from "@/components/HataNotu";
@@ -337,6 +337,10 @@ export default function AssetClient({
               <SinamaKarti analysis={analysis} />
             </Reveal>
           </div>
+
+          <Reveal>
+            <KantKarti analysis={analysis} />
+          </Reveal>
 
           {data.fundamentals && (
             <Reveal>

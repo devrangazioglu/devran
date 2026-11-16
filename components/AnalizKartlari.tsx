@@ -14,7 +14,7 @@ import { useI18n } from "@/components/I18nProvider";
 import { Meter } from "@/components/ui";
 import type { Analysis, BacktestSide } from "@/lib/analysis";
 import { backtestVerdictKey } from "@/lib/commentary";
-import { formatNumber, formatPercent } from "@/lib/format";
+import { formatNumber, formatPercent, formatPrice } from "@/lib/format";
 import type { Fundamentals } from "@/lib/fundamentals";
 import { finansSektoru } from "@/lib/fundamentals";
 import { analystLabel, metricDisplay, metricValue, sectorName } from "@/lib/fundamentals-text";
@@ -191,6 +191,199 @@ export function SinamaKarti({ analysis }: { analysis: Analysis }) {
 
       <p className="dim" style={{ fontSize: 12, marginTop: 12 }}>
         {t("backtest.baseHint")} {t("backtest.caveat")}
+      </p>
+    </div>
+  );
+}
+
+/* ────────────────────────── Olasılık ve risk matematiği ────────────────────────── */
+
+/**
+ * Skorun yanına sayısal bağlam: bu ufukta fiyat ne kadar oynayabilir, skor
+ * geçmişte hangi olasılığa denk geldi, sinyalin beklentisi ne, ne büyüklükte
+ * pozisyon. Skoru değiştirmez (bkz. lib/quant.ts).
+ */
+export function KantKarti({ analysis }: { analysis: Analysis }) {
+  const { t, intl } = useI18n();
+  const q = analysis.quant;
+  if (!q) return null;
+  const yuzde = (oran: number, basamak = 0) => `%${formatNumber(oran * 100, intl, basamak)}`;
+  const isaretli = (deger: number, basamak = 2) =>
+    `${deger > 0 ? "+" : deger < 0 ? "−" : ""}${formatNumber(Math.abs(deger), intl, basamak)}`;
+  const ton = (deger: number) => (deger > 0 ? "up" : deger < 0 ? "down" : "muted");
+  const olasilik = q.probability;
+  const kenar = q.edge;
+  const piyasa = q.market;
+
+  return (
+    <div className="card">
+      <div className="card-title">
+        <span>{t("quant.title")}</span>
+        <span className="pill" style={{ fontSize: 12 }}>
+          {t(`interval.${analysis.interval}` as "interval.4h")}
+        </span>
+      </div>
+      <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+        {t("quant.intro", { horizon: q.horizon })}
+      </p>
+
+      <div className="grid-2" style={{ gap: 18 }}>
+        {/* Olasılık ve fiyat bantları */}
+        <div>
+          {olasilik ? (
+            <>
+              <div className="dim card-label">
+                {t("quant.probUp", { horizon: q.horizon })}:{" "}
+                <strong className={olasilik.up >= 0.5 ? "up" : "down"}>{yuzde(olasilik.up)}</strong>
+              </div>
+              <Meter
+                value={olasilik.up * 100}
+                tone={olasilik.up >= 0.5 ? "var(--up)" : "var(--down)"}
+              />
+              <p className="dim" style={{ fontSize: 12, margin: "6px 0 12px" }}>
+                {t("quant.probNote", {
+                  base: yuzde(olasilik.baseRate),
+                  samples: olasilik.samples,
+                })}{" "}
+                {olasilik.slope <= 0 ? t("quant.probFlat") : ""}
+              </p>
+            </>
+          ) : (
+            <p className="dim" style={{ fontSize: 12, marginBottom: 12 }}>
+              {t("quant.probUnavailable")}
+            </p>
+          )}
+
+          <div className="kv">
+            <span>{t("quant.band1")}</span>
+            <strong className="mono">
+              {formatPrice(q.expectedMove.low1, intl)} – {formatPrice(q.expectedMove.high1, intl)}
+            </strong>
+          </div>
+          <div className="kv">
+            <span>{t("quant.band2")}</span>
+            <strong className="mono">
+              {formatPrice(q.expectedMove.low2, intl)} – {formatPrice(q.expectedMove.high2, intl)}
+            </strong>
+          </div>
+          <div className="kv">
+            <span>{t("quant.sigma", { horizon: q.horizon })}</span>
+            <strong className="mono">±%{formatNumber(q.expectedMove.sigmaPercent, intl)}</strong>
+          </div>
+          <div className="kv">
+            <span>{t("quant.volAnnual")}</span>
+            <strong className="mono">%{formatNumber(q.volAnnual, intl, 1)}</strong>
+          </div>
+        </div>
+
+        {/* Seri istatistikleri */}
+        <div>
+          <div className="kv">
+            <span>{t("quant.hurst")}</span>
+            <strong className="mono">
+              {q.hurst === null ? "—" : formatNumber(q.hurst, intl, 2)}
+              {q.hurstKey && <span className="dim"> · {t(q.hurstKey)}</span>}
+            </strong>
+          </div>
+          <div className="kv">
+            <span>{t("quant.zScore")}</span>
+            <strong className={`mono ${q.zScore === null ? "" : ton(q.zScore)}`}>
+              {q.zScore === null ? "—" : `${isaretli(q.zScore)} σ`}
+            </strong>
+          </div>
+          <div className="kv">
+            <span>{t("quant.sharpe")}</span>
+            <strong className={`mono ${q.sharpe === null ? "" : ton(q.sharpe)}`}>
+              {q.sharpe === null ? "—" : isaretli(q.sharpe)}
+            </strong>
+          </div>
+          <div className="kv">
+            <span>{t("quant.maxDrawdown")}</span>
+            <strong className="mono down">%{formatNumber(Math.abs(q.maxDrawdown), intl, 1)}</strong>
+          </div>
+          {piyasa && (
+            <>
+              <div className="kv">
+                <span>{t("quant.beta", { ticker: piyasa.ticker })}</span>
+                <strong className="mono">{formatNumber(piyasa.beta, intl, 2)}</strong>
+              </div>
+              <div className="kv">
+                <span>{t("quant.correlation")}</span>
+                <strong className="mono">{isaretli(piyasa.correlation)}</strong>
+              </div>
+              <div className="kv">
+                <span>{t("quant.alpha")}</span>
+                <strong className={`mono ${ton(piyasa.alphaAnnual)}`}>
+                  {formatPercent(piyasa.alphaAnnual, intl, 1)}
+                </strong>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Beklenti ve pozisyon */}
+      <h3 style={{ fontSize: 14, margin: "20px 0 10px" }}>
+        {t("quant.edgeTitle", { side: t(`signal.${kenar?.side ?? (analysis.score >= 0 ? "BUY" : "SELL")}` as "signal.BUY") })}
+        {kenar && !kenar.reliable && <span className="dim sinama-az"> · {t("backtest.few")}</span>}
+      </h3>
+      {kenar ? (
+        <div className="grid-2" style={{ gap: 18 }}>
+          <div>
+            <div className="kv">
+              <span>{t("quant.expectancy")}</span>
+              <strong className={`mono ${ton(kenar.expectancy)}`}>
+                {formatPercent(kenar.expectancy, intl)}
+              </strong>
+            </div>
+            <div className="kv">
+              <span>{t("quant.winRate")}</span>
+              <strong className="mono">
+                {yuzde(kenar.winRate)} ({kenar.signals})
+              </strong>
+            </div>
+            <div className="kv">
+              <span>{t("quant.payoff")}</span>
+              <strong className="mono">
+                {formatNumber(kenar.payoff, intl, 2)} : 1
+              </strong>
+            </div>
+          </div>
+          <div>
+            <div className="kv">
+              <span>{t("quant.profitFactor")}</span>
+              <strong className="mono">
+                {kenar.profitFactor === null ? "—" : formatNumber(kenar.profitFactor, intl, 2)}
+              </strong>
+            </div>
+            <div className="kv">
+              <span>{t("quant.kelly")}</span>
+              <strong className={`mono ${kenar.halfKelly > 0 ? "up" : "muted"}`}>
+                {kenar.halfKelly > 0 ? yuzde(kenar.halfKelly, 1) : t("quant.noEdge")}
+              </strong>
+            </div>
+            {q.positionPercent !== null && (
+              <div className="kv">
+                <span>{t("quant.position")}</span>
+                <strong className="mono">%{formatNumber(q.positionPercent, intl, 1)}</strong>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="dim" style={{ fontSize: 12 }}>{t("quant.edgeUnavailable")}</p>
+          {q.positionPercent !== null && (
+            <div className="kv" style={{ marginTop: 8 }}>
+              <span>{t("quant.position")}</span>
+              <strong className="mono">%{formatNumber(q.positionPercent, intl, 1)}</strong>
+            </div>
+          )}
+        </>
+      )}
+
+      <p className="dim" style={{ fontSize: 12, marginTop: 12 }}>
+        {t("quant.positionHint")} {t("quant.caveat")}
       </p>
     </div>
   );

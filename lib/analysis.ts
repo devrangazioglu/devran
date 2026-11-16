@@ -40,6 +40,7 @@
  */
 
 import type { Candle, DataSource, Instrument, Interval } from "./markets/types";
+import { quantStats, type QuantStats } from "./quant";
 import {
   adx,
   atr,
@@ -227,6 +228,11 @@ export type Analysis = {
   profileKey: ProfileKey;
   /** Veri yetmediğinde null. */
   backtest: Backtest | null;
+  /**
+   * Olasılık ve risk matematiği (oynaklık bantları, Hurst, beta, kalibre
+   * olasılık, beklenti, Kelly). Skoru etkilemez; bkz. `lib/quant.ts`.
+   */
+  quant: QuantStats;
 };
 
 /** Analize dışarıdan verilen bağlam; hepsi isteğe bağlı. */
@@ -1330,7 +1336,14 @@ const BACKTEST_SHRINK = 10;
  * değildir ve tek bir varlığın birkaç yüz mumu küçük bir örnektir. Bu ölçüm
  * bir garanti değil, motorun bu varlıkta nasıl davrandığının özetidir.
  */
-function runBacktest(p: Prepared): Backtest | null {
+type BacktestRun = {
+  backtest: Backtest;
+  /** Her sınanan mumun skoru ve ufuk sonundaki yüzde getirisi (kalibrasyon için). */
+  scores: number[];
+  forwards: number[];
+};
+
+function runBacktest(p: Prepared): BacktestRun | null {
   const end = p.closes.length - 1 - BACKTEST_HORIZON;
   if (end - BACKTEST_WARMUP < 40) return null;
 
@@ -1339,10 +1352,14 @@ function runBacktest(p: Prepared): Backtest | null {
   let downs = 0;
   const buy = { signals: 0, hits: 0, sum: 0 };
   const sell = { signals: 0, hits: 0, sum: 0 };
+  const scores: number[] = [];
+  const forwards: number[] = [];
 
   for (let i = BACKTEST_WARMUP; i <= end; i++) {
     const { score } = evaluate(p, i);
     const forward = (p.closes[i + BACKTEST_HORIZON] / p.closes[i] - 1) * 100;
+    scores.push(score);
+    forwards.push(forward);
 
     samples++;
     if (forward > 0) ups++;
@@ -1376,10 +1393,14 @@ function runBacktest(p: Prepared): Backtest | null {
   };
 
   return {
-    horizon: BACKTEST_HORIZON,
-    samples,
-    buy: side(buy, ups / samples),
-    sell: side(sell, downs / samples),
+    backtest: {
+      horizon: BACKTEST_HORIZON,
+      samples,
+      buy: side(buy, ups / samples),
+      sell: side(sell, downs / samples),
+    },
+    scores,
+    forwards,
   };
 }
 
@@ -1403,7 +1424,8 @@ export function analyze(
 
   const { checks, score, regime, agreement, higher } = evaluate(p, i);
   const signal = signalFromScore(score);
-  const backtest = context.backtest === false ? null : runBacktest(p);
+  const run = context.backtest === false ? null : runBacktest(p);
+  const backtest = run?.backtest ?? null;
 
   const snapshot: IndicatorSnapshot = {
     rsi: at(p.rsi, i),
@@ -1533,6 +1555,21 @@ export function analyze(
     },
     profileKey: profileKeyFor(instrument, interval),
     backtest,
+    quant: quantStats({
+      kind: instrument.kind,
+      interval,
+      closes: p.closes,
+      horizon: BACKTEST_HORIZON,
+      score,
+      stopDistancePercent: trade.riskPercent,
+      benchmark:
+        p.benchmark && p.benchmarkTicker
+          ? { ticker: p.benchmarkTicker, closes: p.benchmark }
+          : null,
+      history: run
+        ? { scores: run.scores, forwards: run.forwards, threshold: SIGNAL_THRESHOLD }
+        : null,
+    }),
   };
 }
 
