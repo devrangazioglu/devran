@@ -30,3 +30,9 @@ jobs:
 
       - name: Kaynaktan birkaç sembol çek
         run: npm run besle -- --dene
+        continue-on-error: true
+
+      # Aday kaynakların tamamını dener: hangisi bu makineden cevap veriyor,
+      # gün içi veri var mı, veri kaç dakika gecikmeli.
+      - name: Ücretsiz kaynakları tara
+        run: npm run kaynak-tara
