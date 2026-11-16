@@ -1,7 +1,7 @@
 /**
  * Üyelik planları ve kredi kuralları.
  *
- * Kredi neyi ölçer: bir varlığın **ayrıntılı analizi**. Analiz, 16 göstergenin
+ * Kredi neyi ölçer: bir varlığın **ayrıntılı analizi**. Analiz, 20'den fazla göstergenin
  * hesaplanması, seviye/formasyon çıkarımı ve yorum üretimi demek; maliyeti de
  * değeri de burada. Liste ve tablo görüntülemek kredi harcamaz, yoksa kullanıcı
  * gezinmeye korkar.

@@ -197,7 +197,7 @@ export default function ScannerClient({
       {data?.source === "demo" && <div className="notice notice-warn">{t("common.demoNotice")}</div>}
       <HataNotu hata={error} />
 
-      <div className="grid-4" style={{ marginBottom: 18 }}>
+      <div className="grid-4 ozet-izgara" style={{ marginBottom: 18 }}>
         <div className="card compact">
           <div className="dim card-label">{t("scan.buyCount")}</div>
           <strong className="up" style={{ fontSize: 24 }}>

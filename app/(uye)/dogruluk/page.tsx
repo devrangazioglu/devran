@@ -155,10 +155,13 @@ export default async function DogrulukSayfasi() {
         <>
           <Durum ist={ist} t={t} intl={intl} />
 
-          <div className="grid-2">
-            <YonKarti baslik={t("dogru.buyTitle")} ozet={ist.al} yon="al" t={t} intl={intl} />
-            <YonKarti baslik={t("dogru.sellTitle")} ozet={ist.sat} yon="sat" t={t} intl={intl} />
-          </div>
+          {/* Sonuç yokken boş kartlar ("—") bir şey anlatmaz; durum kutusu yeter. */}
+          {ist.degerlendirilen > 0 && (
+            <div className="grid-2">
+              <YonKarti baslik={t("dogru.buyTitle")} ozet={ist.al} yon="al" t={t} intl={intl} />
+              <YonKarti baslik={t("dogru.sellTitle")} ozet={ist.sat} yon="sat" t={t} intl={intl} />
+            </div>
+          )}
 
           {ist.piyasalar.length > 0 && (
             <div className="card">

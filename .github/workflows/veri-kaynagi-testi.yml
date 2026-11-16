@@ -84,3 +84,17 @@ jobs:
             exit 1
           fi
           echo "✓ Canlı veri geldi."
+
+      # Canlı doğruluk ölçümünün yayında çalıştığını doğrular. Uç idempotent:
+      # yalnızca kapanmış mumları ve henüz yazılmamış günleri kaydeder, bu
+      # yüzden elle çalıştırmak kayıtları bozmaz (en fazla günlük görevi öne
+      # alır). Veritabanı yoksa yanıtta hata görünür.
+      - name: Sinyal günlüğü yayında çalışıyor mu?
+        continue-on-error: true
+        env:
+          UC: https://analiz-brown.vercel.app/api/sinyal-gunlugu
+        run: |
+          kod="$(curl -sS -m 70 -o yanit.json -w '%{http_code}' "$UC" || true)"
+          echo "HTTP $kod"
+          cat yanit.json || true
+          echo

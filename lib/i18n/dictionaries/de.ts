@@ -143,10 +143,11 @@ export const de: Partial<Dictionary> = {
   "fund.analyst.5": "Stark verkaufen",
   "scan.sort.fundamental": "Fundamental-Score",
 
-  "home.badge": "Hunderte Krypto-Paare, eine Analyse-Engine",
+  "home.badge":
+    "Krypto, Aktien, Devisen und Rohstoffe — eine Analyse-Engine",
   "home.title": "Analysieren und\ndas Signal sehen",
   "home.lead":
-    "Wir holen Live-Krypto-Daten von Binance, berechnen 16 technische Indikatoren, verdichten sie zu einer gewichteten Punktzahl und erzeugen ein {signals}-Signal — mit Begründung.",
+    "Wir fassen mehr als 20 technische Indikatoren und die Kursstruktur für Krypto, Borsa Istanbul, US-Aktien, Devisen und Rohstoffe zu einem Score zusammen und erzeugen {signals}-Signale. Bei Aktien vergleichen wir zusätzlich die Finanzlage des Unternehmens mit seinen Wettbewerbern. Jedes Signal wird in einfacher Sprache erklärt.",
   "home.ctaPrimary": "Kostenloses Konto",
   "home.ctaSecondary": "Wie funktioniert es?",
   "home.disclaimerShort":

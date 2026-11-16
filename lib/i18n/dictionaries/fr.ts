@@ -143,10 +143,11 @@ export const fr: Partial<Dictionary> = {
   "fund.analyst.5": "Vente forte",
   "scan.sort.fundamental": "Score fondamental",
 
-  "home.badge": "Des centaines de paires crypto, un moteur d'analyse",
+  "home.badge":
+    "Crypto, actions, devises et matières premières — un seul moteur d'analyse",
   "home.title": "Analysez et voyez\nle signal d'achat/vente",
   "home.lead":
-    "Nous récupérons les données crypto en direct depuis Binance, calculons 16 indicateurs techniques, les transformons en score pondéré et produisons un signal {signals} — en expliquant pourquoi.",
+    "Nous combinons plus de 20 indicateurs techniques et la structure des prix en un seul score pour la crypto, Borsa Istanbul, les actions américaines, les devises et les matières premières, et produisons des signaux {signals}. Pour les actions, nous comparons aussi les finances de l'entreprise à celles de ses pairs. Chaque signal est expliqué simplement.",
   "home.ctaPrimary": "Créer un compte gratuit",
   "home.ctaSecondary": "Comment ça marche ?",
   "home.disclaimerShort":

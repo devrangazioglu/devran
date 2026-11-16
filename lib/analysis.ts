@@ -783,14 +783,20 @@ function readOscillator(
         ? "note.osc.pullbackUp"
         : !up && conviction >= 0.5
           ? "note.osc.weakDown"
-          : "note.osc.oversoldRange";
+          : regime.key === "regime.down"
+            ? // Trend var ama profil (hisse) onu bastırıyor: "trend yok" demek
+              // yanlış olurdu; neden yine de alış okunduğu söylenir.
+              "note.osc.oversoldAgainst"
+            : "note.osc.oversoldRange";
   } else if (position >= 1) {
     noteKey =
       !up && conviction >= 0.35
         ? "note.osc.rallyDown"
         : up && conviction >= 0.5
           ? "note.osc.strongUp"
-          : "note.osc.overboughtRange";
+          : regime.key === "regime.up"
+            ? "note.osc.overboughtAgainst"
+            : "note.osc.overboughtRange";
   } else if (verdict === "BUY") {
     noteKey = position > 0 ? "note.osc.bull" : "note.osc.dipBuy";
   } else if (verdict === "SELL") {

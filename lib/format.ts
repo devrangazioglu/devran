@@ -14,7 +14,9 @@ export function formatPrice(
 ): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—";
   const abs = Math.abs(value);
-  const digits = abs >= 1000 ? 2 : abs >= 1 ? 4 : abs >= 0.01 ? 5 : 8;
+  // 10 ve üzerinde iki basamak yeter (hisse, endeks, altın: "267,51");
+  // birin altındaki kripto ve kurlarda küsurat anlamlıdır.
+  const digits = abs >= 10 ? 2 : abs >= 1 ? 4 : abs >= 0.01 ? 5 : 8;
   return value.toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: digits,
@@ -68,6 +70,11 @@ export function formatTime(ms: number, locale: string = FALLBACK): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** Gün ve kısa ay ("21 Haz"): günlük grafik ekseni için. */
+export function formatShortDate(ms: number, locale: string = FALLBACK): string {
+  return new Date(ms).toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 export function formatDate(ms: number, locale: string = FALLBACK): string {

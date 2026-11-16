@@ -68,7 +68,7 @@ export default function OgGorseli() {
         </div>
 
         <div style={{ display: "flex", gap: 14, marginTop: 44 }}>
-          {["16 gösterge", "8 periyot", "8 dil"].map((etiket) => (
+          {["20+ gösterge", "4 piyasa", "8 dil"].map((etiket) => (
             <div
               key={etiket}
               style={{

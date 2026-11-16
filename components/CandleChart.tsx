@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { formatPrice, formatTime } from "@/lib/format";
+import { formatPrice, formatShortDate, formatTime } from "@/lib/format";
 
 export type ChartCandle = {
   openTime: number;
@@ -446,12 +446,21 @@ export default function CandleChart({
     // Zaman ekseni
     ctx.fillStyle = COLORS.text;
     ctx.textAlign = "center";
-    const labelCount = Math.min(6, gorunen.length);
+    // Günlük ve haftalık mumda saat yazmak anlamsız ("00:00") ve etiketi
+    // uzatıyordu; dar ekranda etiketler üst üste biniyordu. Etiket sayısı
+    // genişliğe göre seçilir, biçim mum aralığına göre.
+    const adim = gorunen.length > 1 ? gorunen[1].openTime - gorunen[0].openTime : 0;
+    const gunluk = adim >= 20 * 3_600_000;
+    const etiketGenisligi = gunluk ? 64 : 104;
+    const cizimGenisligi = width - PADDING.left - PADDING.right;
+    const labelCount = Math.max(2, Math.min(6, gorunen.length, Math.floor(cizimGenisligi / etiketGenisligi)));
     for (let i = 0; i < labelCount; i++) {
       const index = Math.round((i * (gorunen.length - 1)) / (labelCount - 1 || 1));
       // Etiketler kenarlardan taşmasın diye konum sınırlandırılır.
-      const cx = Math.min(Math.max(x(index), PADDING.left + 44), width - PADDING.right - 44);
-      ctx.fillText(formatTime(gorunen[index].openTime, intl), cx, height - 10);
+      const yarim = etiketGenisligi / 2;
+      const cx = Math.min(Math.max(x(index), PADDING.left + yarim), width - PADDING.right - yarim);
+      const zaman = gorunen[index].openTime;
+      ctx.fillText(gunluk ? formatShortDate(zaman, intl) : formatTime(zaman, intl), cx, height - 10);
     }
 
     // Crosshair

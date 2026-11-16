@@ -142,10 +142,11 @@ export const zh: Partial<Dictionary> = {
   "fund.analyst.5": "强力卖出",
   "scan.sort.fundamental": "基本面评分",
 
-  "home.badge": "数百个加密货币交易对，一套分析引擎",
+  "home.badge":
+    "加密货币、股票、外汇与大宗商品——同一套分析引擎",
   "home.title": "分析行情，\n看清买卖信号",
   "home.lead":
-    "我们汇集来自 Binance 的实时加密货币数据，计算 16 个技术指标，加权成一个评分并给出 {signals} 信号——并说明理由。",
+    "我们将 20 多个技术指标和价格结构合并为一个评分，覆盖加密货币、伊斯坦布尔交易所、美股、外汇和大宗商品，并给出 {signals} 信号。对于股票，我们还会将公司财务与同行对比。每个信号都用通俗语言解释。",
   "home.ctaPrimary": "免费注册",
   "home.ctaSecondary": "如何运作？",
   "home.disclaimerShort": "这是一个技术分析工具。其信号不构成投资建议，决策责任由您自行承担。",

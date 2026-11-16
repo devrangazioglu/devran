@@ -204,7 +204,7 @@ export default function PanelClient({
       {marketError && <div className="notice notice-error">{marketError}</div>}
 
       {/* Özet kartları */}
-      <div className="grid-4" style={{ marginBottom: 22 }}>
+      <div className="grid-4 ozet-izgara" style={{ marginBottom: 22 }}>
         {leaders.map((quote) => (
           <SummaryCard key={quote.id} quote={quote} intl={intl} />
         ))}

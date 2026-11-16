@@ -863,6 +863,25 @@ textarea {
   font-size: 11px;
 }
 
+/* Telefonda tablo ekrana sığsın: ortalama getiri sütunu ve "az örnek" notu
+   gizlenir (hüküm cümleleri aşağıda zaten yazıyor). */
+@media (max-width: 620px) {
+  .sinama-tablo {
+    font-size: 12px;
+  }
+
+  .sinama-tablo th,
+  .sinama-tablo td {
+    padding-right: 6px;
+  }
+
+  .sinama-tablo th:nth-child(6),
+  .sinama-tablo td:nth-child(6),
+  .sinama-az {
+    display: none;
+  }
+}
+
 .temel-ust {
   display: flex;
   flex-wrap: wrap;
@@ -2807,5 +2826,27 @@ canvas {
 @media (max-width: 900px) {
   .chart-zoom-hint {
     display: none;
+  }
+}
+
+/* Telefonda özet kutucukları ikişerli: tek sütunda dört kutu, asıl içeriği
+   (sinyal listesi) iki ekran aşağı itiyordu. */
+@media (max-width: 620px) {
+  .grid-4.ozet-izgara {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .ozet-izgara > .card {
+    padding: 14px;
+  }
+
+  .ozet-izgara strong {
+    font-size: 18px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .ozet-izgara .mono {
+    font-size: 16px !important;
   }
 }

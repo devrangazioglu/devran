@@ -90,10 +90,11 @@ export const tr = {
   "category.volume": "Hacim",
 
   /* ── Ana sayfa ────────────────────────────────────────── */
-  "home.badge": "Yüzlerce kripto parite, tek analiz motoru",
+  "home.badge":
+    "Kripto, borsa, döviz ve emtia — tek analiz motoru",
   "home.title": "Analiz et,\nal–sat sinyalini gör",
   "home.lead":
-    "Binance'ten canlı kripto verisini çekiyoruz; 16 teknik göstergeyi hesaplayıp ağırlıklı bir skora çeviriyoruz ve {signals} sinyali üretiyoruz — üstelik neden öyle olduğunu anlatıyoruz.",
+    "Kripto, Borsa İstanbul, ABD hisseleri, döviz ve emtia için 20'den fazla teknik göstergeyi ve fiyat yapısını tek bir skorda birleştiriyor, {signals} sinyali üretiyoruz. Hisselerde şirketin mali durumunu da emsalleriyle kıyaslıyoruz. Her sinyali, teknik analiz bilmeyen birinin de anlayacağı dille anlatıyoruz.",
   "home.ctaPrimary": "Ücretsiz hesap aç",
   "home.ctaSecondary": "Nasıl çalışır?",
   "home.disclaimerShort":
@@ -111,7 +112,8 @@ export const tr = {
   "home.whyTitle": "Grafiği okumak zorunda kalmadan\nteknik analizi görün",
   "home.whyLead":
     "Her gösterge ayrı ayrı hesaplanır, ağırlıklandırılır ve tek bir skorda birleşir. Sonuç sadece bir rozet değil: hangi göstergenin neden o yönde oy verdiğini cümle cümle okuyabilirsiniz.",
-  "home.feature.indicators": "16 teknik gösterge",
+  "home.feature.indicators":
+    "20+ gösterge ve fiyat yapısı",
   "home.feature.indicators.desc": "RSI, MACD, Bollinger, ADX, Supertrend, OBV ve dahası",
   "home.feature.markets": "Yüzlerce parite",
   "home.feature.markets.desc": "Bitcoin, Ethereum ve Binance'te işlem gören yüzlerce altcoin",
@@ -135,7 +137,8 @@ export const tr = {
   "home.how.1.desc":
     "Seçtiğiniz varlık ve zaman dilimi için son 300 mum (açılış, en yüksek, en düşük, kapanış, hacim) çekilir ve önbelleğe alınır.",
   "home.how.2": "2. Analiz",
-  "home.how.2.title": "16 gösterge, ağırlıklı oy",
+  "home.how.2.title":
+    "20'den fazla gösterge, ağırlıklı oy",
   "home.how.2.desc":
     "Her gösterge −1 ile +1 arasında bir yön üretir; önem ağırlığıyla çarpılıp toplanır. Sonuç −100 ile +100 arasında tek bir skora dönüşür.",
   "home.how.3": "3. Yorum",
@@ -452,6 +455,8 @@ export const tr = {
   "note.osc.dipBuy": "{value}: bandın alt yarısında, dibe yakın — bu koşullarda tepki alıcı lehine.",
   "note.osc.topSell": "{value}: bandın üst yarısında, tepeye yakın — bu koşullarda geri çekilme satıcı lehine.",
   "note.osc.neutral": "{value}: orta bantta, belirgin bir uç yok.",
+  "note.osc.oversoldAgainst": "{value}: aşırı satım bölgesi. Fiyat düşüş trendinde, ama hisselerde bu kadar sert düşüşlerin ardından tepki yükselişi sık görüldüğü için alış yönünde okunuyor.",
+  "note.osc.overboughtAgainst": "{value}: aşırı alım bölgesi. Fiyat yükseliş trendinde, ama hisselerde bu kadar hızlı yükselişlerin ardından geri çekilme sık görüldüğü için satış yönünde okunuyor.",
   "regime.up": "Yükseliş trendi",
   "regime.down": "Düşüş trendi",
   "regime.range": "Yatay piyasa",
@@ -780,14 +785,14 @@ export const tr = {
      sonucunda kesiliyor ve cümlenin sonu kullanıcıya ulaşmıyor. */
   "seo.home.title": "Teknik analiz ve al/sat sinyalleri",
   "seo.home.description":
-    "Bitcoin, Ethereum ve yüzlerce altcoin için 16 teknik göstergeyi hesaplayıp AL / SAT / BEKLE sinyali üretir ve sonucu sade bir dille yorumlar.",
+    "Kripto, Borsa İstanbul, ABD hisseleri, döviz ve emtia için 20'den fazla teknik gösterge ve temel analizle AL / SAT / BEKLE sinyali; her sinyal sade bir dille açıklanır.",
 
   "seo.kripto.title": "Kripto teknik analiz ve al/sat sinyalleri",
   "seo.kripto.description":
     "Bitcoin, Ethereum ve yüzlerce altcoin için RSI, MACD, EMA ve Bollinger tabanlı canlı teknik analiz; her parite için AL / SAT / BEKLE sinyali ve gerekçesi.",
   "seo.abd.title": "Amerikan borsası teknik analiz ve hisse sinyalleri",
   "seo.abd.description":
-    "S&P 500, Nasdaq ve Dow hisseleri için günlük teknik analiz: 16 gösterge, destek-direnç seviyeleri ve gerekçesiyle birlikte AL / SAT / BEKLE sinyali.",
+    "S&P 500, Nasdaq ve Dow hisseleri için teknik ve temel analiz: 20'den fazla gösterge, destek-direnç seviyeleri ve gerekçesiyle birlikte AL / SAT / BEKLE sinyali.",
   "seo.bist.title": "Borsa İstanbul teknik analiz ve BIST hisse sinyalleri",
   "seo.bist.description":
     "BIST 100 ve BIST 30 hisseleri için teknik analiz: RSI, MACD, hareketli ortalamalar ve formasyonlarla üretilen AL / SAT / BEKLE sinyalleri, Türkçe yorumla.",
@@ -803,7 +808,7 @@ export const tr = {
 
   "market.kripto.aboutTitle": "Kripto paralarda teknik analiz nasıl okunur?",
   "market.kripto.about":
-    "Kripto piyasası 7 gün 24 saat açıktır; bu yüzden hafta sonu boşluğu yoktur ve göstergeler kesintisiz veriyle çalışır. Buradaki tabloda her parite için son fiyat, günlük değişim ve işlem hacmi yer alır; bir satıra tıkladığınızda o parite için 16 gösterge, destek-direnç seviyeleri, formasyonlar ve bir işlem planı hesaplanır. Yüksek volatilite nedeniyle stop mesafesi ATR'ye göre genişletilir.",
+    "Kripto piyasası 7 gün 24 saat açıktır; bu yüzden hafta sonu boşluğu yoktur ve göstergeler kesintisiz veriyle çalışır. Buradaki tabloda her parite için son fiyat, günlük değişim ve işlem hacmi yer alır; bir satıra tıkladığınızda o parite için 20'den fazla gösterge, destek-direnç seviyeleri, formasyonlar ve bir işlem planı hesaplanır. Yüksek volatilite nedeniyle stop mesafesi ATR'ye göre genişletilir.",
   "market.abd.aboutTitle": "Amerikan hisselerinde sinyaller nasıl üretilir?",
   "market.abd.about":
     "Amerikan borsası hafta içi belirli saatlerde açıktır; kapanış sonrası üretilen sinyaller bir sonraki seansın açılışında değişebilir. Listede endeksler ve işlem hacmi en yüksek hisseler bulunur. Her hisse için trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stokastik), volatilite (Bollinger, ATR) ve hacim göstergeleri ayrı ayrı oy verir; sinyal bu oyların ağırlıklı ortalamasıdır.",
@@ -839,7 +844,7 @@ export const tr = {
 
   "market.bist.faq1.q": "BIST hisselerinde hangi göstergeler kullanılıyor?",
   "market.bist.faq1.a":
-    "Diğer piyasalarla aynı 16 gösterge: RSI, MACD, EMA 9/21/50/200, Bollinger, Stokastik, ATR, ADX, Supertrend, OBV, MFI, CCI, Williams %R, ROC, VWAP ve hacim oranı.",
+    "Diğer piyasalarla aynı 20'den fazla gösterge (RSI, MACD, EMA, Bollinger, Stokastik, ADX, Supertrend, OBV, MFI ve diğerleri), tepe-dip dizilimi, kanal kırılımı ve BIST 100'e göre güç. Hisselerde ayrıca şirketin mali durumu sektöründeki benzerleriyle kıyaslanır.",
   "market.bist.faq2.q": "Temettü ve sermaye artırımı fiyatlara yansıyor mu?",
   "market.bist.faq2.a":
     "Veri sağlayıcının düzeltilmiş kapanış serisi kullanılır; temettü ve bölünme kaynaklı boşluklar bu seride düzeltilmiş olarak gelir.",

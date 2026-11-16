@@ -366,18 +366,17 @@ export default function AssetClient({
                       <p key={index}>{paragraph}</p>
                     ))}
                   </div>
+                  {commentary.highlights.length > 0 && (
+                    <>
+                      <h3 style={{ fontSize: 14, margin: "22px 0 12px" }}>{t("asset.highlights")}</h3>
+                      <ul className="bullet-list">
+                        {commentary.highlights.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </details>
-
-                {commentary.highlights.length > 0 && (
-                  <>
-                    <h3 style={{ fontSize: 14, margin: "22px 0 12px" }}>{t("asset.highlights")}</h3>
-                    <ul className="bullet-list">
-                      {commentary.highlights.map((item, index) => (
-                        <li key={index}>{item}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
 
                 <h3 style={{ fontSize: 14, margin: "22px 0 12px" }}>{t("asset.risks")}</h3>
                 <ul className="bullet-list warn">

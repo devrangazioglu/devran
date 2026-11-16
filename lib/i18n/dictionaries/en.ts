@@ -86,10 +86,11 @@ export const en: Dictionary = {
   "category.volatility": "Volatility",
   "category.volume": "Volume",
 
-  "home.badge": "Hundreds of crypto pairs, one analysis engine",
+  "home.badge":
+    "Crypto, stocks, FX and commodities — one analysis engine",
   "home.title": "Analyse it,\nsee the buy/sell signal",
   "home.lead":
-    "We pull live crypto data from Binance, compute 16 technical indicators, turn them into a weighted score and produce a {signals} signal — and explain why.",
+    "We combine more than 20 technical indicators and price structure into one score for crypto, Borsa Istanbul, US stocks, currencies and commodities, and produce {signals} signals. For stocks we also compare the company's finances with its peers. Every signal is explained in plain language, even for people who know nothing about technical analysis.",
   "home.ctaPrimary": "Create a free account",
   "home.ctaSecondary": "How does it work?",
   "home.disclaimerShort":
@@ -108,7 +109,8 @@ export const en: Dictionary = {
   "home.whyTitle": "See the technical analysis\nwithout reading charts",
   "home.whyLead":
     "Every indicator is computed separately, weighted, and combined into a single score. The result is more than a badge: you can read, sentence by sentence, why each indicator voted the way it did.",
-  "home.feature.indicators": "16 technical indicators",
+  "home.feature.indicators":
+    "20+ indicators and price structure",
   "home.feature.indicators.desc": "RSI, MACD, Bollinger, ADX, Supertrend, OBV and more",
   "home.feature.markets": "Hundreds of pairs",
   "home.feature.markets.desc": "Bitcoin, Ethereum and hundreds of altcoins traded on Binance",
@@ -132,7 +134,8 @@ export const en: Dictionary = {
   "home.how.1.desc":
     "The last 300 candles (open, high, low, close, volume) are fetched for your asset and timeframe, then cached.",
   "home.how.2": "2. Analysis",
-  "home.how.2.title": "16 indicators, weighted vote",
+  "home.how.2.title":
+    "20+ indicators, weighted vote",
   "home.how.2.desc":
     "Each indicator produces a direction between −1 and +1, multiplied by its weight and summed. The result becomes one score between −100 and +100.",
   "home.how.3": "3. Commentary",
@@ -436,6 +439,8 @@ export const en: Dictionary = {
   "note.osc.dipBuy": "{value}: in the lower half, near the floor — in these conditions the reaction favours buyers.",
   "note.osc.topSell": "{value}: in the upper half, near the ceiling — in these conditions the pullback favours sellers.",
   "note.osc.neutral": "{value}: mid-range, no clear extreme.",
+  "note.osc.oversoldAgainst": "{value}: oversold. Price is in a downtrend, but in stocks such sharp falls are often followed by a rebound, so it reads as a buy.",
+  "note.osc.overboughtAgainst": "{value}: overbought. Price is in an uptrend, but in stocks such fast rises are often followed by a pullback, so it reads as a sell.",
   "regime.up": "Uptrend",
   "regime.down": "Downtrend",
   "regime.range": "Range-bound",
@@ -757,14 +762,14 @@ export const en: Dictionary = {
   /* ── Search engine titles and descriptions ── */
   "seo.home.title": "Technical analysis and buy/sell signals",
   "seo.home.description":
-    "Buy / sell / wait signals from 16 technical indicators for Bitcoin, Ethereum and hundreds of altcoins — with the reasoning written out in plain language.",
+    "BUY / SELL / WAIT signals for crypto, Borsa Istanbul, US stocks, currencies and commodities from 20+ technical indicators and fundamental analysis, each explained in plain language.",
 
   "seo.kripto.title": "Crypto technical analysis and buy/sell signals",
   "seo.kripto.description":
     "Live technical analysis for Bitcoin, Ethereum and hundreds of altcoins: RSI, MACD, EMA and Bollinger based buy / sell / wait signals with the reasoning for each pair.",
   "seo.abd.title": "US stock market technical analysis and signals",
   "seo.abd.description":
-    "Daily technical analysis for S&P 500, Nasdaq and Dow stocks: 16 indicators, support and resistance levels, and a buy / sell / wait signal with its reasoning.",
+    "Technical and fundamental analysis for S&P 500, Nasdaq and Dow stocks: 20+ indicators, support and resistance levels and BUY / SELL / WAIT signals with their reasoning.",
   "seo.bist.title": "Borsa Istanbul (BIST) technical analysis and signals",
   "seo.bist.description":
     "Technical analysis for BIST 100 and BIST 30 stocks: buy / sell / wait signals built from RSI, MACD, moving averages and chart patterns, explained in plain language.",
@@ -779,7 +784,7 @@ export const en: Dictionary = {
 
   "market.kripto.aboutTitle": "How to read technical analysis in crypto",
   "market.kripto.about":
-    "The crypto market trades around the clock, so there are no weekend gaps and indicators work on an unbroken series. The table lists the last price, daily change and traded volume for each pair; opening a row computes 16 indicators, support and resistance levels, chart patterns and a trade plan for that pair. Because volatility is high, the stop distance is widened according to ATR.",
+    "The crypto market trades around the clock, so there are no weekend gaps and indicators work on an unbroken series. The table lists the last price, daily change and traded volume for each pair; opening a row computes more than 20 indicators, support and resistance levels, chart patterns and a trade plan for that pair. Because volatility is high, the stop distance is widened according to ATR.",
   "market.abd.aboutTitle": "How signals are produced for US stocks",
   "market.abd.about":
     "The US market trades on weekdays during set hours, so a signal produced after the close can change at the next open. The list contains the indices and the most traded stocks. For each stock, trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stochastic), volatility (Bollinger, ATR) and volume indicators each cast a vote; the signal is the weighted average of those votes.",
@@ -815,7 +820,7 @@ export const en: Dictionary = {
 
   "market.bist.faq1.q": "Which indicators are used for BIST stocks?",
   "market.bist.faq1.a":
-    "The same 16 as everywhere else: RSI, MACD, EMA 9/21/50/200, Bollinger, Stochastic, ATR, ADX, Supertrend, OBV, MFI, CCI, Williams %R, ROC, VWAP and volume ratio.",
+    "The same 20+ indicators as other markets (RSI, MACD, EMA, Bollinger, Stochastic, ADX, Supertrend, OBV, MFI and more), peak-and-trough structure, channel breakouts and strength versus the BIST 100. For stocks, the company's finances are also compared with its sector peers.",
   "market.bist.faq2.q": "Are dividends and splits reflected in the prices?",
   "market.bist.faq2.a":
     "The provider's adjusted close series is used, so gaps caused by dividends and splits arrive already corrected.",

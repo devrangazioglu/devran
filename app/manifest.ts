@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: `${SITE_NAME} — teknik analiz ve al/sat sinyalleri`,
     short_name: SITE_NAME,
     description:
-      "Kripto, Amerikan borsası, Borsa İstanbul, döviz ve emtia için 16 teknik göstergeye dayalı AL / SAT / BEKLE sinyalleri.",
+      "Kripto, Amerikan borsası, Borsa İstanbul, döviz ve emtia için 20'den fazla teknik göstergeye dayalı AL / SAT / BEKLE sinyalleri.",
     start_url: "/",
     display: "standalone",
     background_color: "#05070c",

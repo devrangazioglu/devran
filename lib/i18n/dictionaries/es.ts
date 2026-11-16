@@ -143,10 +143,11 @@ export const es: Partial<Dictionary> = {
   "fund.analyst.5": "Venta fuerte",
   "scan.sort.fundamental": "Puntuación fundamental",
 
-  "home.badge": "Cientos de pares cripto, un motor de análisis",
+  "home.badge":
+    "Cripto, acciones, divisas y materias primas — un solo motor de análisis",
   "home.title": "Analiza y mira\nla señal de compra/venta",
   "home.lead":
-    "Tomamos datos de cripto en vivo desde Binance, calculamos 16 indicadores técnicos, los convertimos en una puntuación ponderada y producimos una señal {signals} — explicando el motivo.",
+    "Combinamos más de 20 indicadores técnicos y la estructura del precio en una sola puntuación para cripto, Borsa Estambul, acciones de EE. UU., divisas y materias primas, y generamos señales {signals}. En acciones también comparamos las finanzas de la empresa con sus competidoras. Cada señal se explica en lenguaje sencillo.",
   "home.ctaPrimary": "Crear cuenta gratis",
   "home.ctaSecondary": "¿Cómo funciona?",
   "home.disclaimerShort":
@@ -164,7 +165,8 @@ export const es: Partial<Dictionary> = {
   "home.whyTitle": "Ve el análisis técnico\nsin leer gráficos",
   "home.whyLead":
     "Cada indicador se calcula por separado, se pondera y se combina en una única puntuación. El resultado es más que una etiqueta: puedes leer, frase a frase, por qué cada indicador votó así.",
-  "home.feature.indicators": "16 indicadores técnicos",
+  "home.feature.indicators":
+    "Más de 20 indicadores y estructura del precio",
   "home.feature.indicators.desc": "RSI, MACD, Bollinger, ADX, Supertrend, OBV y más",
   "home.feature.markets": "Cientos de pares",
   "home.feature.markets.desc": "Bitcoin, Ethereum y cientos de altcoins que cotizan en Binance",
@@ -188,7 +190,8 @@ export const es: Partial<Dictionary> = {
   "home.how.1.desc":
     "Se obtienen las últimas 300 velas (apertura, máximo, mínimo, cierre, volumen) del activo y la temporalidad elegidos, y se guardan en caché.",
   "home.how.2": "2. Análisis",
-  "home.how.2.title": "16 indicadores, voto ponderado",
+  "home.how.2.title":
+    "Más de 20 indicadores, voto ponderado",
   "home.how.2.desc":
     "Cada indicador produce una dirección entre −1 y +1, multiplicada por su peso y sumada. El resultado es una puntuación entre −100 y +100.",
   "home.how.3": "3. Comentario",
