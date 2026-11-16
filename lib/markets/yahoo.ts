@@ -6,7 +6,7 @@
  * (piyasa katmanının geri kalanı sağlayıcıdan bağımsızdır).
  */
 
-import { aktariciAcik, aktariciIleGetir, AKTARICILAR } from "./aktarici";
+import { aktariciAcik, aktariciIleGetir, aktariciJson, AKTARICILAR } from "./aktarici";
 import {
   aggregateCandles,
   intervalMinutes,
@@ -121,7 +121,9 @@ async function requestOnce<T>(path: string, timeoutMs: number): Promise<T> {
     const sonuc = await aktariciIleGetir(HOSTS[0] + path, { zamanAsimiMs: timeoutMs });
     if (sonuc) {
       try {
-        return JSON.parse(sonuc.govde) as T;
+        // Gövde, aktarıcının eklediği başlık satırlarıyla gelebiliyor:
+        // ilk süslü parantezden ayrıştırmak gerekiyor (bkz. `aktariciJson`).
+        return aktariciJson<T>(sonuc.govde);
       } catch {
         lastError = new Error(`aktarıcı (${sonuc.aktarici}) JSON döndürmedi`);
       }

@@ -7,17 +7,21 @@
  * Verinin kendisi ücretsiz ve açık; kapalı olan tek şey bizim adresimiz.
  *
  * Çözüm: isteği araya giren açık bir aktarıcıya yaptırmak. Aktarıcı isteği
- * kendi makinesinden geçirdiği için yanıt normal şekilde geliyor. Aynı ölçümde
- * `allorigins` üzerinden THYAO.IS günlük mumları ve AAPL 15 dakikalık serisi
- * sorunsuz alındı.
+ * kendi makinesinden geçirdiği için yanıt normal şekilde geliyor.
+ *
+ * Sıra ölçümle belirlendi, tahminle değil (aynı betik, dördüncü tur):
+ *   r.jina.ai   → 10/10 ardışık istek, sembol başına 373 ms, 55 KB gövde sorunsuz
+ *   allorigins  → üçüncü turda çalıştı, dördüncü turda HTTP 522 (19 sn): yedek
+ *   corsfix     → Origin başlığı istiyor (yalnızca tarayıcı için), kullanılamaz
+ *   cors.lol · corsproxy.io · thingproxy · cors.workers.dev → reddediyor
  *
  * Bunun bedeli var ve görmezden gelinmemeli:
  *   • Aktarıcı üçüncü bir taraf; yavaşlayabilir, kapanabilir, hız sınırı
  *     koyabilir. Bu yüzden birden çok aktarıcı sırayla denenir ve çalışan
  *     hatırlanır.
- *   • Her istek bir kez daha ağ atlaması demek; bu yüzden yanıtlar
- *     veritabanındaki paylaşımlı önbelleğe yazılır ve asıl yük beslemeye
- *     (GitHub Actions) bırakılır.
+ *   • Her istek bir ağ atlaması daha demek; bu yüzden yanıtlar veritabanındaki
+ *     paylaşımlı önbelleğe yazılır ve liste fiyatları aktarıcıya hiç
+ *     uğramayan TradingView'dan gelir (bkz. `tradingview.ts`).
  *   • Gizli bir veri gönderilmez: sorgular herkese açık fiyat adresleridir,
  *     kullanıcıya ait hiçbir bilgi taşımaz.
  *
@@ -28,6 +32,8 @@
 export type Aktarici = {
   ad: string;
   sar: (url: string) => string;
+  /** Aktarıcının istediği ek başlıklar. */
+  baslik?: Record<string, string>;
 };
 
 /**
@@ -38,16 +44,16 @@ export type Aktarici = {
  */
 export const AKTARICILAR: Aktarici[] = ozelAktaricilar() ?? [
   {
+    ad: "jina",
+    // Adres olduğu gibi ekleniyor; jina kodlanmış adresi kendi sayfası sanıyor.
+    sar: (url) => `https://r.jina.ai/${url}`,
+    // Varsayılan yanıt markdown'a çevrilmiş metin; "text" ham gövdeyi verir ve
+    // 55 KB'lik gün içi seriler bu biçimde eksiksiz geliyor.
+    baslik: { "x-return-format": "text" },
+  },
+  {
     ad: "allorigins",
     sar: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  },
-  {
-    ad: "corsproxy",
-    sar: (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-  },
-  {
-    ad: "cors.lol",
-    sar: (url) => `https://api.cors.lol/?url=${encodeURIComponent(url)}`,
   },
 ];
 
@@ -101,6 +107,22 @@ export type AktariciSonuc = {
 };
 
 /**
+ * Aktarıcı gövdesinden JSON'u ayıklar.
+ *
+ * Aktarıcılar yanıtın başına kendi notunu ekleyebiliyor (jina ham metin
+ * biçiminde bile başlık satırı çıkabiliyor). İlk süslü parantezden itibaren
+ * ayrıştırmak, gövdeyi olduğu gibi `JSON.parse`'a vermekten çok daha
+ * dayanıklı; ölçümde üç jina biçiminin üçü de bu yolla ayrıştı.
+ */
+export function aktariciJson<T>(govde: string): T {
+  const basla = govde.indexOf("{");
+  const dizi = govde.indexOf("[");
+  const kesme = basla < 0 ? dizi : dizi < 0 ? basla : Math.min(basla, dizi);
+  if (kesme < 0) throw new Error("aktarıcı gövdesinde JSON yok");
+  return JSON.parse(govde.slice(kesme)) as T;
+}
+
+/**
  * Adresi aktarıcılar üzerinden çeker; ilk başarılı yanıtı döndürür.
  *
  * Boş ya da HTML (engel sayfası) yanıt başarı sayılmaz: aktarıcılar hatayı
@@ -116,7 +138,10 @@ export async function aktariciIleGetir(
     const basladi = Date.now();
     try {
       const yanit = await fetch(aktarici.sar(url), {
-        headers: { accept: "application/json, text/plain, */*" },
+        headers: {
+          accept: "application/json, text/plain, */*",
+          ...(aktarici.baslik ?? {}),
+        },
         signal: AbortSignal.timeout(zamanAsimiMs),
         cache: "no-store",
       });

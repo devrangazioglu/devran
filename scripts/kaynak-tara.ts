@@ -9,15 +9,19 @@
  *   ✗ Stooq, genelpara, bigpara, isyatirim → 403 / 404 / 401
  *   ✗ Binance → HTTP 451 (çalıştırıcı ABD'de)
  *   ✓ TradingView tarayıcısı → tek istekte 649 BIST / 5012 NASDAQ / 2716 NYSE
- *   ✓ Yahoo + aktarıcı: r.jina.ai (≈400 ms, 55 KB kalkıyor),
- *     allorigins (çalışıyor ama yavaş: ardışık sekiz istekte 6/8, 70 sn)
- *   ✗ corsproxy.io, cors.lol, thingproxy, codetabs
+ *   ✓ Yahoo + r.jina.ai aktarıcısı → 10/10 ardışık istek, sembol başına 373 ms
+ *   ~ allorigins → üçüncü turda çalıştı, dördüncüde HTTP 522: yedek
+ *   ✗ corsproxy.io, cors.lol, thingproxy, corsfix, cors.workers.dev, codetabs
  *   ✓ gold-api (dakikası dakikasına altın/gümüş), truncgil, Frankfurter
  *
- * Bu betik adayları aynı yöntemle dener: tahmin değil, ham sonuç.
+ * Beşinci tur üç şeyi sorar: emtia TradingView'da var mı, ABD verisi ne kadar
+ * gecikmeli, metal/kur kaynaklarının alan adları hâlâ aynı mı.
  *
  * Çalıştırma (veritabanı ve anahtar gerektirmez):
  *   npm run kaynak-tara
+ *
+ * Actions → "Veri kaynağı testi" → Run workflow ile de çalışır; oradaki
+ * çıktı, siteyi besleyecek makinenin gerçek görüşüdür.
  */
 
 type Sonuc = {
@@ -31,6 +35,11 @@ type Sonuc = {
 
 const UA =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+
+const TV_BASLIK = {
+  origin: "https://www.tradingview.com",
+  referer: "https://www.tradingview.com/",
+};
 
 const sonuclar: Sonuc[] = [];
 
@@ -100,148 +109,101 @@ async function dene(
 
 /* ────────────────────── Çözücüler ────────────────────── */
 
-/** Gövdedeki ilk `{`'ten sonrasını Yahoo yanıtı olarak ayrıştırır. */
-function yahooGovdeden(govde: string): string {
-  const basla = govde.indexOf('{"chart"');
-  const ham = basla >= 0 ? govde.slice(basla) : govde;
-  const veri = JSON.parse(ham) as {
-    chart?: {
-      result?: {
-        meta?: { currency?: string };
-        timestamp?: number[];
-        indicators?: { quote?: { close?: (number | null)[] }[] };
-      }[];
-      error?: { description?: string } | null;
-    };
+/** Tarayıcı yanıtını özetler; `göster` kaç satır yazılacağını söyler. */
+function tradingview(goster = 1) {
+  return (govde: string): string => {
+    const veri = JSON.parse(govde) as { totalCount?: number; data?: { s: string; d: unknown[] }[] };
+    const satirlar = veri.data ?? [];
+    if (satirlar.length === 0) throw new Error("boş data dizisi");
+    const ornekler = satirlar
+      .slice(0, goster)
+      .map((s) => `${s.s}=${JSON.stringify(s.d)}`)
+      .join(" · ");
+    return `${veri.totalCount ?? satirlar.length} sembol · ${ornekler}`.slice(0, 300);
   };
-  const sonuc = veri.chart?.result?.[0];
-  if (!sonuc) throw new Error(veri.chart?.error?.description ?? "boş sonuç");
-  const kapanislar = (sonuc.indicators?.quote?.[0]?.close ?? []).filter(
-    (v): v is number => typeof v === "number",
-  );
-  if (kapanislar.length === 0) throw new Error("mum yok");
-  const zaman = sonuc.timestamp?.[sonuc.timestamp.length - 1];
-  const yas = zaman ? Math.round((Date.now() / 1000 - zaman) / 60) : null;
-  return `${kapanislar.length} mum · son ${kapanislar[kapanislar.length - 1].toFixed(2)} ${
-    sonuc.meta?.currency ?? ""
-  } · ${yas} dk önce · ${Math.round(govde.length / 1024)} KB`;
 }
 
-/** Jina'nın JSON zarfı: { data: { content } }. */
-function jinaZarf(govde: string): string {
-  const veri = JSON.parse(govde) as { data?: { content?: string } };
-  const icerik = veri.data?.content;
-  if (!icerik) throw new Error("zarf içinde content yok");
-  return yahooGovdeden(icerik);
+/** Belirtilen alanları yazdırır; alan adı değişmişse hemen görülür. */
+function jsonOzet(alanlar: string[]) {
+  return (govde: string): string => {
+    const veri = JSON.parse(govde) as Record<string, unknown>;
+    const eksik = alanlar.filter((a) => veri[a] === undefined);
+    if (eksik.length > 0) throw new Error(`alan yok: ${eksik.join(", ")}`);
+    return alanlar.map((a) => `${a}=${JSON.stringify(veri[a])}`).join(" ");
+  };
 }
-
-function tradingview(govde: string): string {
-  const veri = JSON.parse(govde) as { totalCount?: number; data?: { s: string; d: unknown[] }[] };
-  const satirlar = veri.data ?? [];
-  if (satirlar.length === 0) throw new Error("boş data dizisi");
-  return `${veri.totalCount ?? satirlar.length} sembol · ${satirlar[0].s} = ${JSON.stringify(
-    satirlar[0].d,
-  ).slice(0, 110)}`;
-}
-
-const yahooUrl = (sembol: string, aralik: string, adim: string) =>
-  `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    sembol,
-  )}?range=${aralik}&interval=${adim}`;
 
 async function tara(): Promise<void> {
   console.log("Ücretsiz veri kaynakları ölçülüyor…\n");
 
-  /* ── 1) Jina: hangi biçim en temiz? ── */
-  await dene("jina düz", "bist", `https://r.jina.ai/${yahooUrl("THYAO.IS", "1mo", "1d")}`, yahooGovdeden);
-  await dene(
-    "jina json zarf",
-    "bist",
-    `https://r.jina.ai/${yahooUrl("THYAO.IS", "1mo", "1d")}`,
-    jinaZarf,
-    { baslik: { accept: "application/json" } },
-  );
-  await dene(
-    "jina ham metin",
-    "abd",
-    `https://r.jina.ai/${yahooUrl("AAPL", "1mo", "15m")}`,
-    yahooGovdeden,
-    { baslik: { "x-return-format": "text" } },
-  );
+  /* ── 1) Emtia: TradingView'da vadeli kontratlar ── */
+  await dene("tv vadeli", "emtia", "https://scanner.tradingview.com/futures/scan", tradingview(3), {
+    govde: {
+      columns: ["name", "description", "close", "change", "volume", "update_mode", "currency"],
+      sort: { sortBy: "volume", sortOrder: "desc" },
+      range: [0, 25],
+    },
+    baslik: TV_BASLIK,
+  });
 
-  /* ── 2) Jina hız sınırı: 10 istek art arda ── */
-  {
-    const semboller = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "AMD", "INTC"];
-    let basarili = 0;
-    let ilkHata = "";
-    const basladi = Date.now();
-    for (const sembol of semboller) {
-      const s = await dene("jina ×10", "abd", `https://r.jina.ai/${yahooUrl(sembol, "6mo", "1d")}`, yahooGovdeden, {
-        sessiz: true,
-      });
-      if (s.ok) basarili++;
-      else if (!ilkHata) ilkHata = `${sembol}: ${s.durum} ${s.ozet.slice(0, 70)}`;
-    }
-    const sure = Date.now() - basladi;
-    sonuclar.push({
-      kaynak: "jina ×10",
-      piyasa: "abd",
-      durum: `${basarili}/10`,
-      sure,
-      ozet:
-        (basarili === 10 ? "hepsi geçti" : `ilk hata — ${ilkHata}`) +
-        ` · sembol başına ${Math.round(sure / 10)} ms`,
-      ok: basarili >= 9,
-    });
+  // Aradığımız kontratlar adıyla duruyor mu? (altın, gümüş, petrol, gaz)
+  for (const sembol of ["COMEX:GC1!", "COMEX:SI1!", "NYMEX:CL1!", "NYMEX:NG1!"]) {
+    await dene(
+      `tv ${sembol.split(":")[1]}`,
+      "emtia",
+      `https://scanner.tradingview.com/symbol?symbol=${encodeURIComponent(sembol)}&fields=` +
+        encodeURIComponent("close,change,high,low,volume,update_mode,currency"),
+      (govde) => JSON.stringify(JSON.parse(govde)).slice(0, 200),
+      { baslik: TV_BASLIK },
+    );
   }
 
-  /* ── 3) Başka aktarıcı adayları ── */
-  await dene(
-    "corsfix",
-    "bist",
-    `https://proxy.corsfix.com/?${yahooUrl("GARAN.IS", "1mo", "1d")}`,
-    yahooGovdeden,
-  );
-  await dene(
-    "cors.workers.dev",
-    "emtia",
-    `https://test.cors.workers.dev/?${yahooUrl("GC=F", "1mo", "1d")}`,
-    yahooGovdeden,
-  );
-  await dene(
-    "allorigins tek",
-    "abd",
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl("AAPL", "1mo", "1d"))}`,
-    yahooGovdeden,
-  );
-
-  /* ── 4) TradingView: tek sembol uç noktası (gün içi alanlar) ── */
-  await dene(
-    "tv tek sembol",
-    "bist",
-    "https://scanner.tradingview.com/symbol?symbol=BIST%3ATHYAO&fields=" +
-      encodeURIComponent(
-        "close,change,open,high,low,volume,price_52_week_high,price_52_week_low,update_mode",
-      ),
-    (govde) => JSON.stringify(JSON.parse(govde)).slice(0, 220),
-    { baslik: { origin: "https://www.tradingview.com", referer: "https://www.tradingview.com/" } },
-  );
-
-  // Gecikme ölçümü: BIST kapalıyken "update_mode" ve son fiyat ne diyor?
-  await dene(
-    "tv bist ilk 5",
-    "bist",
-    "https://scanner.tradingview.com/turkey/scan",
-    tradingview,
-    {
-      govde: {
-        filter: [{ left: "exchange", operation: "equal", right: "BIST" }],
-        columns: ["name", "close", "change", "volume", "update_mode", "currency"],
-        sort: { sortBy: "volume", sortOrder: "desc" },
-        range: [0, 5],
-      },
-      baslik: { origin: "https://www.tradingview.com", referer: "https://www.tradingview.com/" },
+  /* ── 2) ABD verisi ne kadar gecikmeli? ── */
+  await dene("tv abd kipi", "abd", "https://scanner.tradingview.com/america/scan", tradingview(3), {
+    govde: {
+      filter: [{ left: "name", operation: "in_range", right: ["AAPL", "MSFT", "NVDA"] }],
+      columns: ["name", "close", "change", "update_mode", "currency"],
+      range: [0, 3],
     },
+    baslik: TV_BASLIK,
+  });
+
+  // Endeksler de tarayıcıda var mı? (^GSPC karşılığı)
+  await dene("tv endeks", "abd", "https://scanner.tradingview.com/america/scan", tradingview(5), {
+    govde: {
+      filter: [{ left: "type", operation: "equal", right: "index" }],
+      columns: ["name", "description", "close", "change", "update_mode"],
+      sort: { sortBy: "name", sortOrder: "asc" },
+      range: [0, 10],
+    },
+    baslik: TV_BASLIK,
+  });
+
+  /* ── 3) Metal ve kur: alan adları hâlâ aynı mı? ── */
+  for (const metal of ["XAU", "XAG", "XPT", "XPD"]) {
+    await dene(
+      `gold-api ${metal}`,
+      "emtia",
+      `https://api.gold-api.com/price/${metal}`,
+      jsonOzet(["name", "price", "updatedAt"]),
+    );
+  }
+
+  await dene(
+    "truncgil",
+    "doviz",
+    "https://finans.truncgil.com/today.json",
+    (govde) => {
+      const veri = JSON.parse(govde) as Record<string, unknown>;
+      return `${Object.keys(veri).length} kalem · USD=${JSON.stringify(veri["USD"])}`.slice(0, 180);
+    },
+  );
+
+  await dene(
+    "frankfurter",
+    "doviz",
+    "https://api.frankfurter.app/latest?from=USD&to=TRY,EUR",
+    jsonOzet(["date", "rates"]),
   );
 
   /* ────────────────────── Rapor ────────────────────── */
