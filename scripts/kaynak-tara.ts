@@ -221,7 +221,7 @@ async function tara(): Promise<void> {
       if (liste.length === 0) throw new Error("boş data");
       return `${liste.length} hisse · ilk ${JSON.stringify(liste[0]).slice(0, 110)}`;
     },
-    { referer: "https://bigpara.hurriyet.com.tr/" },
+    { baslik: { referer: "https://bigpara.hurriyet.com.tr/" } },
   );
 
   await dene(
