@@ -5,6 +5,7 @@ import type { KrediOzeti } from "./credits";
 import type { Candle, DataSource, Instrument, Interval, MarketId, Quote } from "./markets/types";
 import type { Commentary } from "./commentary";
 import type { Fundamentals } from "./fundamentals";
+import type { SadeOzet } from "./sade-ozet";
 
 export type MarketsResponse = {
   market: MarketId;
@@ -16,6 +17,8 @@ export type MarketsResponse = {
 export type AnalyzeResponse = {
   analysis: Analysis;
   commentary: Commentary;
+  /** Teknik analiz bilmeyenler için kısa özet. */
+  plain: SadeOzet;
   /** Temel analiz; hisse dışındaki varlıklarda ya da veri yoksa null. */
   fundamentals: Fundamentals | null;
   /** Teknik sinyal ile temel puanın birlikte okunuşu (çeviri anahtarı). */

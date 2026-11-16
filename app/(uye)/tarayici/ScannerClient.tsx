@@ -272,6 +272,22 @@ export default function ScannerClient({
         </label>
       </div>
 
+      {/* Teknik analiz bilmeyenler için: sütunların günlük dildeki anlamı. */}
+      <details className="ayrinti" style={{ marginBottom: 14 }}>
+        <summary>
+          <span>{t("scan.help.title")}</span>
+        </summary>
+        <ul className="bullet-list" style={{ marginTop: 14 }}>
+          <li>{t("scan.help.signal")}</li>
+          <li>{t("scan.help.score")}</li>
+          <li>{t("scan.help.confidence")}</li>
+          <li className="only-desktop">{t("scan.help.rsi")}</li>
+          <li className="only-desktop">{t("scan.help.adx")}</li>
+          <li className="only-desktop">{t("scan.help.atr")}</li>
+          {temelVar && <li>{t("scan.help.fund")}</li>}
+        </ul>
+      </details>
+
       {/* Masaüstü tablo */}
       <div className="only-desktop">
         <div className="table-wrap">

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { analyze, chartSeries, isBuySignal, isSellSignal } from "@/lib/analysis";
 import { buildCommentary } from "@/lib/commentary";
+import { sadeOzet } from "@/lib/sade-ozet";
 import { krediHarca, krediIade, krediOzeti, kullanicidanDurum } from "@/lib/credits";
 import { bilesikGorunum } from "@/lib/fundamentals";
 import { analysisReady } from "@/lib/i18n";
@@ -178,6 +179,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       analysis,
       commentary,
+      plain: sadeOzet(analysis, locale, { fundamentals }),
       fundamentals,
       overallKey,
       analysisLocalized: analysisReady(locale),

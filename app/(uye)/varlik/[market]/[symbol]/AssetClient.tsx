@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { RejimKarti, SinamaKarti, TemelKarti } from "@/components/AnalizKartlari";
+import { Aciklama, SadeOzetKarti } from "@/components/SadeOzet";
 import CandleChart, { type Gorunum } from "@/components/CandleChart";
 import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
@@ -278,6 +279,11 @@ export default function AssetClient({
             </SpotlightCard>
           </Reveal>
 
+          {/* ── Kısaca: teknik terim bilmeden okunabilen özet ── */}
+          <Reveal>
+            <SadeOzetKarti ozet={data.plain} />
+          </Reveal>
+
           {/* ── Grafikler ───────────────────────────────── */}
           <CandleChart
             candles={data.candles}
@@ -348,11 +354,19 @@ export default function AssetClient({
                     {t(`interval.${analysis.interval}` as "interval.4h")}
                   </span>
                 </div>
-                <div className="prose">
-                  {commentary.paragraphs.map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                  ))}
-                </div>
+                {/* Ayrıntılı yorum göstergeleri tek tek anlatır ve terim bilgisi
+                    ister; varsayılan kapalı. Herkes için olan özet yukarıda. */}
+                <details className="ayrinti">
+                  <summary>
+                    <span>{t("plain.details")}</span>
+                    <span className="dim">{t("plain.detailsHint")}</span>
+                  </summary>
+                  <div className="prose">
+                    {commentary.paragraphs.map((paragraph, index) => (
+                      <p key={index}>{paragraph}</p>
+                    ))}
+                  </div>
+                </details>
 
                 {commentary.highlights.length > 0 && (
                   <>
@@ -544,7 +558,10 @@ export default function AssetClient({
                   {group.items.map((check) => (
                     <div className="check-row" key={check.id}>
                       <div>
-                        <div className="name">{t(check.labelKey as "ind.rsi")}</div>
+                        <div className="name">
+                          {t(check.labelKey as "ind.rsi")}
+                          <Aciklama metin={t(`${check.labelKey}.what` as "ind.rsi.what")} etiket={t("plain.what")} />
+                        </div>
                         <div className="note">{renderNote(t, check, intl)}</div>
                       </div>
                       <div className="value mono dim" style={{ fontSize: 13 }}>

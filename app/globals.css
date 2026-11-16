@@ -987,6 +987,150 @@ textarea {
   }
 }
 
+/* ── Sade özet ("Kısaca") ve terim açıklamaları ── */
+
+.sade-kart {
+  border-left: 3px solid var(--border);
+}
+
+.sade-kart.sade-up {
+  border-left-color: var(--up);
+}
+
+.sade-kart.sade-down {
+  border-left-color: var(--down);
+}
+
+.sade-kart.sade-flat {
+  border-left-color: var(--flat);
+}
+
+.sade-baslik {
+  font-size: 17px;
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+
+.sade-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.sade-liste li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.sade-liste li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+
+.sade-liste li.sade-up::before {
+  background: var(--up);
+}
+
+.sade-liste li.sade-down::before {
+  background: var(--down);
+}
+
+.sade-liste li.sade-flat::before {
+  background: var(--flat);
+}
+
+.sade-liste li.sade-warn::before {
+  background: var(--flat);
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.sade-liste li.sade-info::before {
+  background: var(--accent);
+}
+
+.ayrinti > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ayrinti > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ayrinti > summary::before {
+  content: "▸";
+  color: var(--accent);
+  transition: transform 0.15s ease;
+}
+
+.ayrinti[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.ayrinti > summary .dim {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.ayrinti[open] > .prose {
+  margin-top: 16px;
+}
+
+.aciklama-dugme {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: 1px;
+}
+
+.aciklama-dugme:hover,
+.aciklama-dugme.acik {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.aciklama-metin {
+  display: block;
+  margin: 6px 0 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-dim);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
 .field {
   display: grid;
   gap: 7px;
