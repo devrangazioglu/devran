@@ -1,5 +1,6 @@
 "use client";
 
+import PiyasaSecici from "@/components/PiyasaSecici";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -158,19 +159,7 @@ export default function PanelClient({
         <div className="toolbar">
           {/* Tek piyasa açıkken seçici gösterilmez: tek düğmeli bir seçim,
               kullanıcıya olmayan bir tercih sunar. */}
-          {AKTIF_MARKET_IDS.length > 1 && (
-            <div className="segmented">
-              {AKTIF_MARKET_IDS.map((id) => (
-                <button
-                  key={id}
-                  className={id === market ? "active" : ""}
-                  onClick={() => setMarket(id)}
-                >
-                  {t(`market.${id}` as "market.kripto")}
-                </button>
-              ))}
-            </div>
-          )}
+          {AKTIF_MARKET_IDS.length > 1 && <PiyasaSecici value={market} onChange={setMarket} />}
           <div className="segmented">
             {MARKETS[market].intervals
               .filter((value) => ["15m", "1h", "4h", "1d"].includes(value))

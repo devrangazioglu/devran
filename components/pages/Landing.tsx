@@ -13,7 +13,7 @@ import { intlTag, type Locale } from "@/lib/i18n";
 import { localeHref } from "@/lib/i18n/routing";
 import { faqJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { getQuotes } from "@/lib/markets/provider";
-import { MARKETS, AKTIF_MARKET_IDS, type MarketId, type Quote } from "@/lib/markets/types";
+import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS, DUNYA_MARKET_IDS, type MarketId, type Quote } from "@/lib/markets/types";
 
 // Tanıtım sayfası dakikada bir yeniden üretilir.
 export const revalidate = 60;
@@ -21,8 +21,10 @@ export const revalidate = 60;
 /** Üst şeritteki altı başlık: en çok işlem görenlerle günün en hareketlileri. */
 async function highlights(): Promise<Quote[]> {
   const TOPLAM = 6;
+  // Yalnızca ana piyasalar: on beş piyasanın her biri için istek atmak
+  // tanıtım sayfasını yavaşlatırdı ve şeritte zaten altı yer var.
   const lists = await Promise.all(
-    AKTIF_MARKET_IDS.map((market) =>
+    ANA_MARKET_IDS.filter((id) => AKTIF_MARKET_IDS.includes(id)).map((market) =>
       getQuotes(market, 12)
         .then(({ quotes }) => quotes)
         .catch(() => []),
@@ -176,7 +178,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
             </Reveal>
 
             <div className="grid-4">
-              {AKTIF_MARKET_IDS.map((id, index) => (
+              {ANA_MARKET_IDS.map((id, index) => (
                 <Reveal key={id} delay={index * 70}>
                   <SpotlightCard>
                     <Link href={yol(`/piyasa/${MARKETS[id].slug}`)} className="market-card">
@@ -192,6 +194,34 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
           </div>
         </section>
       )}
+
+      {/* ── Dünya borsaları ──────────────────────────────── */}
+      <section className="section" id="dunya">
+        <div className="container">
+          <Reveal>
+            <p className="eyebrow">
+              <em>🌍 {t("market.dunya")}</em>
+            </p>
+            <h2 className="section-title">{t("home.dunyaTitle")}</h2>
+            <p className="section-sub">{t("home.dunyaSub")}</p>
+          </Reveal>
+          <div className="dunya-izgara">
+            {DUNYA_MARKET_IDS.map((id, index) => (
+              <Reveal key={id} delay={Math.min(index, 6) * 50}>
+                <Link href={yol(`/piyasa/${MARKETS[id].slug}`)} className="dunya-kart">
+                  <span className="bayrak" aria-hidden>
+                    {MARKETS[id].bayrak}
+                  </span>
+                  <span>
+                    <strong>{t(`market.${id}` as "market.kripto")}</strong>
+                    <small>{t(`market.${id}.desc` as "market.kripto.desc")}</small>
+                  </span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ── Neden ────────────────────────────────────────── */}
       <section className="section" id="ozellikler">
@@ -389,11 +419,12 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
               <LogoWord />
             </div>
             <nav className="footer-links">
-              {AKTIF_MARKET_IDS.map((id) => (
+              {ANA_MARKET_IDS.map((id) => (
                 <Link key={id} href={yol(`/piyasa/${MARKETS[id].slug}`)}>
                   {t(`market.${id}` as "market.kripto")}
                 </Link>
               ))}
+              <a href="#dunya">🌍 {t("market.dunya")}</a>
               <Link href={yol("/planlar")}>{t("nav.plans")}</Link>
               <a href="#nasil">{t("nav.how")}</a>
               <a href="#sss">{t("nav.faq")}</a>

@@ -10,6 +10,7 @@
  */
 
 import type { AnalysisContext } from "../analysis";
+import { borsa } from "./borsalar";
 import { getCandles } from "./provider";
 import type { Candle, Instrument, Interval, MarketId } from "./types";
 
@@ -24,9 +25,10 @@ type Kiyas = { market: MarketId; symbol: string; ticker: string };
  */
 export function kiyasEndeksi(instrument: Instrument): Kiyas | null {
   if (instrument.kind === "hisse") {
-    if (instrument.market === "bist") return { market: "bist", symbol: "XU100.IS", ticker: "BIST 100" };
-    if (instrument.market === "abd") return { market: "abd", symbol: "^GSPC", ticker: "S&P 500" };
-    return null;
+    const tanim = borsa(instrument.market);
+    return tanim
+      ? { market: instrument.market, symbol: tanim.endeks.symbol, ticker: tanim.endeks.ticker }
+      : null;
   }
   if (instrument.kind === "kripto" && instrument.symbol !== "BTCUSDT") {
     return { market: "kripto", symbol: "BTCUSDT", ticker: "BTC" };

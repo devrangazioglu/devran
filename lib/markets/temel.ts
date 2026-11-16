@@ -20,6 +20,7 @@
  */
 
 import { temelPuanla, type Fundamentals, type TemelSatir } from "../fundamentals";
+import { borsa } from "./borsalar";
 import { tradingViewAcik } from "./tradingview";
 import type { MarketId } from "./types";
 
@@ -56,13 +57,14 @@ const SUTUNLAR: [string, keyof TemelSatir][] = [
 ];
 
 /**
- * Kıyas evreni. ABD'de 5000'i aşkın hisse var; emsal dağılımı için piyasa
- * değerine göre ilk 2500 fazlasıyla yeter ve yanıtı küçük tutar.
+ * Kıyas evreni: borsa tanımından (`borsalar.ts`). ABD'de 5000'i aşkın hisse
+ * var; emsal dağılımı için piyasa değerine göre ilk birkaç bin fazlasıyla
+ * yeter ve yanıtı küçük tutar.
  */
-const EVREN: Partial<Record<MarketId, { yol: string; borsalar: string[]; adet: number }>> = {
-  bist: { yol: "turkey", borsalar: ["BIST"], adet: 1000 },
-  abd: { yol: "america", borsalar: ["NASDAQ", "NYSE", "AMEX"], adet: 2500 },
-};
+function evrenTanimi(market: MarketId): { yol: string; borsalar: string[]; adet: number } | null {
+  const tanim = borsa(market);
+  return tanim ? { yol: tanim.tvYol, borsalar: tanim.tvBorsalar, adet: tanim.temelAdet } : null;
+}
 
 /** Bilançolar üç ayda bir değişir; yarım gün fazlasıyla taze. */
 const TTL_MS = 12 * 60 * 60_000;
@@ -73,7 +75,7 @@ const bellek = new Map<MarketId, Kayit>();
 const bekleyen = new Map<MarketId, Promise<Map<string, TemelSatir>>>();
 
 export function temelDestekliyor(market: MarketId): boolean {
-  return tradingViewAcik() && EVREN[market] !== undefined;
+  return tradingViewAcik() && evrenTanimi(market) !== null;
 }
 
 /** Testler için. */
@@ -97,7 +99,7 @@ function satirYap(degerler: unknown[]): TemelSatir | null {
 }
 
 async function evreniCek(market: MarketId): Promise<Map<string, TemelSatir>> {
-  const evren = EVREN[market];
+  const evren = evrenTanimi(market);
   if (!evren) return new Map();
 
   const yanit = await fetch(`${BASE}/${evren.yol}/scan`, {
@@ -150,7 +152,7 @@ async function evren(market: MarketId): Promise<Map<string, TemelSatir>> {
 
 /** Uygulama sembolünden borsadaki kısa kodu çıkarır ("THYAO.IS" → "THYAO"). */
 function kod(market: MarketId, symbol: string): string {
-  return market === "bist" ? symbol.replace(/\.IS$/, "") : symbol;
+  return borsa(market)?.tvAdi(symbol) ?? symbol;
 }
 
 /**

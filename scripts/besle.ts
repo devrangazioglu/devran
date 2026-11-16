@@ -26,7 +26,9 @@
 
 import { closePool, ensureSchema, postgresEnabled, query } from "../lib/db";
 import { aktariciAcik } from "../lib/markets/aktarici";
-import { staticInstruments } from "../lib/markets/instruments";
+import { findStaticInstrument, staticInstruments } from "../lib/markets/instruments";
+import { tvTamAd } from "../lib/markets/tradingview";
+import { fetchTvCandles, tvMumAcik } from "../lib/markets/tv-mum";
 import { fetchChart } from "../lib/markets/yahoo";
 import { MARKET_IDS, type Candle, type Instrument, type Interval, type MarketId } from "../lib/markets/types";
 
@@ -78,16 +80,28 @@ const bekle = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * alıp boş döndü, ölçüm de bunu "kaynak çalışmıyor" diye gösterdi. Tek yol
  * kullanmak aynı hatanın iki yerde ayrı ayrı düzeltilmesi gereğini de bitirir.
  */
+/**
+ * Önce TradingView grafik akışı (kotasız, aktarıcısız; bkz. `lib/markets/tv-mum.ts`),
+ * düşerse Yahoo. `kaynak` istekler arasında ne kadar bekleneceğini belirler:
+ * aktarıcının dakikada ~20 istek sınırı yalnızca Yahoo yolunda geçerli.
+ */
 async function mumlariCek(
-  symbol: string,
+  instrument: Instrument,
   interval: Interval,
-): Promise<{ candles: Candle[]; currency?: string; name?: string }> {
-  const chart = await fetchChart(symbol, interval, MUM_SAYISI);
-  return {
-    candles: chart.candles,
-    currency: chart.currency ?? undefined,
-    name: chart.name ?? undefined,
-  };
+): Promise<{ candles: Candle[]; currency?: string; kaynak: "tv" | "yahoo" }> {
+  if (tvMumAcik()) {
+    try {
+      const tamAd = await tvTamAd(instrument.market, instrument.symbol);
+      if (tamAd) {
+        const { candles, currency } = await fetchTvCandles(tamAd, interval, MUM_SAYISI);
+        if (candles.length >= 30) return { candles, currency: currency ?? undefined, kaynak: "tv" };
+      }
+    } catch {
+      // Yahoo'ya düşülür.
+    }
+  }
+  const chart = await fetchChart(instrument.symbol, interval, MUM_SAYISI);
+  return { candles: chart.candles, currency: chart.currency ?? undefined, kaynak: "yahoo" };
 }
 
 /* ────────────────────────── Yazma ────────────────────────── */
@@ -133,8 +147,10 @@ async function piyasayiBesle(market: MarketId): Promise<Sonuc> {
 
   for (const instrument of instruments) {
     for (const periyot of PERIYOTLAR) {
+      let sonKaynak: "tv" | "yahoo" = "yahoo";
       try {
-        const { candles, currency } = await mumlariCek(instrument.symbol, periyot);
+        const { candles, currency, kaynak } = await mumlariCek(instrument, periyot);
+        sonKaynak = kaynak;
         // Birkaç mumluk yanıt genelde "sembol bulunamadı" demektir; yarım
         // veriyle önbelleği kirletmektense o sembolü atlamak daha iyi.
         if (candles.length < 30) throw new Error(`yetersiz veri (${candles.length} mum)`);
@@ -145,7 +161,7 @@ async function piyasayiBesle(market: MarketId): Promise<Sonuc> {
           `${instrument.symbol} ${periyot}: ${error instanceof Error ? error.message : "bilinmeyen"}`,
         );
       }
-      await bekle(ISTEK_ARASI_MS);
+      await bekle(sonKaynak === "tv" ? 250 : ISTEK_ARASI_MS);
     }
   }
 
@@ -167,6 +183,8 @@ async function kaynagiDene(): Promise<void> {
     { market: "bist", symbol: "GARAN.IS" },
     { market: "emtia", symbol: "GC=F" },
     { market: "emtia", symbol: "USDTRY=X" },
+    { market: "almanya", symbol: "SAP.DE" },
+    { market: "japonya", symbol: "7203.T" },
   ];
 
   console.log(
@@ -177,12 +195,14 @@ async function kaynagiDene(): Promise<void> {
 
   for (const ornek of ornekler) {
     try {
-      const { candles, currency } = await mumlariCek(ornek.symbol, "1d");
+      const instrument = findStaticInstrument(ornek.market, ornek.symbol);
+      if (!instrument) throw new Error("listede yok");
+      const { candles, currency, kaynak } = await mumlariCek(instrument, "1d");
       const son = candles[candles.length - 1];
       const tarih = new Date(son.openTime).toISOString().slice(0, 10);
       console.log(
         `✓ ${ornek.symbol.padEnd(10)} ${String(candles.length).padStart(3)} mum · ` +
-          `son ${tarih} · kapanış ${son.close.toFixed(2)} ${currency ?? ""}`,
+          `son ${tarih} · kapanış ${son.close.toFixed(2)} ${currency ?? ""} · ${kaynak}`,
       );
       basarili++;
     } catch (error) {

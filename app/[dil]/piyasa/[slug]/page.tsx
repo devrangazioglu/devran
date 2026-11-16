@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import MarketView from "@/components/pages/MarketView";
 import { isLocale, makeT, type Locale } from "@/lib/i18n";
 import { PREFIXED_LOCALES } from "@/lib/i18n/routing";
+import { seoMetni } from "@/lib/piyasa-metni";
 import { marketBySlug, MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
 import { dilAlternatifleri, ogLocale, SITE_NAME } from "@/lib/seo";
 
@@ -31,8 +32,8 @@ export async function generateMetadata({
   if (!market) return { title: SITE_NAME };
 
   const t = makeT(locale);
-  const title = t(`seo.${market.id}.title` as "seo.kripto.title");
-  const description = t(`seo.${market.id}.description` as "seo.kripto.description");
+  const title = seoMetni(t, market, "title");
+  const description = seoMetni(t, market, "description");
 
   return {
     title,

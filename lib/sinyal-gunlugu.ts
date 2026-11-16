@@ -228,7 +228,12 @@ export function sonuclariBul(
 ): { id: string; fiyat: number; zaman: number; getiri: number }[] {
   const out: { id: string; fiyat: number; zaman: number; getiri: number }[] = [];
   for (const kayit of bekleyenler) {
-    const index = mumlar.findIndex((m) => m.openTime === kayit.mumZamani);
+    // Önce tam zaman; tutmazsa aynı gün. Mum kaynağı değişince (Yahoo →
+    // TradingView) aynı günün mumu farklı saatle damgalanabiliyor: biri seans
+    // açılışını, öteki gece yarısını yazıyor. Tam eşleşmede ısrar etmek o
+    // günden önce açılmış kayıtların sonucunu hiç bulamamak demekti.
+    let index = mumlar.findIndex((m) => m.openTime === kayit.mumZamani);
+    if (index < 0) index = mumlar.findIndex((m) => gunu(m.openTime) === gunu(kayit.mumZamani));
     if (index < 0 || index + UFUK >= mumlar.length) continue;
     const hedef = mumlar[index + UFUK];
     out.push({

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
+import PiyasaSecici from "@/components/PiyasaSecici";
 import Secim from "@/components/Secim";
 import { AssetAvatar, Change, MarketBadge, Score, SignalBadge } from "@/components/ui";
 import { isBuySignal, isSellSignal } from "@/lib/analysis";
@@ -156,15 +157,7 @@ export default function ScannerClient({
           </p>
         </div>
         <div className="toolbar">
-          {AKTIF_MARKET_IDS.length > 1 && (
-            <div className="segmented">
-              {AKTIF_MARKET_IDS.map((id) => (
-                <button key={id} className={id === market ? "active" : ""} onClick={() => setMarket(id)}>
-                  {t(`market.${id}` as "market.kripto")}
-                </button>
-              ))}
-            </div>
-          )}
+          {AKTIF_MARKET_IDS.length > 1 && <PiyasaSecici value={market} onChange={setMarket} />}
           <div className="segmented">
             {MARKETS[market].intervals.map((value) => (
               <button

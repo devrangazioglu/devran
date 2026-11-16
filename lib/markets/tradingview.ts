@@ -31,7 +31,8 @@
  * uygulama eski kaynaklara düşer.
  */
 
-import { instrumentId, MarketDataError, type MarketId, type Quote } from "./types";
+import { BORSALAR, borsa as borsaTanimi } from "./borsalar";
+import { instrumentId, MARKETS, MarketDataError, type MarketId, type Quote } from "./types";
 
 const BASE = process.env.TRADINGVIEW_API_BASE ?? "https://scanner.tradingview.com";
 
@@ -50,11 +51,8 @@ const TARAYICI_BASLIK = {
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
 };
 
-/** Borsaya göre taranan piyasalar: tek istekte bütün liste. */
-const BORSA_TARAMASI: Partial<Record<MarketId, { yol: string; borsalar: string[] }>> = {
-  bist: { yol: "turkey", borsalar: ["BIST"] },
-  abd: { yol: "america", borsalar: ["NASDAQ", "NYSE", "AMEX"] },
-};
+/** Tarama sütunlarına ek olarak borsa kodu; Çin'de sembol soneki ona bağlı. */
+const BORSA_SUTUNU = "exchange";
 
 /**
  * Uygulama sembolü → tarayıcıdaki tam ad ("BORSA:AD").
@@ -98,12 +96,14 @@ const DOVIZ: Record<string, string> = {
  * sembol başına istek burada sorun değil.
  */
 const ENDEKS: Record<string, string> = {
-  "^GSPC": "SP:SPX",
   "^IXIC": "NASDAQ:IXIC",
   "^DJI": "DJ:DJI",
-  "XU100.IS": "BIST:XU100",
   "XU030.IS": "BIST:XU030",
   "DX-Y.NYB": "TVC:DXY",
+  // Her borsanın ana endeksi borsa tanımından gelir (S&P 500, BIST 100, DAX…).
+  ...Object.fromEntries(
+    Object.values(BORSALAR).map((b) => [b!.endeks.symbol, b!.endeks.tv]),
+  ),
 };
 
 type TarayiciYanit = {
@@ -128,7 +128,7 @@ export function tradingViewSembolu(market: MarketId, symbol: string): boolean {
   if (!tradingViewAcik()) return false;
   if (ENDEKS[symbol] || VADELI[symbol] || DOVIZ[symbol]) return true;
   // Borsa taraması bütün listeyi getirdiği için hisseler ad eşlemesi istemez.
-  return BORSA_TARAMASI[market] !== undefined;
+  return borsaTanimi(market) !== null;
 }
 
 /**
@@ -145,7 +145,7 @@ export async function fetchTradingViewQuotes(
 ): Promise<Map<string, Quote>> {
   if (!tradingViewAcik()) throw new MarketDataError("Kaynak kapalı.", 503);
 
-  const borsa = BORSA_TARAMASI[market];
+  const borsa = borsaTanimi(market);
   const endeksler = semboller.filter((s) => ENDEKS[s]);
   const vadeli = semboller.filter((s) => VADELI[s]);
   const doviz = semboller.filter((s) => DOVIZ[s]);
@@ -153,7 +153,14 @@ export async function fetchTradingViewQuotes(
   const isler: Promise<Map<string, Quote>>[] = [];
 
   if (borsa) {
-    isler.push(tarama(market, borsa.yol, "exchange", borsa.borsalar, null));
+    // Büyük borsalarda (Japonya, Çin) yalnızca istenen hisseler adla süzülür;
+    // ABD ve BIST'te bütün borsa zaten tek istekte geliyor.
+    const hisseler = borsa.adaGore
+      ? semboller.filter((s) => !ENDEKS[s]).map((s) => borsa.tvAdi(s))
+      : null;
+    if (!hisseler || hisseler.length > 0) {
+      isler.push(borsaTaramasi(market, borsa.tvYol, borsa.tvBorsalar, hisseler));
+    }
   }
   if (vadeli.length > 0) {
     isler.push(tarama(market, "futures", "name", null, secilenler(vadeli, VADELI)));
@@ -185,6 +192,55 @@ export async function fetchTradingViewQuotes(
   return sonuc;
 }
 
+/** ABD hisselerinin borsası (NASDAQ/NYSE) bilinmiyor; tarayıcıdan bir kez öğrenilir. */
+const tamAdBellegi = new Map<string, string>();
+
+/**
+ * Uygulama sembolünün TradingView'daki tam adı ("XETR:SAP", "COMEX:GC1!").
+ *
+ * Grafik akışı (`tv-mum.ts`) tam ad istiyor: yalnızca "SAP" yazmak New York'taki
+ * ADR'yi getirebilir. Endeks, vadeli ve döviz tablodan, borsa hisseleri borsa
+ * tanımından gelir. ABD'de hissenin hangi borsada olduğu sembolden
+ * anlaşılmadığı için tarayıcıya bir kez sorulur ve hatırlanır.
+ */
+export async function tvTamAd(market: MarketId, symbol: string): Promise<string | null> {
+  if (!tradingViewAcik()) return null;
+  const sabit = ENDEKS[symbol] ?? VADELI[symbol] ?? DOVIZ[symbol];
+  if (sabit) return sabit;
+
+  const tanim = borsaTanimi(market);
+  if (!tanim) return null;
+  if (tanim.tvBorsalar.length === 1) return `${tanim.tvBorsalar[0]}:${tanim.tvAdi(symbol)}`;
+  if (market === "cin") return `${symbol.endsWith(".SS") ? "SSE" : "SZSE"}:${tanim.tvAdi(symbol)}`;
+
+  const anahtar = `${market}:${symbol}`;
+  const bilinen = tamAdBellegi.get(anahtar);
+  if (bilinen) return bilinen;
+  try {
+    const yanit = await fetch(`${BASE}/${tanim.tvYol}/scan`, {
+      method: "POST",
+      headers: TARAYICI_BASLIK,
+      body: JSON.stringify({
+        filter: [
+          { left: "exchange", operation: "in_range", right: tanim.tvBorsalar },
+          { left: "name", operation: "equal", right: tanim.tvAdi(symbol) },
+        ],
+        columns: ["name"],
+        sort: { sortBy: "volume", sortOrder: "desc" },
+        range: [0, 1],
+      }),
+      signal: AbortSignal.timeout(6_000),
+      cache: "no-store",
+    });
+    if (!yanit.ok) return null;
+    const tam = ((await yanit.json()) as TarayiciYanit).data?.[0]?.s ?? null;
+    if (tam) tamAdBellegi.set(anahtar, tam);
+    return tam;
+  } catch {
+    return null;
+  }
+}
+
 /** Seçilen sembollerin tarayıcıdaki adları ve tam adları. */
 function secilenler(semboller: string[], tablo: Record<string, string>) {
   const tamAdlar = new Set(semboller.map((s) => tablo[s]));
@@ -192,7 +248,69 @@ function secilenler(semboller: string[], tablo: Record<string, string>) {
   return { tamAdlar, adlar };
 }
 
-/** Bir bölgeyi tarar. */
+/**
+ * Bir hisse borsasını tarar. `adlar` verilirse yalnızca o hisseler gelir.
+ *
+ * Borsa süzgeci her durumda uygulanır: aynı kod bir ülkenin ikincil
+ * pazarlarında da işlem görebiliyor (Almanya'da XETR yanında FWB, MUN…) ve
+ * yanlış satır başka fiyat ve hacim demek.
+ */
+async function borsaTaramasi(
+  market: MarketId,
+  yol: string,
+  borsalar: string[],
+  adlar: string[] | null,
+): Promise<Map<string, Quote>> {
+  const tanim = borsaTanimi(market);
+  const filtre: unknown[] = [{ left: "exchange", operation: "in_range", right: borsalar }];
+  if (adlar) filtre.push({ left: "name", operation: "in_range", right: adlar });
+
+  const yanit = await fetch(`${BASE}/${yol}/scan`, {
+    method: "POST",
+    headers: TARAYICI_BASLIK,
+    body: JSON.stringify({
+      filter: filtre,
+      options: { lang: "tr" },
+      columns: [...SUTUNLAR, BORSA_SUTUNU],
+      sort: { sortBy: "volume", sortOrder: "desc" },
+      range: [0, adlar ? Math.max(adlar.length * 3, 50) : 3000],
+    }),
+    signal: AbortSignal.timeout(10_000),
+    cache: "no-store",
+  });
+  if (!yanit.ok) throw new MarketDataError(`Fiyat listesi alınamadı (${yanit.status}).`, 502);
+
+  const govde = (await yanit.json()) as TarayiciYanit;
+  const satirlar = govde.data ?? [];
+  if (satirlar.length === 0) throw new MarketDataError("Fiyat listesi boş döndü.", 502);
+
+  const sonuc = new Map<string, Quote>();
+  for (const satir of satirlar) {
+    const [ad, aciklama, kapanis, degisim, yuksek, dusuk, hacim, paraBirimi, borsaKodu] = satir.d;
+    if (typeof ad !== "string" || typeof kapanis !== "number") continue;
+    const sembol = tanim
+      ? tanim.uygulamaSembolu(ad, typeof borsaKodu === "string" ? borsaKodu : "")
+      : ad;
+    // Hacme göre sıralı geldiği için ilk satır (en likit olan) kalır.
+    if (sonuc.has(sembol)) continue;
+    sonuc.set(
+      sembol,
+      quoteYap(market, sembol, {
+        ad: typeof aciklama === "string" && aciklama ? aciklama : ad,
+        ticker: ad,
+        kapanis,
+        degisim: typeof degisim === "number" ? degisim : 0,
+        yuksek: typeof yuksek === "number" ? yuksek : kapanis,
+        dusuk: typeof dusuk === "number" ? dusuk : kapanis,
+        hacim: typeof hacim === "number" ? hacim : 0,
+        paraBirimi: typeof paraBirimi === "string" ? paraBirimi : null,
+      }),
+    );
+  }
+  return sonuc;
+}
+
+/** Bir bölgeyi tarar (vadeli ve döviz: adla süzülür). */
 async function tarama(
   market: MarketId,
   yol: string,
@@ -237,7 +355,7 @@ async function tarama(
     const [ad, aciklama, kapanis, degisim, yuksek, dusuk, hacim, paraBirimi] = satir.d;
     if (typeof ad !== "string" || typeof kapanis !== "number") continue;
 
-    const sembol = secim ? uygulamaSembolu(satir.s) : borsaSembolu(market, ad);
+    const sembol = secim ? uygulamaSembolu(satir.s) : ad;
     if (!sembol || sonuc.has(sembol)) continue;
 
     sonuc.set(
@@ -318,7 +436,7 @@ function quoteYap(
     // Para birimi bilinmiyorsa katalogdaki değer kullanılacak: çağıran
     // enstrümanı bu quote'un üstüne yaydığı için boş bırakmak yeterli değil,
     // bu yüzden piyasanın varsayılanı yazılır.
-    currency: v.paraBirimi ?? (market === "bist" ? "TRY" : "USD"),
+    currency: v.paraBirimi ?? MARKETS[market].currency,
     kind: ENDEKS[sembol]
       ? "endeks"
       : DOVIZ[sembol]
@@ -335,11 +453,6 @@ function quoteYap(
     volume: v.hacim,
     updatedAt: Date.now(),
   };
-}
-
-/** Borsa taramasındaki adı uygulamanın sembolüne çevirir. */
-function borsaSembolu(market: MarketId, tarayiciAdi: string): string {
-  return market === "bist" ? `${tarayiciAdi}.IS` : tarayiciAdi;
 }
 
 /** Tam addan ("FX:USDTRY") uygulama sembolünü bulur. */

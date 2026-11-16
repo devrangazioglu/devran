@@ -37,8 +37,18 @@ const COZUNURLUK: Record<Interval, string> = {
   "1w": "1W",
 };
 
+/**
+ * Açık mı? `MARKET_API_BASE` tanımlıyken kapalı: o değişken testlerin ve
+ * kapalı ağların sahte sunucuyu göstermesi için var; akışa çıkmak oradaki
+ * ölçümü bozar (aynı kural aktarıcı için de geçerli).
+ */
 export function tvMumAcik(): boolean {
-  return process.env.TV_MUM_KAPALI !== "1" && typeof WebSocket !== "undefined";
+  return (
+    process.env.TV_MUM_KAPALI !== "1" &&
+    process.env.TRADINGVIEW_KAPALI !== "1" &&
+    !process.env.MARKET_API_BASE &&
+    typeof WebSocket !== "undefined"
+  );
 }
 
 function cerceve(govde: string): string {

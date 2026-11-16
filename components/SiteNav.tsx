@@ -7,7 +7,7 @@ import MobileMenu from "./MobileMenu";
 import { getI18n } from "@/lib/i18n/server";
 import { localeHref } from "@/lib/i18n/routing";
 import type { Locale } from "@/lib/i18n";
-import { MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
+import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS } from "@/lib/markets/types";
 
 /**
  * Herkese açık sayfaların üst menüsü.
@@ -20,10 +20,16 @@ export default async function SiteNav({ locale: istenen }: { locale?: Locale } =
   const [session, { t, locale }] = await Promise.all([auth(), getI18n(istenen)]);
   const yol = (path: string) => localeHref(locale, path);
 
-  const marketLinks = AKTIF_MARKET_IDS.map((id) => ({
-    href: yol(`/piyasa/${MARKETS[id].slug}`),
-    label: t(`market.${id}` as "market.kripto"),
-  }));
+  // Menüde ana dört piyasa ve tek bir "Dünya borsaları" bağlantısı: on bir
+  // ülkeyi tek tek yazmak menüyü taşırırdı. Ülkeler tanıtım sayfasındaki
+  // bölümde ve her piyasa sayfasının bayrak satırında.
+  const marketLinks = [
+    ...ANA_MARKET_IDS.filter((id) => AKTIF_MARKET_IDS.includes(id)).map((id) => ({
+      href: yol(`/piyasa/${MARKETS[id].slug}`),
+      label: t(`market.${id}` as "market.kripto"),
+    })),
+    { href: `${yol("/")}#dunya`, label: `🌍 ${t("market.dunya")}` },
+  ];
 
   const menuLinks = [
     ...marketLinks,

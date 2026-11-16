@@ -45,10 +45,59 @@ export function intervalMinutes(interval: Interval): number {
 
 /* ────────────────────────── Piyasalar ────────────────────────── */
 
-export type MarketId = "kripto" | "abd" | "bist" | "emtia";
+export type MarketId =
+  | "kripto"
+  | "abd"
+  | "bist"
+  | "emtia"
+  | "almanya"
+  | "ingiltere"
+  | "fransa"
+  | "japonya"
+  | "hongkong"
+  | "cin"
+  | "hindistan"
+  | "kanada"
+  | "kore"
+  | "tayvan"
+  | "suudi";
+
+/**
+ * Dünya borsaları: ABD dışında işlem hacmi en yüksek hisse piyasaları.
+ *
+ * Sıra kabaca toplam işlem hacmine göre (Çin, Japonya, Hong Kong, Hindistan,
+ * Avrupa'nın büyükleri, Kanada, Kore, Tayvan, Suudi Arabistan). Arayüzde ana dört piyasadan
+ * ayrı bir "Dünya borsaları" seçicisinde gösterilir; on dört düğmelik bir
+ * sekme satırı telefona sığmazdı.
+ */
+export const DUNYA_MARKET_IDS = [
+  "cin",
+  "japonya",
+  "hongkong",
+  "hindistan",
+  "ingiltere",
+  "almanya",
+  "fransa",
+  "kanada",
+  "kore",
+  "tayvan",
+  "suudi",
+] as const satisfies readonly MarketId[];
+
+/** Ana sekmelerde gösterilen piyasalar. */
+export const ANA_MARKET_IDS: MarketId[] = ["kripto", "abd", "bist", "emtia"];
 
 /** Uygulamanın tanıdığı tüm piyasalar (kapalı olanlar dâhil). */
-export const MARKET_IDS: MarketId[] = ["kripto", "abd", "bist", "emtia"];
+export const MARKET_IDS: MarketId[] = [...ANA_MARKET_IDS, ...DUNYA_MARKET_IDS];
+
+export function dunyaPiyasasi(market: MarketId): boolean {
+  return (DUNYA_MARKET_IDS as readonly string[]).includes(market);
+}
+
+/** Kripto, emtia ve döviz dışındaki piyasalar: hisse borsaları. */
+export function hisseBorsasi(market: MarketId): boolean {
+  return market !== "kripto" && market !== "emtia";
+}
 
 /**
  * Şu an açık olan piyasalar.
@@ -64,7 +113,7 @@ export const MARKET_IDS: MarketId[] = ["kripto", "abd", "bist", "emtia"];
  * `update_mode = "delayed_streaming_900"`). Ücretsiz ve gerçek zamanlı borsa
  * verisi yok; gecikme arayüzde yazılır, gizlenmez. Kripto gerçek zamanlıdır.
  */
-export const AKTIF_MARKET_IDS: MarketId[] = ["kripto", "abd", "bist", "emtia"];
+export const AKTIF_MARKET_IDS: MarketId[] = [...MARKET_IDS];
 
 export function isMarketId(value: string): value is MarketId {
   return (MARKET_IDS as string[]).includes(value);
@@ -97,6 +146,8 @@ export type MarketMeta = {
   intervals: Interval[];
   /** Fiyatların varsayılan para birimi. */
   currency: string;
+  /** Ülke bayrağı (dünya borsaları için); seçicide adın önünde durur. */
+  bayrak?: string;
   /** 7/24 açık mı (kripto) yoksa seans saatleri mi var. */
   alwaysOpen: boolean;
   /**
@@ -160,7 +211,47 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     alwaysOpen: false,
     gecikmeDk: 10,
   },
+  ...dunyaBorsalari(),
 };
+
+/**
+ * Dünya borsalarının ortak ayarı: günlük/haftalık, seanslı, hisse gecikmeli.
+ *
+ * Gecikme ölçüldü (`scripts/ulke-tara.ts`, kaynağın `update_mode` alanı);
+ * borsadan borsaya değiştiği için tek tek yazıldı. Ücretsiz kaynakta gerçek
+ * zamanlı borsa verisi yok, gecikme arayüzde gösterilir.
+ */
+function dunyaBorsalari(): Record<(typeof DUNYA_MARKET_IDS)[number], MarketMeta> {
+  const tablo: Record<(typeof DUNYA_MARKET_IDS)[number], { slug: string; currency: string; bayrak: string; gecikmeDk: number }> = {
+    cin: { slug: "cin-borsasi", currency: "CNY", bayrak: "🇨🇳", gecikmeDk: 15 },
+    japonya: { slug: "japonya-borsasi", currency: "JPY", bayrak: "🇯🇵", gecikmeDk: 20 },
+    hongkong: { slug: "hong-kong-borsasi", currency: "HKD", bayrak: "🇭🇰", gecikmeDk: 15 },
+    hindistan: { slug: "hindistan-borsasi", currency: "INR", bayrak: "🇮🇳", gecikmeDk: 15 },
+    // Londra tarayıcıda gecikmesiz geliyor (`update_mode = streaming`).
+    ingiltere: { slug: "ingiltere-borsasi", currency: "GBX", bayrak: "🇬🇧", gecikmeDk: 0 },
+    almanya: { slug: "almanya-borsasi", currency: "EUR", bayrak: "🇩🇪", gecikmeDk: 15 },
+    fransa: { slug: "fransa-borsasi", currency: "EUR", bayrak: "🇫🇷", gecikmeDk: 15 },
+    kanada: { slug: "kanada-borsasi", currency: "CAD", bayrak: "🇨🇦", gecikmeDk: 15 },
+    kore: { slug: "kore-borsasi", currency: "KRW", bayrak: "🇰🇷", gecikmeDk: 20 },
+    tayvan: { slug: "tayvan-borsasi", currency: "TWD", bayrak: "🇹🇼", gecikmeDk: 15 },
+    suudi: { slug: "suudi-arabistan-borsasi", currency: "SAR", bayrak: "🇸🇦", gecikmeDk: 15 },
+  };
+  return Object.fromEntries(
+    Object.entries(tablo).map(([id, v]) => [
+      id,
+      {
+        id: id as MarketId,
+        labelKey: `market.${id}`,
+        slug: v.slug,
+        intervals: ["1d", "1w"],
+        currency: v.currency,
+        bayrak: v.bayrak,
+        alwaysOpen: false,
+        gecikmeDk: v.gecikmeDk,
+      },
+    ]),
+  ) as Record<(typeof DUNYA_MARKET_IDS)[number], MarketMeta>;
+}
 
 /**
  * Piyasaya geçildiğinde seçilecek periyot.

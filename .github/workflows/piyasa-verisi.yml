@@ -33,8 +33,10 @@ concurrency:
 jobs:
   besle:
     runs-on: ubuntu-latest
-    # İstekler aktarıcının hız sınırının altında, sırayla atılıyor (~12 dk).
-    timeout-minutes: 35
+    # Mumlar önce TradingView grafik akışından (sembol başına ~1 sn) geliyor;
+    # yalnızca o düşerse aktarıcıya, hız sınırının altında sırayla gidiliyor.
+    # 15 piyasa × ~26 sembol × 2 periyot: akışla ~15 dk, aktarıcıyla çok daha uzun.
+    timeout-minutes: 75
 
     steps:
       - uses: actions/checkout@v4

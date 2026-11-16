@@ -3,7 +3,7 @@
 import { useI18n } from "./I18nProvider";
 import type { SignalLabel, Verdict } from "@/lib/analysis";
 import { formatPercent } from "@/lib/format";
-import type { AssetKind, MarketId } from "@/lib/markets/types";
+import { MARKETS, type AssetKind, type MarketId } from "@/lib/markets/types";
 
 /* ────────────────────────── Varlık ikonu ────────────────────────── */
 
@@ -14,12 +14,15 @@ const KNOWN_COLORS: Record<string, string> = {
   XAU: "#d4af37", XAG: "#c0c0c0", WTI: "#3f3f46", BRENT: "#52525b", COPPER: "#b87333",
 };
 
-const MARKET_TINT: Record<MarketId, string> = {
+const MARKET_TINT: Partial<Record<MarketId, string>> = {
   kripto: "#8ff0a4",
   abd: "#60a5fa",
   bist: "#f472b6",
   emtia: "#fbbf24",
 };
+/** Dünya borsaları tek renk: on bir renk ayırt edilmez, bayrak zaten ayırıyor. */
+const DUNYA_TINT = "#a78bfa";
+const tint = (market: MarketId) => MARKET_TINT[market] ?? DUNYA_TINT;
 
 /** Sembolden deterministik renk üretir. */
 export function assetColor(ticker: string, market: MarketId): string {
@@ -29,8 +32,8 @@ export function assetColor(ticker: string, market: MarketId): string {
   let hash = 0;
   for (let i = 0; i < base.length; i++) hash = (hash * 31 + base.charCodeAt(i)) % 360;
   // Piyasaya göre hafif ton farkı: kripto yeşilden, ABD maviden yana kayar.
-  const marketShift: Record<MarketId, number> = { kripto: 120, abd: 215, bist: 330, emtia: 45 };
-  const hue = (hash + marketShift[market]) % 360;
+  const marketShift: Partial<Record<MarketId, number>> = { kripto: 120, abd: 215, bist: 330, emtia: 45 };
+  const hue = (hash + (marketShift[market] ?? 265)) % 360;
   return `hsl(${hue}, 58%, 56%)`;
 }
 
@@ -78,8 +81,9 @@ export function MarketBadge({ market }: { market: MarketId }) {
   return (
     <span
       className="market-badge"
-      style={{ color: MARKET_TINT[market], borderColor: `${MARKET_TINT[market]}55` }}
+      style={{ color: tint(market), borderColor: `${tint(market)}55` }}
     >
+      {MARKETS[market].bayrak ? `${MARKETS[market].bayrak} ` : ""}
       {t(`market.${market}` as "market.kripto")}
     </span>
   );

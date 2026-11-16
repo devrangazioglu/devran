@@ -31,6 +31,7 @@ import {
   marketAktif,
   MarketDataError,
   MARKETS,
+  hisseBorsasi,
   type Candle,
   type DataSource,
   type Instrument,
@@ -42,9 +43,11 @@ import { paylasilanBayatOku, paylasilanOku, paylasilanYaz } from "./cache-store"
 import { fetchFxCandles, fetchFxQuotes, parseFxPair } from "./frankfurter";
 import { krediAyir, kotaBloklu, kotaHatasiniIsle, kotaMesaji, PIYASA_PAY } from "./kota";
 import { fetchMetalQuotes, metalDestekliyor } from "./metals";
+import { yahooBorsasindanPiyasa } from "./borsalar";
 import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol, toStooqSymbols } from "./stooq";
-import { fetchTradingViewQuotes, tradingViewSembolu } from "./tradingview";
-import { fetchTwelveBatch, fetchTwelveCandles, twelveDataEnabled } from "./twelvedata";
+import { fetchTradingViewQuotes, tradingViewSembolu, tvTamAd } from "./tradingview";
+import { fetchTvCandles, tvMumAcik } from "./tv-mum";
+import { fetchTwelveBatch, fetchTwelveCandles, toTwelveSymbol, twelveDataEnabled } from "./twelvedata";
 import { fetchChart, fetchQuotes, fetchSparkQuotes, searchSymbols } from "./yahoo";
 
 /* ────────────────────────── Önbellek ────────────────────────── */
@@ -96,7 +99,7 @@ export async function getInstrument(market: MarketId, symbol: string): Promise<I
     name: symbol,
     ticker: displayTicker(market, symbol),
     currency: MARKETS[market].currency,
-    kind: market === "bist" || market === "abd" ? "hisse" : "emtia",
+    kind: hisseBorsasi(market) ? "hisse" : "emtia",
   };
 
   try {
@@ -171,6 +174,12 @@ export type QuoteList = { quotes: Quote[]; source: DataSource; updatedAt: number
 /** Günlük mum gün içinde ancak bir kez değişir; kotayı korumak için uzun tutulur. */
 const GUNLUK_TTL_MS = 4 * 60 * 60_000;
 const GUN_ICI_TTL_MS = 5 * 60_000;
+/**
+ * Grafik akışından gelen günlük mum: kota yok, bu yüzden 4 saat beklemek
+ * gerekmiyor. Yarım saat, seans içinde son mumun güncel kalmasını sağlarken
+ * kaynağa giden istek sayısını da makul tutar.
+ */
+const TV_TTL_MS = 30 * 60_000;
 
 /** Kripto dışı sağlayıcıdan her zaman bu kadar mum istenir (kredi aynı). */
 const TAM_MUM = 300;
@@ -249,26 +258,6 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
   let kalan = instruments;
   let kotaDoluListe = false;
 
-  // Önce önbellekteki günlük mumlar: kota harcamadan fiyat verirler.
-  // Liste tek anahtarda tutulsaydı, kredi bütçesi yüzünden yarım kalan liste
-  // olduğu gibi saklanır ve her tazelemede yine aynı ilk semboller istenirdi —
-  // liste hiç dolmazdı. Sembol başına saklayınca dolmuş semboller sıradan
-  // çıkar, bütçe her turda YENİ sembollere harcanır ve liste birkaç turda
-  // tamamlanır; üstelik dolduran ziyaretçi tek kişi olsa bile herkese açılır.
-  const onbellekli = await paylasimliOku<CandleSet>(
-    instruments.map((i) => candleCacheKey(i.market, i.symbol, "1d")),
-  );
-  for (const instrument of instruments) {
-    const set = onbellekli.get(candleCacheKey(instrument.market, instrument.symbol, "1d"));
-    const quote = set ? quoteFromCandles(instrument, set) : null;
-    if (quote) toplanan.push(quote);
-  }
-  if (toplanan.length > 0) {
-    const gelenler = new Set(toplanan.map((q) => q.symbol));
-    kalan = kalan.filter((i) => !gelenler.has(i.symbol));
-    if (kalan.length === 0) return { quotes: toplanan, source: "canli", updatedAt: Date.now() };
-  }
-
   /* ── Hisse listesi: tek istekte bütün borsa ───────────────────────
    *
    * Bu, listeyi dolduran asıl kaynak. Diğer bütün yollar sembol başına (ya da
@@ -315,6 +304,30 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     } catch {
       // Kaynak düşerse aşağıdaki yollar denenir; liste yarım kalmaz.
     }
+  }
+
+  // Tarayıcının vermediği semboller için önbellekteki günlük mumlar: kota
+  // harcamadan fiyat verirler. Tarayıcıdan sonra bakılır, çünkü önbellek
+  // saatler önceki kapanışı tutabilir; tarayıcı ise o anki (gecikmeli) fiyatı.
+  // Liste tek anahtarda tutulsaydı, kredi bütçesi yüzünden yarım kalan liste
+  // olduğu gibi saklanır ve her tazelemede yine aynı ilk semboller istenirdi —
+  // liste hiç dolmazdı. Sembol başına saklayınca dolmuş semboller sıradan
+  // çıkar, bütçe her turda YENİ sembollere harcanır ve liste birkaç turda
+  // tamamlanır; üstelik dolduran ziyaretçi tek kişi olsa bile herkese açılır.
+  const onbellekli = await paylasimliOku<CandleSet>(
+    kalan.map((i) => candleCacheKey(i.market, i.symbol, "1d")),
+  );
+  const onbellekGelen: Quote[] = [];
+  for (const instrument of kalan) {
+    const set = onbellekli.get(candleCacheKey(instrument.market, instrument.symbol, "1d"));
+    const quote = set ? quoteFromCandles(instrument, set) : null;
+    if (quote) onbellekGelen.push(quote);
+  }
+  if (onbellekGelen.length > 0) {
+    toplanan.push(...onbellekGelen);
+    const gelenler = new Set(onbellekGelen.map((q) => q.symbol));
+    kalan = kalan.filter((i) => !gelenler.has(i.symbol));
+    if (kalan.length === 0) return { quotes: toplanan, source: "canli", updatedAt: Date.now() };
   }
 
   // Dövizler: anahtarsız çalışan tek kaynak. Taban para birimi başına tek istek.
@@ -685,11 +698,37 @@ export async function getCandles(
   if (cached) return { ...cached, candles: cached.candles.slice(-limit) };
 
   const cekilecek = Math.max(limit, TAM_MUM);
+  const gunlukVeHaftalik = interval === "1d" || interval === "1w";
+
+  // Önce TradingView grafik akışı: anahtarsız, kotasız, aktarıcıya uğramıyor
+  // ve ölçümde (2026-11-16) her borsada, emtiada ve dövizde 300 mumu ~1 sn'de,
+  // tarayıcıdaki fiyatla birebir verdi. Yahoo aynı gün Asya borsalarında üç
+  // gün geriden geliyordu ve aktarıcısı zaman zaman bütünüyle 429 veriyordu.
+  // Düşerse aşağıdaki eski yollar aynen denenir.
+  if (tvMumAcik()) {
+    try {
+      const tamAd = await tvTamAd(market, symbol);
+      if (tamAd) {
+        const { candles, currency } = await fetchTvCandles(tamAd, interval, cekilecek);
+        if (candles.length >= 30) {
+          const result: CandleSet = {
+            instrument: { ...instrument, currency: currency ?? instrument.currency },
+            candles,
+            source: "canli",
+            fetchedAt: Date.now(),
+          };
+          await paylasimliYaz(key, result, gunlukVeHaftalik ? TV_TTL_MS : GUN_ICI_TTL_MS);
+          return { ...result, candles: candles.slice(-limit) };
+        }
+      }
+    } catch {
+      // Eski yollara düşülür.
+    }
+  }
 
   // Kaynak sırası ölçüme dayanır (bkz. /tani): anahtar isteyen sağlayıcı bulut
   // sunucusundan çalışıyor, anahtarsız olanlar IP'yi engelliyor. Dövizde
   // anahtarsız ve çalışan bir kaynak olduğu için önce o denenir.
-  const gunlukVeHaftalik = interval === "1d" || interval === "1w";
 
   if (gunlukVeHaftalik && market === "emtia" && parseFxPair(symbol)) {
     try {
@@ -707,9 +746,12 @@ export async function getCandles(
   let kotaDolu = false;
   // `tekil`: kullanıcının açtığı varlık. Günlük kotanın son dilimi listelere
   // değil buraya saklanır; tıklanan varlığın analizi listeden önemli.
-  if (twelveDataEnabled()) kotaDolu = (await kotaBloklu()) || (await krediAyir(1, true)) < 1;
+  // Sağlayıcının tanımadığı borsada (dünya borsaları) kredi ayrılmaz: istek
+  // zaten atılmayacak, ayrılan kredi listedeki başka bir sembolden eksilirdi.
+  const twelveUygun = twelveDataEnabled() && toTwelveSymbol(market, symbol) !== null;
+  if (twelveUygun) kotaDolu = (await kotaBloklu()) || (await krediAyir(1, true)) < 1;
 
-  if (twelveDataEnabled() && !kotaDolu) {
+  if (twelveUygun && !kotaDolu) {
     try {
       const candles = await fetchTwelveCandles(market, symbol, interval, cekilecek);
       const result: CandleSet = { instrument, candles, source: "canli", fetchedAt: Date.now() };
@@ -810,11 +852,12 @@ function mapSearchHit(exchange: string | null, quoteType: string | null): Market
   const market = (exchange ?? "").toUpperCase();
 
   if (type === "CRYPTOCURRENCY") return null; // kripto tarafı kendi sağlayıcısından geliyor
-  if (market === "IST") return "bist";
   if (type === "CURRENCY" || type === "FUTURE" || type === "COMMODITY") return "emtia";
-  if (["NMS", "NYQ", "NGM", "PCX", "ASE", "BTS", "NCM", "NYS"].includes(market)) return "abd";
+  // Endeksler yalnızca tanımlı listelerden gelir: aramadaki endeks kodları
+  // (borsa "SNP", "DJI"…) piyasaya güvenle eşlenemiyor.
   if (type === "INDEX") return "abd";
-  return null;
+  if (type !== "EQUITY" && type !== "ETF") return null;
+  return yahooBorsasindanPiyasa(market);
 }
 
 /** Tüm piyasalarda varlık arar. */

@@ -9,7 +9,7 @@ import MobileMenu from "./MobileMenu";
 import SignOutButton from "./SignOutButton";
 import { kullanicidanDurum } from "@/lib/credits";
 import { getI18n } from "@/lib/i18n/server";
-import { MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
+import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS } from "@/lib/markets/types";
 import { findUserByEmail } from "@/lib/users";
 
 /** Üye alanının üst menüsü. */
@@ -32,10 +32,13 @@ export default async function AppNav() {
     { href: "/ayarlar", label: t("nav.settings") },
   ];
 
-  const marketLinks = AKTIF_MARKET_IDS.map((id) => ({
-    href: `/piyasa/${MARKETS[id].slug}`,
-    label: t(`market.${id}` as "market.kripto"),
-  }));
+  const marketLinks = [
+    ...ANA_MARKET_IDS.filter((id) => AKTIF_MARKET_IDS.includes(id)).map((id) => ({
+      href: `/piyasa/${MARKETS[id].slug}`,
+      label: t(`market.${id}` as "market.kripto"),
+    })),
+    { href: "/#dunya", label: `🌍 ${t("market.dunya")}` },
+  ];
 
   return (
     <header className="nav">

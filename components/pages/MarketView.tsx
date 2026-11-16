@@ -10,7 +10,8 @@ import { intlTag, type Locale } from "@/lib/i18n";
 import { localeHref } from "@/lib/i18n/routing";
 import { getI18n } from "@/lib/i18n/server";
 import { getQuotes } from "@/lib/markets/provider";
-import { marketBySlug, MARKETS, AKTIF_MARKET_IDS, type Quote } from "@/lib/markets/types";
+import { marketBySlug, MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS, DUNYA_MARKET_IDS, type Quote } from "@/lib/markets/types";
+import { piyasaMetni } from "@/lib/piyasa-metni";
 import { breadcrumbJsonLd, faqJsonLd, itemListJsonLd } from "@/lib/seo";
 
 export default async function MarketView({
@@ -44,8 +45,8 @@ export default async function MarketView({
   // bildirir; ayrıca piyasaya özel SSS arama sonucunda açılır madde olarak
   // görünebilir.
   const sss = ([1, 2, 3] as const).map((n) => ({
-    soru: t(`market.${market.id}.faq${n}.q` as "market.kripto.faq1.q"),
-    cevap: t(`market.${market.id}.faq${n}.a` as "market.kripto.faq1.a"),
+    soru: piyasaMetni(t, market, `faq${n}.q`),
+    cevap: piyasaMetni(t, market, `faq${n}.a`),
   }));
 
   const yapisalVeri = [
@@ -80,12 +81,15 @@ export default async function MarketView({
         <div className="container container-wide">
           <div className="page-head">
             <div>
-              <h1>{t(`market.${market.id}.h1` as "market.kripto.h1")}</h1>
-              <p className="sub">{t(`market.${market.id}.desc` as "market.kripto.desc")}</p>
+              <h1>
+                {market.bayrak ? `${market.bayrak} ` : ""}
+                {piyasaMetni(t, market, "h1")}
+              </h1>
+              <p className="sub">{piyasaMetni(t, market, "desc")}</p>
             </div>
             {AKTIF_MARKET_IDS.length > 1 && (
               <div className="toolbar market-tabs">
-                {AKTIF_MARKET_IDS.map((id) => (
+                {ANA_MARKET_IDS.map((id) => (
                   <Link
                     key={id}
                     href={yol(`/piyasa/${MARKETS[id].slug}`)}
@@ -97,6 +101,22 @@ export default async function MarketView({
               </div>
             )}
           </div>
+
+          {/* Dünya borsaları: bayraklı ikinci satır. Bağlantı olarak durur ki
+              arama motoru her ülke sayfasına buradan da ulaşsın; dar ekranda
+              yana kayar, sayfayı taşırmaz. */}
+          <nav className="dunya-seritleri" aria-label={t("market.dunya.sec")}>
+            <span className="dunya-baslik">🌍 {t("market.dunya")}</span>
+            {DUNYA_MARKET_IDS.map((id) => (
+              <Link
+                key={id}
+                href={yol(`/piyasa/${MARKETS[id].slug}`)}
+                className={`dunya-link ${id === market.id ? "active" : ""}`}
+              >
+                {MARKETS[id].bayrak} {t(`market.${id}` as "market.kripto")}
+              </Link>
+            ))}
+          </nav>
 
           <div style={{ maxWidth: 560, marginBottom: 20 }}>
             <AssetSearch />
@@ -198,8 +218,8 @@ export default async function MarketView({
           {/* Sayfanın konusunu anlatan metin. Yalnızca sayı dolu bir tablo,
               arama motoruna sayfanın neyle ilgili olduğunu söylemiyor. */}
           <section className="prose market-about">
-            <h2>{t(`market.${market.id}.aboutTitle` as "market.kripto.aboutTitle")}</h2>
-            <p>{t(`market.${market.id}.about` as "market.kripto.about")}</p>
+            <h2>{piyasaMetni(t, market, "aboutTitle")}</h2>
+            <p>{piyasaMetni(t, market, "about")}</p>
             <p>{t("market.methodology")}</p>
           </section>
 

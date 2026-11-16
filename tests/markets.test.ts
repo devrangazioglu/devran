@@ -25,6 +25,7 @@ import { fetchChart, parseSpark, rateLimitedUntil, resetRateLimitState } from ".
 import {
   aggregateCandles,
   AKTIF_MARKET_IDS,
+  DUNYA_MARKET_IDS,
   instrumentId,
   isMarketId,
   marketAktif,
@@ -35,8 +36,9 @@ import {
   type Candle,
 } from "../lib/markets/types";
 
-test("dört piyasa tanımlı ve her birinin sayfa yolu tekil", () => {
-  assert.deepEqual(MARKET_IDS, ["kripto", "abd", "bist", "emtia"]);
+test("piyasalar tanımlı ve her birinin sayfa yolu tekil", () => {
+  assert.deepEqual(MARKET_IDS.slice(0, 4), ["kripto", "abd", "bist", "emtia"]);
+  assert.equal(MARKET_IDS.length, 4 + DUNYA_MARKET_IDS.length);
   const slugs = MARKET_IDS.map((id) => MARKETS[id].slug);
   assert.equal(new Set(slugs).size, slugs.length);
   for (const id of MARKET_IDS) {

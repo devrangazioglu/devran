@@ -95,8 +95,19 @@ test("süresi dolmamış ya da mumu bulunamayan kayıt değerlendirilmez", () =>
   const bas = Date.UTC(2026, 9, 1);
   const m = mumlar(30, bas, (i) => 100 + i);
   const yeni = kayit({ id: "yeni", mumZamani: bas + 25 * GUN });
-  const kayip = kayit({ id: "kayip", mumZamani: bas + 5 * GUN + 1234 });
+  const kayip = kayit({ id: "kayip", mumZamani: bas - 10 * GUN });
   assert.deepEqual(sonuclariBul([yeni, kayip], m), []);
+});
+
+test("mum kaynağı değişince aynı günün farklı saatli mumu eşleşir", () => {
+  // Kayıt Yahoo mumuyla (seans açılışı 14:30) açıldı, sonuç TradingView
+  // mumlarıyla (gece yarısı damgası) aranıyor: aynı gün, aynı mum.
+  const bas = Date.UTC(2026, 9, 1);
+  const m = mumlar(30, bas, (i) => 100 + i);
+  const k = kayit({ id: "saat", mumZamani: bas + 5 * GUN + 14.5 * 3_600_000, fiyat: 105 });
+  const [sonuc] = sonuclariBul([k], m);
+  assert.equal(sonuc.id, "saat");
+  assert.equal(sonuc.fiyat, 115);
 });
 
 test("istatistik: isabet taban oranla birlikte hesaplanır, BEKLE isabete girmez", () => {

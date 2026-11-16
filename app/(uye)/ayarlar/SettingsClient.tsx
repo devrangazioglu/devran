@@ -79,7 +79,7 @@ export default function SettingsClient({
                   onChange={(defaultMarket) => setForm({ ...form, defaultMarket })}
                   options={AKTIF_MARKET_IDS.map((id) => ({
                     value: id as string,
-                    label: t(`market.${id}` as "market.kripto"),
+                    label: `${MARKETS[id].bayrak ? `${MARKETS[id].bayrak} ` : ""}${t(`market.${id}` as "market.kripto")}`,
                   }))}
                 />
               </div>
