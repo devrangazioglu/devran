@@ -163,10 +163,10 @@ export async function fetchTradingViewQuotes(
     }
   }
   if (vadeli.length > 0) {
-    isler.push(tarama(market, "futures", "name", null, secilenler(vadeli, VADELI)));
+    isler.push(tarama(market, "futures", secilenler(vadeli, VADELI)));
   }
   if (doviz.length > 0) {
-    isler.push(tarama(market, "forex", "name", null, secilenler(doviz, DOVIZ)));
+    isler.push(tarama(market, "forex", secilenler(doviz, DOVIZ)));
   }
   for (const sembol of endeksler) {
     isler.push(tekSembol(market, sembol, ENDEKS[sembol]));
@@ -314,27 +314,19 @@ async function borsaTaramasi(
 async function tarama(
   market: MarketId,
   yol: string,
-  sutun: "exchange" | "name",
-  borsalar: string[] | null,
-  secim: { tamAdlar: Set<string>; adlar: string[] } | null,
+  secim: { tamAdlar: Set<string>; adlar: string[] },
 ): Promise<Map<string, Quote>> {
-  const sagTaraf = sutun === "exchange" ? borsalar : secim?.adlar;
   const yanit = await fetch(`${BASE}/${yol}/scan`, {
     method: "POST",
     headers: TARAYICI_BASLIK,
     body: JSON.stringify({
-      filter: sagTaraf && sagTaraf.length > 0
-        ? [{ left: sutun, operation: "in_range", right: sagTaraf }]
-        : [],
+      filter: [{ left: "name", operation: "in_range", right: secim.adlar }],
       options: { lang: "tr" },
       columns: SUTUNLAR,
-      sort:
-        sutun === "exchange"
-          ? { sortBy: "volume", sortOrder: "desc" }
-          : { sortBy: "name", sortOrder: "asc" },
+      sort: { sortBy: "name", sortOrder: "asc" },
       // Ada göre süzülen bölgede aynı ad onlarca borsada çıkıyor; aralık bol
       // tutulur, istediğimiz borsa listenin neresinde olursa olsun yakalanır.
-      range: [0, sutun === "exchange" ? 3000 : 400],
+      range: [0, 400],
     }),
     signal: AbortSignal.timeout(10_000),
     cache: "no-store",
@@ -350,12 +342,12 @@ async function tarama(
   for (const satir of satirlar) {
     // `satir.s` tam ad: "NYMEX:CL1!". Borsası sabitlenmiş semboller yalnızca
     // kendi borsalarından kabul edilir; gerisi atılır.
-    if (secim && !secim.tamAdlar.has(satir.s)) continue;
+    if (!secim.tamAdlar.has(satir.s)) continue;
 
     const [ad, aciklama, kapanis, degisim, yuksek, dusuk, hacim, paraBirimi] = satir.d;
     if (typeof ad !== "string" || typeof kapanis !== "number") continue;
 
-    const sembol = secim ? uygulamaSembolu(satir.s) : ad;
+    const sembol = uygulamaSembolu(satir.s);
     if (!sembol || sonuc.has(sembol)) continue;
 
     sonuc.set(
