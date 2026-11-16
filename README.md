@@ -213,6 +213,30 @@ tests/                         node:test birim testleri
    belirlenir; ilk hedef mümkünse en yakın anlamlı direnç/destek, sonraki hedefler 1,618 ve
    2,618 R seviyeleridir.
 
+### Olasılık ve risk matematiği (`lib/quant.ts`)
+
+Skorun yanında, skoru **değiştirmeyen** sayısal bir katman hesaplanır ve detay
+sayfasında ayrı bir kartta gösterilir. Skora karışmamasının nedeni: motor
+ağırlıkları iki ayrı dönemde ölçülerek ayarlandı; aynı sınamadan geçmemiş bir
+büyüklüğün skoru etkilemesi o ölçümü geçersiz kılardı.
+
+| Ölçü | Formül | Ne söyler |
+|---|---|---|
+| Yıllık oynaklık | σ(log getiri) × √N (kripto 365, diğerleri 252 gün; haftalıkta 52) | Varlığın tipik oynama genişliği |
+| Beklenen aralık | P · e^(±zσ√h), h = 10 mum | ±1σ ≈ %68, ±2σ ≈ %95 olasılıklı fiyat bandı |
+| Hurst üssü | Anis–Lloyd düzeltmeli R/S | > 0,58 trend sürer, < 0,38 ortalamaya döner, arası rastgeleye yakın |
+| Z-skor | (kapanış − SMA20) / σ20 | Fiyat ortalamasından kaç standart sapma uzakta |
+| Sharpe, en büyük düşüş | ortalama/σ × √N; tepeden dibe | Pencere içindeki getiri/risk ve en kötü düşüş |
+| Beta, korelasyon, alfa | r_varlık = α + β·r_endeks (hisse/endeks, karşılaştırma endeksi varsa) | Hisse endeksle ne kadar ve ne yönde hareket ediyor |
+| Yükseliş olasılığı | P = σ(a + b·skor/50), geçmiş sınamasında ridge'li lojistik regresyon | Bu skor bu varlıkta geçmişte hangi olasılığa denk geldi |
+| Beklenti, kâr faktörü | p·ortKazanç − (1−p)·ortKayıp; Σkazanç/Σkayıp | Güncel yöndeki sinyallerin geçmiş matematiksel beklentisi |
+| Yarım Kelly | (p − (1−p)/R) / 2, p büzülmüş, en fazla %25 | Pozisyon için üst sınır; negatifse "avantaj yok" |
+| %1 risk pozisyonu | %1 / stop uzaklığı | Stop'a gelindiğinde sermayenin %1'ini kaybettiren büyüklük |
+
+Bilinen sınırlar kodun başında yazılıdır: bantlar normal dağılım varsayar (gerçek
+kuyruklar daha kalındır), kalibrasyon örnekleri örtüşür, Kelly tahmin hatasına
+duyarlıdır.
+
 Motor yalnızca `Candle` dizisi ile çalışır; bir hisseyi, endeksi, altını ve coini
 birbirinden ayırt etmez. Piyasaya özgü tek fark yorumdaki uyarılardır: 7/24 açık olmayan
 piyasalarda "seans kapalı olabilir" riski eklenir.
