@@ -6,6 +6,7 @@
  * (piyasa katmanının geri kalanı sağlayıcıdan bağımsızdır).
  */
 
+import { aktariciAcik, aktariciIleGetir, AKTARICILAR } from "./aktarici";
 import {
   aggregateCandles,
   intervalMinutes,
@@ -64,9 +65,20 @@ export function rateLimitedUntil(): number {
   return blockedUntil;
 }
 
+/**
+ * Aktarıcı devrede mi?
+ *
+ * `MARKET_API_BASE` tanımlıyken kapalı: o değişken testlerin ve kapalı ağların
+ * sahte sunucuyu göstermesi için var, aktarıcıya çıkmak oradaki ölçümü bozar.
+ */
+function aktariciKullanilsin(): boolean {
+  return !process.env.MARKET_API_BASE && aktariciAcik();
+}
+
 async function requestOnce<T>(path: string, timeoutMs: number): Promise<T> {
   const hosts = lastGoodHost ? [lastGoodHost, ...HOSTS.filter((h) => h !== lastGoodHost)] : HOSTS;
   let lastError: unknown = null;
+  let hizSiniri = false;
 
   for (const host of hosts) {
     const controller = new AbortController();
@@ -82,19 +94,43 @@ async function requestOnce<T>(path: string, timeoutMs: number): Promise<T> {
         throw new MarketDataError("Sembol bulunamadı.", 404);
       }
       if (response.status === 429) {
-        throw new MarketDataError(RATE_LIMIT_MESSAGE, 429);
+        // Doğrudan yol kapalı: hemen pes etme, aşağıdaki aktarıcılar dursun.
+        hizSiniri = true;
+        continue;
       }
       if (!response.ok) throw new MarketDataError(`Veri sağlayıcı yanıtı: ${response.status}`, 502);
 
       lastGoodHost = host;
       return (await response.json()) as T;
     } catch (error) {
-      if (error instanceof MarketDataError && (error.status === 404 || error.status === 429)) throw error;
+      if (error instanceof MarketDataError && error.status === 404) throw error;
       lastError = error;
     } finally {
       clearTimeout(timer);
     }
   }
+
+  /* ── Aktarıcı ───────────────────────────────────────────────────
+   *
+   * Yahoo bizim IP aralığımızı engelliyor (ölçüldü: hem Vercel hem GitHub
+   * çalıştırıcısı, her sembolde 429). Aynı adres açık bir aktarıcı üzerinden
+   * istendiğinde veri geliyor; engellenen şey verinin kendisi değil, isteğin
+   * geldiği yer. Bu yüzden doğrudan yol tükendiğinde buraya düşülür.
+   */
+  if (aktariciKullanilsin()) {
+    const sonuc = await aktariciIleGetir(HOSTS[0] + path, { zamanAsimiMs: timeoutMs });
+    if (sonuc) {
+      try {
+        return JSON.parse(sonuc.govde) as T;
+      } catch {
+        lastError = new Error(`aktarıcı (${sonuc.aktarici}) JSON döndürmedi`);
+      }
+    } else {
+      lastError = new Error(`hiçbir aktarıcı yanıt vermedi (${AKTARICILAR.length} denendi)`);
+    }
+  }
+
+  if (hizSiniri) throw new MarketDataError(RATE_LIMIT_MESSAGE, 429);
 
   throw new MarketDataError(
     `Piyasa verisine ulaşılamadı (${lastError instanceof Error ? lastError.message : "bilinmeyen hata"}).`,

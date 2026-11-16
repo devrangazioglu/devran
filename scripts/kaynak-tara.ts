@@ -6,22 +6,18 @@
  * engellenmediği. GitHub çalıştırıcısından ölçüldü (2026-11-16):
  *
  *   ✗ Yahoo doğrudan (query1/query2) → HTTP 429, her sembolde
- *   ✗ Stooq doğrudan                 → HTTP 403 / bağlantı düşüyor
- *   ✗ genelpara, bigpara, isyatirim  → Cloudflare 403 / 404 / 401
- *   ✗ Binance                        → HTTP 451 (çalıştırıcı ABD'de)
- *   ✓ TradingView tarayıcısı         → tek istekte 649 BIST, 5012 ABD sembolü
- *   ✓ Yahoo + açık aracı (allorigins, r.jina.ai) → tam geçmiş, gün içi dahil
- *   ✓ gold-api, truncgil, Frankfurter → metal ve kur
+ *   ✗ Stooq, genelpara, bigpara, isyatirim → 403 / 404 / 401
+ *   ✗ Binance → HTTP 451 (çalıştırıcı ABD'de)
+ *   ✓ TradingView tarayıcısı → tek istekte 649 BIST / 5012 NASDAQ / 2716 NYSE
+ *   ✓ Yahoo + aktarıcı: r.jina.ai (≈400 ms, 55 KB kalkıyor),
+ *     allorigins (çalışıyor ama yavaş: ardışık sekiz istekte 6/8, 70 sn)
+ *   ✗ corsproxy.io, cors.lol, thingproxy, codetabs
+ *   ✓ gold-api (dakikası dakikasına altın/gümüş), truncgil, Frankfurter
  *
- * Yani Yahoo'yu engelleyen şey isteğin **nereden** geldiği; araya açık bir
- * aktarıcı koyulunca aynı veri geliyor. Bu betik o aktarıcıların sınırlarını
- * ölçer: büyük gövde kalkıyor mu, art arda istekte hız sınırı var mı.
+ * Bu betik adayları aynı yöntemle dener: tahmin değil, ham sonuç.
  *
  * Çalıştırma (veritabanı ve anahtar gerektirmez):
  *   npm run kaynak-tara
- *
- * Actions → "Veri kaynağı testi" → Run workflow ile de çalışır; oradaki
- * çıktı, siteyi besleyecek makinenin gerçek görüşüdür.
  */
 
 type Sonuc = {
@@ -104,11 +100,14 @@ async function dene(
 
 /* ────────────────────── Çözücüler ────────────────────── */
 
-function yahooChart(govde: string): string {
-  const veri = JSON.parse(govde) as {
+/** Gövdedeki ilk `{`'ten sonrasını Yahoo yanıtı olarak ayrıştırır. */
+function yahooGovdeden(govde: string): string {
+  const basla = govde.indexOf('{"chart"');
+  const ham = basla >= 0 ? govde.slice(basla) : govde;
+  const veri = JSON.parse(ham) as {
     chart?: {
       result?: {
-        meta?: { currency?: string; exchangeName?: string };
+        meta?: { currency?: string };
         timestamp?: number[];
         indicators?: { quote?: { close?: (number | null)[] }[] };
       }[];
@@ -123,14 +122,17 @@ function yahooChart(govde: string): string {
   if (kapanislar.length === 0) throw new Error("mum yok");
   const zaman = sonuc.timestamp?.[sonuc.timestamp.length - 1];
   const yas = zaman ? Math.round((Date.now() / 1000 - zaman) / 60) : null;
-  return [
-    `${kapanislar.length} mum`,
-    `son ${kapanislar[kapanislar.length - 1]?.toFixed(2)} ${sonuc.meta?.currency ?? ""}`,
-    yas === null ? "" : `${yas} dk önce`,
-    `${Math.round(govde.length / 1024)} KB`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  return `${kapanislar.length} mum · son ${kapanislar[kapanislar.length - 1].toFixed(2)} ${
+    sonuc.meta?.currency ?? ""
+  } · ${yas} dk önce · ${Math.round(govde.length / 1024)} KB`;
+}
+
+/** Jina'nın JSON zarfı: { data: { content } }. */
+function jinaZarf(govde: string): string {
+  const veri = JSON.parse(govde) as { data?: { content?: string } };
+  const icerik = veri.data?.content;
+  if (!icerik) throw new Error("zarf içinde content yok");
+  return yahooGovdeden(icerik);
 }
 
 function tradingview(govde: string): string {
@@ -139,34 +141,8 @@ function tradingview(govde: string): string {
   if (satirlar.length === 0) throw new Error("boş data dizisi");
   return `${veri.totalCount ?? satirlar.length} sembol · ${satirlar[0].s} = ${JSON.stringify(
     satirlar[0].d,
-  ).slice(0, 80)}`;
+  ).slice(0, 110)}`;
 }
-
-function jsonOzet(alanlar: string[]) {
-  return (govde: string): string => {
-    const veri = JSON.parse(govde) as Record<string, unknown>;
-    return alanlar
-      .map((alan) => {
-        const deger = alan
-          .split(".")
-          .reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], veri);
-        return `${alan}=${JSON.stringify(deger)}`;
-      })
-      .join(" · ")
-      .slice(0, 180);
-  };
-}
-
-/* ────────────────────── Aracılar ────────────────────── */
-
-/** Yahoo isteğini bir aktarıcı üzerinden geçiren adresler. */
-const ARACILAR: { ad: string; sar: (url: string) => string; ham: boolean }[] = [
-  { ad: "allorigins", sar: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, ham: true },
-  { ad: "corsproxy.io", sar: (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`, ham: true },
-  { ad: "cors.lol", sar: (u) => `https://api.cors.lol/?url=${encodeURIComponent(u)}`, ham: true },
-  { ad: "thingproxy", sar: (u) => `https://thingproxy.freeboard.io/fetch/${u}`, ham: true },
-  { ad: "r.jina.ai", sar: (u) => `https://r.jina.ai/${u}`, ham: false },
-];
 
 const yahooUrl = (sembol: string, aralik: string, adim: string) =>
   `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
@@ -176,106 +152,107 @@ const yahooUrl = (sembol: string, aralik: string, adim: string) =>
 async function tara(): Promise<void> {
   console.log("Ücretsiz veri kaynakları ölçülüyor…\n");
 
-  /* ── 1) Aracılar: hangisi ayakta, büyük gövdeyi kaldırıyor mu? ── */
-  for (const aracı of ARACILAR) {
-    // Küçük istek: 1 aylık günlük mum.
-    await dene(
-      `${aracı.ad} küçük`,
-      "bist",
-      aracı.sar(yahooUrl("THYAO.IS", "1mo", "1d")),
-      aracı.ham ? yahooChart : (g) => `${Math.round(g.length / 1024)} KB · ${g.slice(0, 60).replace(/\s+/g, " ")}`,
-    );
-    // Büyük istek: 300 mumluk gün içi seri — analizin gerçekte istediği boyut.
-    await dene(
-      `${aracı.ad} büyük`,
-      "abd",
-      aracı.sar(yahooUrl("AAPL", "1mo", "15m")),
-      aracı.ham ? yahooChart : (g) => `${Math.round(g.length / 1024)} KB`,
-    );
-  }
-
-  /* ── 2) Ayakta kalan aracıda hız sınırı: 8 istek art arda ── */
-  const calisanAraci = ARACILAR.find((a) =>
-    sonuclar.some((s) => s.ok && s.kaynak.startsWith(a.ad)),
+  /* ── 1) Jina: hangi biçim en temiz? ── */
+  await dene("jina düz", "bist", `https://r.jina.ai/${yahooUrl("THYAO.IS", "1mo", "1d")}`, yahooGovdeden);
+  await dene(
+    "jina json zarf",
+    "bist",
+    `https://r.jina.ai/${yahooUrl("THYAO.IS", "1mo", "1d")}`,
+    jinaZarf,
+    { baslik: { accept: "application/json" } },
   );
-  if (calisanAraci) {
-    const semboller = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX"];
+  await dene(
+    "jina ham metin",
+    "abd",
+    `https://r.jina.ai/${yahooUrl("AAPL", "1mo", "15m")}`,
+    yahooGovdeden,
+    { baslik: { "x-return-format": "text" } },
+  );
+
+  /* ── 2) Jina hız sınırı: 10 istek art arda ── */
+  {
+    const semboller = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "AMD", "INTC"];
     let basarili = 0;
     let ilkHata = "";
     const basladi = Date.now();
     for (const sembol of semboller) {
-      const s = await dene(
-        "hız sınırı",
-        "abd",
-        calisanAraci.sar(yahooUrl(sembol, "5d", "1d")),
-        yahooChart,
-        { sessiz: true },
-      );
+      const s = await dene("jina ×10", "abd", `https://r.jina.ai/${yahooUrl(sembol, "6mo", "1d")}`, yahooGovdeden, {
+        sessiz: true,
+      });
       if (s.ok) basarili++;
-      else if (!ilkHata) ilkHata = `${sembol}: ${s.durum} ${s.ozet.slice(0, 60)}`;
+      else if (!ilkHata) ilkHata = `${sembol}: ${s.durum} ${s.ozet.slice(0, 70)}`;
     }
+    const sure = Date.now() - basladi;
     sonuclar.push({
-      kaynak: `${calisanAraci.ad} ×8`,
+      kaynak: "jina ×10",
       piyasa: "abd",
-      durum: `${basarili}/8`,
-      sure: Date.now() - basladi,
-      ozet: basarili === semboller.length ? "art arda sekiz istek geçti" : `ilk hata — ${ilkHata}`,
-      ok: basarili === semboller.length,
+      durum: `${basarili}/10`,
+      sure,
+      ozet:
+        (basarili === 10 ? "hepsi geçti" : `ilk hata — ${ilkHata}`) +
+        ` · sembol başına ${Math.round(sure / 10)} ms`,
+      ok: basarili >= 9,
     });
   }
 
-  /* ── 3) TradingView tarayıcısı: tek istekte tüm piyasa ── */
-  for (const [piyasa, bolge, borsa] of [
-    ["bist", "turkey", "BIST"],
-    ["abd", "america", "NASDAQ"],
-    ["abd-nyse", "america", "NYSE"],
-  ] as const) {
-    await dene("tradingview", piyasa, `https://scanner.tradingview.com/${bolge}/scan`, tradingview, {
-      govde: {
-        filter: [{ left: "exchange", operation: "equal", right: borsa }],
-        options: { lang: "tr" },
-        columns: ["name", "description", "close", "change", "volume", "market_cap_basic"],
-        sort: { sortBy: "market_cap_basic", sortOrder: "desc" },
-        range: [0, 3],
-      },
-      baslik: { origin: "https://www.tradingview.com", referer: "https://www.tradingview.com/" },
-    });
-  }
-
-  /* ── 4) Anahtarsız metal/kur ── */
-  for (const metal of ["XAU", "XAG"]) {
-    await dene(
-      `gold-api ${metal}`,
-      "emtia",
-      `https://api.gold-api.com/price/${metal}`,
-      jsonOzet(["name", "price", "updatedAt"]),
-    );
-  }
+  /* ── 3) Başka aktarıcı adayları ── */
   await dene(
-    "truncgil",
-    "doviz",
-    "https://finans.truncgil.com/today.json",
-    (govde) => {
-      const veri = JSON.parse(govde) as Record<string, unknown>;
-      return `${Object.keys(veri).length} kalem · USD=${JSON.stringify(veri["USD"])}`.slice(0, 180);
-    },
+    "corsfix",
+    "bist",
+    `https://proxy.corsfix.com/?${yahooUrl("GARAN.IS", "1mo", "1d")}`,
+    yahooGovdeden,
   );
   await dene(
-    "frankfurter",
-    "doviz",
-    "https://api.frankfurter.app/latest?from=USD&to=TRY",
-    jsonOzet(["date", "rates.TRY"]),
+    "cors.workers.dev",
+    "emtia",
+    `https://test.cors.workers.dev/?${yahooUrl("GC=F", "1mo", "1d")}`,
+    yahooGovdeden,
+  );
+  await dene(
+    "allorigins tek",
+    "abd",
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl("AAPL", "1mo", "1d"))}`,
+    yahooGovdeden,
+  );
+
+  /* ── 4) TradingView: tek sembol uç noktası (gün içi alanlar) ── */
+  await dene(
+    "tv tek sembol",
+    "bist",
+    "https://scanner.tradingview.com/symbol?symbol=BIST%3ATHYAO&fields=" +
+      encodeURIComponent(
+        "close,change,open,high,low,volume,price_52_week_high,price_52_week_low,update_mode",
+      ),
+    (govde) => JSON.stringify(JSON.parse(govde)).slice(0, 220),
+    { baslik: { origin: "https://www.tradingview.com", referer: "https://www.tradingview.com/" } },
+  );
+
+  // Gecikme ölçümü: BIST kapalıyken "update_mode" ve son fiyat ne diyor?
+  await dene(
+    "tv bist ilk 5",
+    "bist",
+    "https://scanner.tradingview.com/turkey/scan",
+    tradingview,
+    {
+      govde: {
+        filter: [{ left: "exchange", operation: "equal", right: "BIST" }],
+        columns: ["name", "close", "change", "volume", "update_mode", "currency"],
+        sort: { sortBy: "volume", sortOrder: "desc" },
+        range: [0, 5],
+      },
+      baslik: { origin: "https://www.tradingview.com", referer: "https://www.tradingview.com/" },
+    },
   );
 
   /* ────────────────────── Rapor ────────────────────── */
 
   console.log(
-    `${"kaynak".padEnd(22)}${"piyasa".padEnd(10)}${"durum".padEnd(14)}${"süre".padEnd(9)}özet`,
+    `${"kaynak".padEnd(20)}${"piyasa".padEnd(8)}${"durum".padEnd(12)}${"süre".padEnd(9)}özet`,
   );
   console.log("─".repeat(125));
   for (const s of sonuclar) {
     console.log(
-      `${(s.ok ? "✓ " : "✗ ") + s.kaynak.padEnd(20)}${s.piyasa.padEnd(10)}${s.durum.padEnd(14)}${String(
+      `${(s.ok ? "✓ " : "✗ ") + s.kaynak.padEnd(18)}${s.piyasa.padEnd(8)}${s.durum.padEnd(12)}${String(
         s.sure + "ms",
       ).padEnd(9)}${s.ozet}`,
     );
@@ -283,8 +260,7 @@ async function tara(): Promise<void> {
 
   const calisan = sonuclar.filter((s) => s.ok);
   console.log(`\n${calisan.length}/${sonuclar.length} istek başarılı.`);
-  const isimler = [...new Set(calisan.map((s) => s.kaynak))];
-  console.log(`Çalışan: ${isimler.length > 0 ? isimler.join(", ") : "yok"}`);
+  console.log(`Çalışan: ${[...new Set(calisan.map((s) => s.kaynak))].join(", ") || "yok"}`);
 }
 
 tara().catch((error) => {
