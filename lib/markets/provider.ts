@@ -3,8 +3,15 @@
  *
  * Sayfalar ve API route'ları yalnızca bu modülü kullanır; hangi piyasanın
  * hangi sağlayıcıdan geldiğini bilmeleri gerekmez.
- *   • kripto            → `lib/binance.ts`
- *   • abd / bist / emtia → `lib/markets/yahoo.ts`
+ *   • kripto      → `lib/binance.ts`
+ *   • abd / bist  → liste fiyatı `lib/markets/tradingview.ts` (tek istekte
+ *                   bütün borsa), mum geçmişi `lib/markets/yahoo.ts`
+ *   • emtia       → `lib/markets/yahoo.ts`, son çare `lib/markets/metals.ts`
+ *   • döviz       → `lib/markets/frankfurter.ts`
+ *
+ * Yahoo'ya çıkan her istek `lib/markets/aktarici.ts` üzerinden geçebilir:
+ * sağlayıcı bulut IP aralıklarını engelliyor (ölçüldü), veri değil adresimiz
+ * yasaklı.
  */
 
 import { fetchCandles as fetchCryptoCandles, fetchMarkets as fetchCryptoMarkets } from "../binance";
@@ -34,7 +41,9 @@ import {
 import { paylasilanBayatOku, paylasilanOku, paylasilanYaz } from "./cache-store";
 import { fetchFxCandles, fetchFxQuotes, parseFxPair } from "./frankfurter";
 import { krediAyir, kotaBloklu, kotaHatasiniIsle, kotaMesaji, PIYASA_PAY } from "./kota";
+import { fetchMetalQuotes, metalDestekliyor } from "./metals";
 import { fetchStooqCandles, fetchStooqQuotes, toStooqSymbol, toStooqSymbols } from "./stooq";
+import { fetchTradingViewQuotes, tradingViewSembolu } from "./tradingview";
 import { fetchTwelveBatch, fetchTwelveCandles, twelveDataEnabled } from "./twelvedata";
 import { fetchChart, fetchQuotes, fetchSparkQuotes, searchSymbols } from "./yahoo";
 
@@ -260,6 +269,54 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     if (kalan.length === 0) return { quotes: toplanan, source: "canli", updatedAt: Date.now() };
   }
 
+  /* ── Hisse listesi: tek istekte bütün borsa ───────────────────────
+   *
+   * Bu, listeyi dolduran asıl kaynak. Diğer bütün yollar sembol başına (ya da
+   * en iyi hâlde 40 sembollük öbekler hâlinde) istek atıyor ve ücretsiz
+   * katmanın kotasını listeyi tamamlamadan bitiriyordu; burada 649 BIST ya da
+   * 5012 ABD sembolünün tamamı tek istekle geliyor, kota tüketmiyor ve
+   * aktarıcıya hiç uğramıyor. Kalan semboller aşağıdaki yollara düşer.
+   */
+  const tvEnstrumanlari = kalan.filter((i) => tradingViewSembolu(i.market, i.symbol));
+  if (tvEnstrumanlari.length > 0) {
+    try {
+      const piyasa = tvEnstrumanlari[0].market;
+      const liste = await fetchTradingViewQuotes(
+        piyasa,
+        tvEnstrumanlari.map((i) => i.symbol),
+      );
+      const yeni: Quote[] = [];
+      for (const instrument of tvEnstrumanlari) {
+        const satir = liste.get(instrument.symbol);
+        if (!satir) continue;
+        yeni.push({
+          // Enstrüman bilgisi bizim kataloğumuzdan gelir: Türkçe adlar ve
+          // kısa gösterimler orada, kaynağın kendi adlandırması değişse bile
+          // arayüz aynı kalsın.
+          ...instrument,
+          price: satir.price,
+          previousClose: satir.previousClose,
+          changePercent: satir.changePercent,
+          high: satir.high,
+          low: satir.low,
+          // Karşılaştırılabilir olması için hacim para birimi cinsine çevrilir.
+          volume: satir.volume * satir.price,
+          updatedAt: satir.updatedAt,
+        });
+      }
+      if (yeni.length > 0) {
+        toplanan.push(...yeni);
+        const gelenler = new Set(yeni.map((q) => q.symbol));
+        kalan = kalan.filter((i) => !gelenler.has(i.symbol));
+        if (kalan.length === 0) {
+          return { quotes: toplanan, source: "canli", updatedAt: Date.now() };
+        }
+      }
+    } catch {
+      // Kaynak düşerse aşağıdaki yollar denenir; liste yarım kalmaz.
+    }
+  }
+
   // Dövizler: anahtarsız çalışan tek kaynak. Taban para birimi başına tek istek.
   const fxSemboller = kalan.filter((i) => parseFxPair(i.symbol));
   if (fxSemboller.length > 0) {
@@ -441,6 +498,44 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
     }
     throw new MarketDataError("Fiyat listesi boş döndü.", 502);
   } catch (error) {
+    /* ── Değerli metaller: son çare, anahtarsız spot fiyat ──────────
+     *
+     * Buraya kadar geldiyse toplu sorguların hiçbiri çalışmadı. gold-api
+     * yalnızca fiyat veriyor — günlük değişim, gün içi uç değer ve hacim yok.
+     * Bu yüzden listenin başında değil sonunda: dolu bir satır üretemez, ama
+     * altın fiyatını hiç göstermemekten iyidir. Değişim yüzdesi uydurulmaz,
+     * sıfır gösterilir; yanlış bir yüzde eksik olandan daha kötüdür.
+     */
+    const metalEnstrumanlari = kalan.filter((i) => metalDestekliyor(i.symbol));
+    if (metalEnstrumanlari.length > 0) {
+      try {
+        const satirlar = await fetchMetalQuotes(metalEnstrumanlari.map((i) => i.symbol));
+        const metalBySymbol = new Map(metalEnstrumanlari.map((i) => [i.symbol, i]));
+        const yeni: Quote[] = [];
+        for (const satir of satirlar) {
+          const instrument = metalBySymbol.get(satir.symbol);
+          if (!instrument) continue;
+          yeni.push({
+            ...instrument,
+            price: satir.price,
+            previousClose: satir.price,
+            changePercent: 0,
+            high: satir.price,
+            low: satir.price,
+            volume: 0,
+            updatedAt: satir.updatedAt,
+          });
+        }
+        if (yeni.length > 0) {
+          toplanan.push(...yeni);
+          const gelenler = new Set(yeni.map((q) => q.symbol));
+          kalan = kalan.filter((i) => !gelenler.has(i.symbol));
+        }
+      } catch {
+        // Metal kaynağı da düştü; aşağıdaki sembol başına yol denenir.
+      }
+    }
+
     // Toplu sorguların ikisi de çalışmazsa günlük mumlardan fiyat üretilir.
     // Sağlayıcıyı boğmamak için hem az eşzamanlılık hem de sembol üst sınırı var.
     const quotes = await mapWithLimit(kalan.slice(0, PER_SYMBOL_FALLBACK_LIMIT), 3, async (instrument) => {

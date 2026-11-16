@@ -53,14 +53,18 @@ export const MARKET_IDS: MarketId[] = ["kripto", "abd", "bist", "emtia"];
 /**
  * Şu an açık olan piyasalar.
  *
- * ABD borsası, Borsa İstanbul ve döviz/emtia tarafı **geçici olarak** kapalı:
- * bu üç piyasanın verisi ücretsiz katmanda sembol başına kredi harcayan bir
- * sağlayıcıdan geliyor ve kota listeleri doldurmaya yetmiyordu; kullanıcı boş
- * ya da yarı dolu tablo görüyordu. Kod ve enstrüman listeleri yerinde duruyor,
- * yalnızca arayüz ve uç noktalar kapatıldı — sağlam bir veri kaynağı
- * bağlandığında bu listeye eklemek yetiyor.
+ * Dördü de açık. Üçü (ABD, BIST, emtia/döviz) bir süre kapalıydı: verisi
+ * sembol başına kredi harcayan bir sağlayıcıdan geliyordu ve ücretsiz kota
+ * listeyi doldurmaya yetmediği için kullanıcı yarı dolu tablo görüyordu.
+ * Ölçümle (bkz. `scripts/kaynak-tara.ts`) tek istekte bütün borsayı veren,
+ * kota harcamayan bir kaynak bulununca tekrar açıldılar.
+ *
+ * Gecikme konusunda dürüst olmak gerekiyor: BIST ve ABD hisse fiyatları
+ * **15 dakika gecikmeli** geliyor (kaynağın kendi bildirimi:
+ * `update_mode = "delayed_streaming_900"`). Ücretsiz ve gerçek zamanlı borsa
+ * verisi yok; gecikme arayüzde yazılır, gizlenmez. Kripto gerçek zamanlıdır.
  */
-export const AKTIF_MARKET_IDS: MarketId[] = ["kripto"];
+export const AKTIF_MARKET_IDS: MarketId[] = ["kripto", "abd", "bist", "emtia"];
 
 export function isMarketId(value: string): value is MarketId {
   return (MARKET_IDS as string[]).includes(value);
@@ -99,6 +103,16 @@ export type MarketMeta = {
    * çalışmazsa kredi bütçesi devreye girer ve liste yine kademeli dolar.
    */
   listSize?: number;
+  /**
+   * Fiyatların kaç dakika gecikmeli geldiği; 0 ise gerçek zamanlı.
+   *
+   * Ücretsiz ve gerçek zamanlı borsa verisi yok: kaynak gecikmeyi kendi
+   * bildiriyor (`update_mode`) ve ölçüldü — hisse 15 dakika, vadeli emtia
+   * 10 dakika, döviz ve kripto gerçek zamanlı. Bu sayı arayüzde yazılır;
+   * gecikmeyi gizlemek, kullanıcının 15 dakika önceki fiyata göre işlem
+   * yapması demek olurdu.
+   */
+  gecikmeDk: number;
 };
 
 export const MARKETS: Record<MarketId, MarketMeta> = {
@@ -109,6 +123,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     intervals: ["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"],
     currency: "USDT",
     alwaysOpen: true,
+    gecikmeDk: 0,
   },
   abd: {
     id: "abd",
@@ -117,6 +132,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     intervals: ["1d", "1w"],
     currency: "USD",
     alwaysOpen: false,
+    gecikmeDk: 15,
   },
   bist: {
     id: "bist",
@@ -125,14 +141,18 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     intervals: ["1d", "1w"],
     currency: "TRY",
     alwaysOpen: false,
+    gecikmeDk: 15,
   },
   emtia: {
     id: "emtia",
     labelKey: "market.emtia",
+    // Bu piyasa hem vadeli emtiayı (10 dk gecikmeli) hem kurları (gerçek
+    // zamanlı) barındırıyor; kullanıcıyı yanıltmamak için kötü olan yazılır.
     slug: "dovizler",
     intervals: ["1d", "1w"],
     currency: "USD",
     alwaysOpen: false,
+    gecikmeDk: 10,
   },
 };
 

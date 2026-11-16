@@ -54,11 +54,29 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const COOLDOWN_MS = 30_000;
 let blockedUntil = 0;
 
+/* ── Doğrudan yolun kapalı olduğunu hatırla ───────────────────────
+ *
+ * Sağlayıcı bizim IP aralığımızı engellediğinde bu durum tek bir sembolle
+ * sınırlı değil: sonraki her sembolde de 429 gelir. Yine de her istekte iki
+ * konağı denemek, 100 sembollük bir beslemede 400 boşa istek ve dakikalarca
+ * bekleme demek. Bir kez 429 görüldüğünde kısa bir süre doğrudan konaklar
+ * atlanır ve doğruca aktarıcıya gidilir; süre dolunca doğrudan yol yeniden
+ * denenir, çünkü engel kalkmış olabilir ve aktarıcısız yol her zaman daha
+ * hızlı ve daha güvenilirdir.
+ */
+const DOGRUDAN_DINLENME_MS = 5 * 60_000;
+let dogrudanKapaliSon = 0;
+
+function dogrudanKapali(): boolean {
+  return Date.now() < dogrudanKapaliSon;
+}
+
 const RATE_LIMIT_MESSAGE = "Veri sağlayıcı istek limitine takıldı, birazdan tekrar deneyin.";
 
 /** Testler için: devre kesiciyi sıfırlar. */
 export function resetRateLimitState(): void {
   blockedUntil = 0;
+  dogrudanKapaliSon = 0;
 }
 
 export function rateLimitedUntil(): number {
@@ -76,9 +94,13 @@ function aktariciKullanilsin(): boolean {
 }
 
 async function requestOnce<T>(path: string, timeoutMs: number): Promise<T> {
-  const hosts = lastGoodHost ? [lastGoodHost, ...HOSTS.filter((h) => h !== lastGoodHost)] : HOSTS;
+  const siraliHostlar = lastGoodHost
+    ? [lastGoodHost, ...HOSTS.filter((h) => h !== lastGoodHost)]
+    : HOSTS;
+  // Doğrudan yol kapalıysa ve aktarıcı varsa konakları hiç denemeden geç.
+  const hosts = dogrudanKapali() && aktariciKullanilsin() ? [] : siraliHostlar;
   let lastError: unknown = null;
-  let hizSiniri = false;
+  let hizSiniri = dogrudanKapali();
 
   for (const host of hosts) {
     const controller = new AbortController();
@@ -96,6 +118,7 @@ async function requestOnce<T>(path: string, timeoutMs: number): Promise<T> {
       if (response.status === 429) {
         // Doğrudan yol kapalı: hemen pes etme, aşağıdaki aktarıcılar dursun.
         hizSiniri = true;
+        dogrudanKapaliSon = Date.now() + DOGRUDAN_DINLENME_MS;
         continue;
       }
       if (!response.ok) throw new MarketDataError(`Veri sağlayıcı yanıtı: ${response.status}`, 502);
@@ -144,18 +167,30 @@ async function request<T>(path: string, timeoutMs = 12_000): Promise<T> {
   // Bekleme süresi dolmadıysa ağa hiç çıkma.
   if (Date.now() < blockedUntil) throw new MarketDataError(RATE_LIMIT_MESSAGE, 429);
 
+  /*
+   * Aktarıcı devredeyken yeniden deneme yapılmaz.
+   *
+   * Yeniden denemeler, Yahoo'nun 429'u birkaç yüz milisaniyede bıraktığı
+   * durumlar için konmuştu. Aktarıcı varken tablo değişiyor: doğrudan yol
+   * zaten kapalıysa (bizim IP aralığı yasaklı) beklemek onu açmıyor, çareyi
+   * aktarıcı veriyor ve o da aynı tur içinde deneniyor. Üç tur döndüğünde tek
+   * bir mum isteği 12 isteğe çıkıyordu — sağlayıcıya 6, aktarıcılara 6 — yani
+   * hem sunucusuz ortamda saniyeler hem de aktarıcı kotası boşa gidiyordu.
+   */
+  const denemeGecikmeleri = aktariciKullanilsin() ? [] : RETRY_DELAYS_MS;
+
   for (let attempt = 0; ; attempt++) {
     try {
       return await requestOnce<T>(path, timeoutMs);
     } catch (error) {
       const rateLimited = error instanceof MarketDataError && error.status === 429;
       if (!rateLimited) throw error;
-      if (attempt >= RETRY_DELAYS_MS.length) {
+      if (attempt >= denemeGecikmeleri.length) {
         // Yeniden denemeler de yetmedi: bir süre tamamen geri çekil.
         blockedUntil = Date.now() + COOLDOWN_MS;
         throw error;
       }
-      await sleep(RETRY_DELAYS_MS[attempt]);
+      await sleep(denemeGecikmeleri[attempt]);
       if (Date.now() < blockedUntil) throw error;
     }
   }

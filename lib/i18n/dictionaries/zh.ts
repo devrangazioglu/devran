@@ -60,6 +60,7 @@ export const zh: Partial<Dictionary> = {
   "market.bist.desc": "BIST 100 指数与伊斯坦布尔交易所主要股票",
   "market.emtia.desc": "黄金、白银、原油、美元/里拉及主要货币对",
   "market.closedNote": "非交易时段该市场休市，显示最近收盘数据。",
+  "market.delayNote": "价格延迟 {dakika} 分钟。免费的实时交易所数据并不存在，因此延迟无法避免，交易前请考虑这一点。",
 
   "interval.1m": "1 分钟",
   "interval.5m": "5 分钟",

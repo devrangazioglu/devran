@@ -104,6 +104,9 @@ export default async function MarketView({
 
           {source === "demo" && <div className="notice notice-warn">{t("common.demoNotice")}</div>}
           {!market.alwaysOpen && <div className="notice">{t("market.closedNote")}</div>}
+          {market.gecikmeDk > 0 && (
+            <div className="notice">{t("market.delayNote", { dakika: market.gecikmeDk })}</div>
+          )}
           {error && <div className="notice notice-error">{error}</div>}
 
           {/* Masaüstü: tablo */}

@@ -61,6 +61,7 @@ export const es: Partial<Dictionary> = {
   "market.bist.desc": "Índice BIST 100 y principales acciones de Borsa İstanbul",
   "market.emtia.desc": "Oro, plata, petróleo, USD/TRY y los pares principales",
   "market.closedNote": "Este mercado está cerrado fuera del horario de sesión; se muestra el último cierre.",
+  "market.delayNote": "Los precios tienen {dakika} minutos de retraso. No existen datos bursátiles gratuitos en tiempo real, así que el retraso es inevitable; tenlo en cuenta antes de operar.",
 
   "interval.1m": "1 minuto",
   "interval.5m": "5 minutos",

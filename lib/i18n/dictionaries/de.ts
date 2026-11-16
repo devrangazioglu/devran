@@ -61,6 +61,7 @@ export const de: Partial<Dictionary> = {
   "market.bist.desc": "BIST-100-Index und führende Aktien der Borsa İstanbul",
   "market.emtia.desc": "Gold, Silber, Öl, USD/TRY und die großen Paare",
   "market.closedNote": "Dieser Markt ist außerhalb der Handelszeiten geschlossen; es wird der letzte Schlusskurs gezeigt.",
+  "market.delayNote": "Die Kurse sind {dakika} Minuten verzögert. Kostenlose Echtzeit-Börsendaten gibt es nicht, die Verzögerung ist also unvermeidbar — bedenken Sie das vor einem Handel.",
 
   "interval.1m": "1 Minute",
   "interval.5m": "5 Minuten",

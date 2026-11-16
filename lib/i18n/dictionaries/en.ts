@@ -61,6 +61,7 @@ export const en: Dictionary = {
   "market.bist.desc": "BIST 100 index and leading Borsa İstanbul shares",
   "market.emtia.desc": "Gold, silver, oil, USD/TRY and the major pairs",
   "market.closedNote": "This market is closed outside session hours; the last close is shown.",
+  "market.delayNote": "Prices are delayed by {dakika} minutes. Free real-time exchange data does not exist, so the delay is unavoidable — keep it in mind before trading.",
 
   "interval.1m": "1 minute",
   "interval.5m": "5 minutes",

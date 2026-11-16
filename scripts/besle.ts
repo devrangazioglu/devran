@@ -1,16 +1,17 @@
 /**
  * Piyasa verisini veritabanına doldurur (günlük besleme).
  *
- * Neden ayrı bir betik: kripto dışı veriyi web sunucusundan çekmek iki duvara
- * çarpıyor. Anahtarsız kaynaklar (Yahoo, Stooq) Vercel'in IP aralığını
- * engelliyor — ölçüldü, sırasıyla 429 ve CSV yerine HTML engel sayfası. Anahtar
- * isteyen kaynak ise ücretsiz katmanda günde 800 kredi veriyor ve tek bir gün
- * içinde bitiyor.
+ * Neden ayrı bir betik: mum geçmişi veren anahtarsız kaynak (Yahoo) bulut IP
+ * aralıklarını engelliyor ve anahtar isteyen kaynak ücretsiz katmanda günde
+ * 800 kredi veriyor — ikisi de her ziyaretçi isteğinde sağlayıcıya gitmeyi
+ * imkânsız kılıyor. Bu betik veriyi gece bir kez çeker ve paylaşımlı
+ * önbelleğe yazar; site zaten önce oraya bakıyor, tablo doluysa hiçbir
+ * sağlayıcıya gitmiyor.
  *
- * Bu betik ikisini de aşar: uygulamanın çalıştığı yerden değil, **başka bir
- * makineden** (GitHub Actions) çalışır ve sonucu doğrudan paylaşımlı önbelleğe
- * yazar. Site zaten önce oraya bakıyor; tablo doluysa hiçbir sağlayıcıya
- * gitmiyor. Böylece kota kavramı tamamen ortadan kalkar.
+ * Önemli bir ölçüm: GitHub çalıştırıcısının IP aralığı da yasaklı, yani
+ * "başka makineden çalıştırmak" tek başına yetmiyordu. Veri aktarıcı
+ * üzerinden geliyor (bkz. `lib/markets/aktarici.ts`) ve bu betik de
+ * uygulamanın veri yolunu kullanıyor, kendi `fetch`'ini değil.
  *
  * Günlük mumlar günde bir değiştiği için günde bir çalışması yeterli.
  *
@@ -24,7 +25,9 @@
  */
 
 import { closePool, ensureSchema, postgresEnabled, query } from "../lib/db";
+import { aktariciAcik } from "../lib/markets/aktarici";
 import { staticInstruments } from "../lib/markets/instruments";
+import { fetchChart } from "../lib/markets/yahoo";
 import { MARKET_IDS, type Candle, type Instrument, type Interval, type MarketId } from "../lib/markets/types";
 
 /** Beslenen mum sayısı: göstergeler için 300 fazlasıyla yeter. */
@@ -37,10 +40,7 @@ const MUM_SAYISI = 300;
  * hesaplıyor. Yalnızca günlük beslendiğinde site her analizde haftalık için
  * sağlayıcıya gidiyor ve kotayı orada harcıyordu — ölçüldü.
  */
-const PERIYOTLAR: { interval: Interval; aralik: string; adim: string }[] = [
-  { interval: "1d", aralik: "2y", adim: "1d" },
-  { interval: "1w", aralik: "10y", adim: "1wk" },
-];
+const PERIYOTLAR: Interval[] = ["1d", "1w"];
 
 /**
  * Kaydın "taze" sayılacağı süre.
@@ -59,103 +59,26 @@ const bekle = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /* ────────────────────────── Kaynak ────────────────────────── */
 
-type ChartYanit = {
-  chart?: {
-    result?: {
-      meta?: { currency?: string; longName?: string; shortName?: string };
-      timestamp?: number[];
-      indicators?: {
-        quote?: {
-          open?: (number | null)[];
-          high?: (number | null)[];
-          low?: (number | null)[];
-          close?: (number | null)[];
-          volume?: (number | null)[];
-        }[];
-      };
-    }[];
-    error?: { code?: string; description?: string };
-  };
-};
-
-const BASE = process.env.BESLEME_API_BASE ?? "https://query1.finance.yahoo.com";
-
 /**
- * Tek sembolün günlük mumları.
+ * Tek sembolün mumları.
  *
- * Yanıttaki diziler paralel: aynı indeks aynı günü gösterir ve tatil günlerinde
- * `null` gelebilir; eksik alanı olan gün tamamen atlanır, yoksa gösterge
- * hesapları bozulur.
+ * Veri yolu uygulamayla **aynı**: `lib/markets/yahoo.ts`. Bu betik bir süre
+ * kendi `fetch`'ini kullanıyordu ve bu sessiz bir tuzak oldu — uygulamaya
+ * eklenen aktarıcı (engellenen IP aralığını aşan yol, bkz.
+ * `lib/markets/aktarici.ts`) beslemeye hiç uğramadı, besleme her sembolde 429
+ * alıp boş döndü, ölçüm de bunu "kaynak çalışmıyor" diye gösterdi. Tek yol
+ * kullanmak aynı hatanın iki yerde ayrı ayrı düzeltilmesi gereğini de bitirir.
  */
 async function mumlariCek(
   symbol: string,
-  adim: string,
-  aralik: string,
+  interval: Interval,
 ): Promise<{ candles: Candle[]; currency?: string; name?: string }> {
-  const url =
-    `${BASE}/v8/finance/chart/${encodeURIComponent(symbol)}` +
-    `?interval=${adim}&range=${aralik}&includePrePost=false`;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20_000);
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        accept: "application/json",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-      },
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const govde = (await response.json()) as ChartYanit;
-    const sonuc = govde.chart?.result?.[0];
-    if (!sonuc) throw new Error(govde.chart?.error?.description ?? "boş yanıt");
-
-    const zaman = sonuc.timestamp ?? [];
-    const q = sonuc.indicators?.quote?.[0] ?? {};
-    const candles: Candle[] = [];
-
-    for (let i = 0; i < zaman.length; i++) {
-      const open = q.open?.[i];
-      const high = q.high?.[i];
-      const low = q.low?.[i];
-      const close = q.close?.[i];
-      if (
-        typeof open !== "number" ||
-        typeof high !== "number" ||
-        typeof low !== "number" ||
-        typeof close !== "number" ||
-        close <= 0
-      ) {
-        continue;
-      }
-      const volume = typeof q.volume?.[i] === "number" ? (q.volume[i] as number) : 0;
-      const openTime = zaman[i] * 1000;
-      const sureMs = adim === "1wk" ? 7 * 86_400_000 : 86_400_000;
-      candles.push({
-        openTime,
-        open,
-        high,
-        low,
-        close,
-        volume,
-        closeTime: openTime + sureMs - 1,
-        quoteVolume: volume * close,
-        trades: 0,
-      });
-    }
-
-    candles.sort((a, b) => a.openTime - b.openTime);
-    return {
-      candles: candles.slice(-MUM_SAYISI),
-      currency: sonuc.meta?.currency,
-      name: sonuc.meta?.longName ?? sonuc.meta?.shortName,
-    };
-  } finally {
-    clearTimeout(timer);
-  }
+  const chart = await fetchChart(symbol, interval, MUM_SAYISI);
+  return {
+    candles: chart.candles,
+    currency: chart.currency ?? undefined,
+    name: chart.name ?? undefined,
+  };
 }
 
 /* ────────────────────────── Yazma ────────────────────────── */
@@ -205,19 +128,15 @@ async function piyasayiBesle(market: MarketId): Promise<Sonuc> {
       parca.map(async (instrument) => {
         for (const periyot of PERIYOTLAR) {
           try {
-            const { candles, currency } = await mumlariCek(
-              instrument.symbol,
-              periyot.adim,
-              periyot.aralik,
-            );
+            const { candles, currency } = await mumlariCek(instrument.symbol, periyot);
             // Birkaç mumluk yanıt genelde "sembol bulunamadı" demektir; yarım
             // veriyle önbelleği kirletmektense o sembolü atlamak daha iyi.
             if (candles.length < 30) throw new Error(`yetersiz veri (${candles.length} mum)`);
-            await kaydet(instrument, periyot.interval, candles, currency);
-            if (periyot.interval === "1d") basarili++;
+            await kaydet(instrument, periyot, candles, currency);
+            if (periyot === "1d") basarili++;
           } catch (error) {
             hatalar.push(
-              `${instrument.symbol} ${periyot.interval}: ${error instanceof Error ? error.message : "bilinmeyen"}`,
+              `${instrument.symbol} ${periyot}: ${error instanceof Error ? error.message : "bilinmeyen"}`,
             );
           }
         }
@@ -246,12 +165,15 @@ async function kaynagiDene(): Promise<void> {
     { market: "emtia", symbol: "USDTRY=X" },
   ];
 
-  console.log(`Kaynak: ${BASE}\n`);
+  console.log(
+    `Kaynak: ${process.env.MARKET_API_BASE ?? "Yahoo Finance"}` +
+      `${aktariciAcik() ? " (gerekirse aktarıcı üzerinden)" : ""}\n`,
+  );
   let basarili = 0;
 
   for (const ornek of ornekler) {
     try {
-      const { candles, currency } = await mumlariCek(ornek.symbol, "1d", "6mo");
+      const { candles, currency } = await mumlariCek(ornek.symbol, "1d");
       const son = candles[candles.length - 1];
       const tarih = new Date(son.openTime).toISOString().slice(0, 10);
       console.log(

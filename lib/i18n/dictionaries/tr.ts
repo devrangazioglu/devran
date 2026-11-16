@@ -62,6 +62,7 @@ export const tr = {
   "market.bist.desc": "BIST 100 endeksi ve öne çıkan Borsa İstanbul hisseleri",
   "market.emtia.desc": "Altın, gümüş, petrol, dolar/TL ve büyük pariteler",
   "market.closedNote": "Bu piyasa seans saatleri dışında kapalıdır; son kapanış verisi gösterilir.",
+  "market.delayNote": "Fiyatlar {dakika} dakika gecikmelidir. Ücretsiz ve gerçek zamanlı borsa verisi bulunmadığı için gecikme kaçınılmaz; işlem kararında bunu göz önünde bulundurun.",
 
   /* ── Zaman dilimleri ──────────────────────────────────── */
   "interval.1m": "1 dakika",
