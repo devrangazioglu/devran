@@ -63,9 +63,13 @@ jobs:
             printf %s "$sayfa" | grep -o 'notice notice-error[^<]*<[^>]*>[^<]*' | head -3
             exit 1
           fi
-          # THYAO satırı ve yanında bir fiyat var mı?
-          if printf %s "$sayfa" | grep -q "THYAO"; then
-            echo "✓ Canlı veri geldi; THYAO tabloda."
-          else
-            echo "::warning::THYAO tabloda yok; liste beklenenden farklı."
+          # Tabloda gerçek satır var mı? Sembol adını aramak yetmez: arama
+          # kutusunun örnek metninde de "THYAO" geçiyor, yani veri gelmese
+          # bile eşleşirdi. Satır bağlantısı yalnızca fiyat geldiğinde basılır.
+          satir="$(printf %s "$sayfa" | grep -o '/varlik/bist/[A-Z0-9.]*' | sort -u | wc -l)"
+          echo "Tabloda $satir varlık satırı var."
+          if [ "$satir" -lt 5 ]; then
+            echo "::error::Tablo boş ya da yarım: kaynak Vercel'den cevap vermiyor olabilir."
+            exit 1
           fi
+          echo "✓ Canlı veri geldi."
