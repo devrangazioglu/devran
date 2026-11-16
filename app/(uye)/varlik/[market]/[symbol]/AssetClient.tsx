@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { KantKarti, RejimKarti, SinamaKarti, TemelKarti } from "@/components/AnalizKartlari";
+import {
+  BeklentiKarti,
+  IstatistikKarti,
+  OlasilikKarti,
+  RejimKarti,
+  SinamaKarti,
+  TemelKarti,
+} from "@/components/AnalizKartlari";
 import { Aciklama, SadeOzetKarti } from "@/components/SadeOzet";
 import CandleChart, { type Gorunum } from "@/components/CandleChart";
 import HataNotu from "@/components/HataNotu";
@@ -328,8 +335,8 @@ export default function AssetClient({
             />
           </div>
 
-          {/* ── Bağlam: piyasa durumu, geçmiş sınaması, temel analiz ── */}
-          <div className="grid-2">
+          {/* ── Bağlam: piyasa durumu ve geçmiş sınaması ── */}
+          <div className="grid-2 kart-sirasi">
             <Reveal>
               <RejimKarti analysis={analysis} />
             </Reveal>
@@ -338,9 +345,15 @@ export default function AssetClient({
             </Reveal>
           </div>
 
-          <Reveal>
-            <KantKarti analysis={analysis} />
-          </Reveal>
+          {/* ── Olasılık ve seri istatistikleri ── */}
+          <div className="grid-2 kart-sirasi">
+            <Reveal>
+              <OlasilikKarti analysis={analysis} />
+            </Reveal>
+            <Reveal delay={60}>
+              <IstatistikKarti analysis={analysis} />
+            </Reveal>
+          </div>
 
           {data.fundamentals && (
             <Reveal>
@@ -447,6 +460,11 @@ export default function AssetClient({
                     </strong>
                   </div>
                 </div>
+              </Reveal>
+
+              {/* Sinyalin geçmiş beklentisi ve pozisyon büyüklüğü — plana bağlı */}
+              <Reveal delay={90}>
+                <BeklentiKarti analysis={analysis} />
               </Reveal>
 
               {/* Seviyeler */}
