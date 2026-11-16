@@ -349,7 +349,10 @@ export default function AssetClient({
           )}
 
           {/* ── Yorum + plan ────────────────────────────── */}
-          <div className="split">
+          {/* Kartlar iki sütuna akar (CSS sütunları): yorum kartı katlanınca kısa
+              kalıyor, eski düzende (geniş sol sütun + sağda kart yığını) solda
+              büyük bir boşluk açılıyordu. */}
+          <div className="kart-sutunlari">
             <Reveal>
               <div className="card">
                 <div className="card-title">
@@ -391,7 +394,7 @@ export default function AssetClient({
               </div>
             </Reveal>
 
-            <div className="stack">
+            <>
               {/* İşlem planı */}
               <Reveal delay={60}>
                 <div className="card">
@@ -544,11 +547,13 @@ export default function AssetClient({
                   </div>
                 </Reveal>
               )}
-            </div>
+            </>
           </div>
 
           {/* ── Gösterge tablosu ────────────────────────── */}
-          <div className="grid-2">
+          {/* Grupların gösterge sayısı farklı (2–6); ızgarada kısa kartın yanında
+              boşluk kalıyordu, sütun düzeni boşluksuz dizer. */}
+          <div className="kart-sutunlari">
             {groupChecks(analysis.checks).map((group) => (
               <Reveal key={group.category}>
                 <div className="card">
