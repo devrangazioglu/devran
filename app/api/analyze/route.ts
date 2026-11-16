@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { analyze, chartSeries } from "@/lib/analysis";
+import { analyze, chartSeries, isBuySignal, isSellSignal } from "@/lib/analysis";
 import { buildCommentary } from "@/lib/commentary";
 import { krediHarca, krediIade, krediOzeti, kullanicidanDurum } from "@/lib/credits";
+import { bilesikGorunum } from "@/lib/fundamentals";
 import { analysisReady } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
+import { analizBaglami } from "@/lib/markets/baglam";
 import { getCandles, getQuotes, normalizeSymbol } from "@/lib/markets/provider";
+import { getFundamentals } from "@/lib/markets/temel";
 import {
   isInterval,
   marketAktif,
@@ -104,8 +107,24 @@ export async function GET(request: Request) {
 
   try {
     const { candles, source, instrument } = await getCandles(marketParam, symbol, interval, 300);
-    const analysis = analyze(instrument, interval, candles, source);
+    // Temel veri mumlarla aynı anda istenir; ikisi birbirinden bağımsız.
+    const temelSozu =
+      instrument.kind === "hisse" ? getFundamentals(marketParam, symbol) : Promise.resolve(null);
+    const analysis = analyze(
+      instrument,
+      interval,
+      candles,
+      source,
+      await analizBaglami(instrument, interval),
+    );
     const series = chartSeries(candles);
+    const fundamentals = await temelSozu;
+    const overallKey = fundamentals
+      ? bilesikGorunum(
+          isBuySignal(analysis.signal) ? "buy" : isSellSignal(analysis.signal) ? "sell" : "wait",
+          fundamentals.score,
+        )
+      : null;
 
     // Fiyat listesinden gün içi istatistikler (varsa).
     const quote = await getQuotes(marketParam, 60)
@@ -115,8 +134,18 @@ export async function GET(request: Request) {
     const timeframes = await Promise.all(
       higherTimeframes(marketParam, interval).map(async (other) => {
         try {
-          const result = await getCandles(marketParam, symbol, other, 250);
-          const otherAnalysis = analyze(instrument, other, result.candles, result.source);
+          // Tarayıcıyla aynı mum sayısı ve aynı bağlam: aynı periyot her
+          // ekranda aynı skoru göstersin. Geçmiş sınaması burada gereksiz
+          // (yalnızca sinyal gösteriliyor) ama güven puanına girdiği için
+          // kapatılmaz.
+          const result = await getCandles(marketParam, symbol, other, 300);
+          const otherAnalysis = analyze(
+            instrument,
+            other,
+            result.candles,
+            result.source,
+            await analizBaglami(instrument, other),
+          );
           return {
             interval: other,
             signal: otherAnalysis.signal,
@@ -132,7 +161,11 @@ export async function GET(request: Request) {
 
     // Yorum en son üretilir: diğer zaman dilimlerinin sonucunu da kullanıyor,
     // "üst periyot ne diyor" cümlesi ancak onlar hesaplandıktan sonra yazılabilir.
-    const commentary = buildCommentary(analysis, locale, { timeframes: digerPeriyotlar });
+    const commentary = buildCommentary(analysis, locale, {
+      timeframes: digerPeriyotlar,
+      fundamentals,
+      overallKey,
+    });
 
     const visible = 180;
     const trim = <T,>(list: T[]) => list.slice(-visible);
@@ -140,6 +173,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       analysis,
       commentary,
+      fundamentals,
+      overallKey,
       analysisLocalized: analysisReady(locale),
       kredi: krediOzeti(harcama.durum),
       quote,

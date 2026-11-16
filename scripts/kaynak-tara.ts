@@ -28,6 +28,8 @@
  * çıktı, siteyi besleyecek makinenin gerçek görüşüdür.
  */
 
+import { getFundamentals } from "../lib/markets/temel";
+
 type Sonuc = {
   kaynak: string;
   piyasa: string;
@@ -280,6 +282,34 @@ async function tara(): Promise<void> {
   const calisan = sonuclar.filter((s) => s.ok);
   console.log(`\n${calisan.length}/${sonuclar.length} istek başarılı.`);
   console.log(`Çalışan: ${[...new Set(calisan.map((s) => s.kaynak))].join(", ") || "yok"}`);
+
+  /* ────────────────────── Temel analiz modülü (uçtan uca) ────────────────────── */
+
+  // Yukarıdaki istekler alanların geldiğini ölçer; bu bölüm uygulamanın
+  // kendi modülünü gerçek veriyle çalıştırır: eşleme, emsal seçimi, puanlama.
+  console.log("\nTemel analiz modülü (gerçek veri):");
+  for (const [market, symbol] of [
+    ["bist", "THYAO.IS"],
+    ["bist", "GARAN.IS"],
+    ["bist", "ASELS.IS"],
+    ["abd", "AAPL"],
+    ["abd", "JPM"],
+    ["abd", "NVDA"],
+  ] as const) {
+    const temel = await getFundamentals(market, symbol);
+    if (!temel) {
+      console.log(`✗ ${symbol.padEnd(9)} veri yok`);
+      continue;
+    }
+    const sutunlar = temel.pillars
+      .map((p) => `${p.id}=${p.score === null ? "—" : Math.round(p.score)}`)
+      .join(" ");
+    console.log(
+      `✓ ${symbol.padEnd(9)} puan ${String(temel.score).padStart(3)} · ${temel.sector} · ` +
+        `${temel.scope === "sector" ? "sektör" : "borsa"} ${temel.peers} emsal · ${sutunlar}` +
+        `${temel.flags.length ? ` · ${temel.flags.join(",")}` : ""}`,
+    );
+  }
 }
 
 tara().catch((error) => {

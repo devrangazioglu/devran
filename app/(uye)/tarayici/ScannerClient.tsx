@@ -14,7 +14,7 @@ import { formatCompact, formatNumber, formatPrice, formatRelative } from "@/lib/
 import { MARKETS, AKTIF_MARKET_IDS, type Interval, type MarketId } from "@/lib/markets/types";
 
 type Filter = "all" | "buy" | "sell" | "watch";
-type SortKey = "score" | "confidence" | "change" | "volume" | "rsi";
+type SortKey = "score" | "confidence" | "change" | "volume" | "rsi" | "fundamental";
 
 export default function ScannerClient({
   defaultMarket,
@@ -108,9 +108,22 @@ export default function ScannerClient({
       change: (a, b) => b.changePercent - a.changePercent,
       volume: (a, b) => b.volume - a.volume,
       rsi: (a, b) => (b.rsi ?? 0) - (a.rsi ?? 0),
+      // Temel puanı olmayanlar (endeks, emtia, kripto) sona düşer.
+      fundamental: (a, b) => (b.fundamental ?? -1) - (a.fundamental ?? -1),
     };
     return list.sort(comparators[sort]);
   }, [data, filter, strongOnly, sort, watchlist]);
+
+  /** Taramada temel puanı olan en az bir satır var mı? (Sütun buna göre açılır.) */
+  const temelVar = useMemo(
+    () => (data?.rows ?? []).some((r) => r.fundamental !== null && r.fundamental !== undefined),
+    [data],
+  );
+
+  // Piyasa değişince "temel puana göre" sıralama anlamsız kalabilir.
+  useEffect(() => {
+    if (!temelVar && sort === "fundamental") setSort("score");
+  }, [temelVar, sort]);
 
   const counts = useMemo(() => {
     const list = data?.rows ?? [];
@@ -237,6 +250,9 @@ export default function ScannerClient({
             { value: "change", label: t("scan.sortChange") },
             { value: "volume", label: t("scan.sortVolume") },
             { value: "rsi", label: t("scan.sortRsi") },
+            // Temel puan yalnızca hisselerde vardır; taramada hiç yoksa
+            // seçenek de gösterilmez.
+            ...(temelVar ? [{ value: "fundamental" as const, label: t("scan.sort.fundamental") }] : []),
           ]}
         />
         <label className="pill" style={{ cursor: "pointer" }}>
@@ -265,6 +281,7 @@ export default function ScannerClient({
                 <th className="num">RSI</th>
                 <th className="num">ADX</th>
                 <th className="num">ATR %</th>
+                {temelVar && <th className="num">{t("fund.short")}</th>}
                 <th>{t("common.pattern")}</th>
                 <th />
               </tr>
@@ -273,14 +290,14 @@ export default function ScannerClient({
               {loading && !data ? (
                 Array.from({ length: 10 }, (_, i) => (
                   <tr key={i}>
-                    <td colSpan={12}>
+                    <td colSpan={temelVar ? 13 : 12}>
                       <div className="skeleton" style={{ height: 18 }} />
                     </td>
                   </tr>
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={{ textAlign: "center", padding: 30 }}>
+                  <td colSpan={temelVar ? 13 : 12} style={{ textAlign: "center", padding: 30 }}>
                     <span className="muted">{t("scan.empty")}</span>
                   </td>
                 </tr>
@@ -318,6 +335,21 @@ export default function ScannerClient({
                       {row.adx === null ? "—" : formatNumber(row.adx, intl, 0)}
                     </td>
                     <td className="num mono dim">{formatNumber(row.atrPercent, intl, 1)}</td>
+                    {temelVar && (
+                      <td
+                        className={`num mono ${
+                          row.fundamental === null
+                            ? "dim"
+                            : row.fundamental >= 57
+                              ? "up"
+                              : row.fundamental < 43
+                                ? "down"
+                                : "flat"
+                        }`}
+                      >
+                        {row.fundamental ?? "—"}
+                      </td>
+                    )}
                     <td className="dim pattern-cell">
                       {row.patterns.length
                         ? row.patterns.map((id) => patternName(t, id)).join(", ")

@@ -201,6 +201,8 @@ export type Backtest = {
   sell: BacktestSide | null;
 };
 
+export type ProfileKey = "profile.trend" | "profile.crypto" | "profile.equity" | "profile.equityWeekly";
+
 export type Analysis = {
   instrument: Instrument;
   interval: Interval;
@@ -221,6 +223,8 @@ export type Analysis = {
   volatility: { atrPercent: number; regimeKey: string; squeeze: boolean };
   trendStrength: { adx: number | null; labelKey: string };
   regime: Regime;
+  /** Göstergelerin hangi varsayımla okunduğu (varlık sınıfına göre). */
+  profileKey: ProfileKey;
   /** Veri yetmediğinde null. */
   backtest: Backtest | null;
 };
@@ -404,10 +408,21 @@ function blend(a: Profile, b: Profile, t: number): Profile {
  * ne geri dönüş ne momentum baskındır. Haftalıkta bu yüzden iki profilin
  * ortası kullanılır — ölçülmemiş bir vadede taraf tutmamak için.
  */
-function profileFor(instrument: Instrument, interval: Interval): Profile {
+function profileKeyFor(instrument: Instrument, interval: Interval): ProfileKey {
   const equity = instrument.kind === "hisse" || instrument.kind === "endeks";
-  if (!equity) return instrument.kind === "kripto" ? CRYPTO_PROFILE : TREND_PROFILE;
-  return interval === "1w" ? blend(TREND_PROFILE, EQUITY_PROFILE, 0.5) : EQUITY_PROFILE;
+  if (!equity) return instrument.kind === "kripto" ? "profile.crypto" : "profile.trend";
+  return interval === "1w" ? "profile.equityWeekly" : "profile.equity";
+}
+
+const PROFILES: Record<ProfileKey, Profile> = {
+  "profile.trend": TREND_PROFILE,
+  "profile.crypto": CRYPTO_PROFILE,
+  "profile.equity": EQUITY_PROFILE,
+  "profile.equityWeekly": blend(TREND_PROFILE, EQUITY_PROFILE, 0.5),
+};
+
+function profileFor(instrument: Instrument, interval: Interval): Profile {
+  return PROFILES[profileKeyFor(instrument, interval)];
 }
 
 /* ────────────────────────── Hazırlık ────────────────────────── */
@@ -1510,6 +1525,7 @@ export function analyze(
       direction: Number(regime.direction.toFixed(3)),
       key: regime.key,
     },
+    profileKey: profileKeyFor(instrument, interval),
     backtest,
   };
 }

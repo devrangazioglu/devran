@@ -5,7 +5,9 @@ import { analyze } from "@/lib/analysis";
 import type { ScanRow } from "@/lib/api-types";
 import { krediHarca, krediIade, krediOzeti, kullanicidanDurum } from "@/lib/credits";
 import { displayTicker } from "@/lib/markets/instruments";
+import { analizBaglami } from "@/lib/markets/baglam";
 import { getCandles, getInstruments, getQuotes, mapWithLimit } from "@/lib/markets/provider";
+import { getFundamentals } from "@/lib/markets/temel";
 import {
   isInterval,
   marketAktif,
@@ -189,9 +191,17 @@ export async function GET(request: Request) {
           instrument.market,
           instrument.symbol,
           effective,
-          250,
+          // Detay sayfasıyla aynı mum sayısı: farklı uzunlukta seri, aynı
+          // varlık için farklı skor demek (EMA 200 ve geçmiş sınaması değişir).
+          300,
         );
-        const analysis = analyze(instrument, effective, candles, candleSource);
+        const [baglam, temel] = await Promise.all([
+          analizBaglami(instrument, effective),
+          instrument.kind === "hisse"
+            ? getFundamentals(instrument.market, instrument.symbol)
+            : Promise.resolve(null),
+        ]);
+        const analysis = analyze(instrument, effective, candles, candleSource, baglam);
         if (candleSource === "demo") source = "demo";
         const last = candles[candles.length - 1];
         return {
@@ -212,6 +222,8 @@ export async function GET(request: Request) {
           adx: analysis.indicators.adx,
           atrPercent: analysis.volatility.atrPercent,
           trendLabelKey: analysis.trendStrength.labelKey,
+          regimeKey: analysis.regime.key,
+          fundamental: temel?.score ?? null,
           patterns: analysis.patterns.map((p) => p.id),
         };
       } catch (error) {

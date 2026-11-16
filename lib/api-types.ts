@@ -4,6 +4,7 @@ import type { Analysis, SignalLabel } from "./analysis";
 import type { KrediOzeti } from "./credits";
 import type { Candle, DataSource, Instrument, Interval, MarketId, Quote } from "./markets/types";
 import type { Commentary } from "./commentary";
+import type { Fundamentals } from "./fundamentals";
 
 export type MarketsResponse = {
   market: MarketId;
@@ -15,6 +16,10 @@ export type MarketsResponse = {
 export type AnalyzeResponse = {
   analysis: Analysis;
   commentary: Commentary;
+  /** Temel analiz; hisse dışındaki varlıklarda ya da veri yoksa null. */
+  fundamentals: Fundamentals | null;
+  /** Teknik sinyal ile temel puanın birlikte okunuşu (çeviri anahtarı). */
+  overallKey: string | null;
   /** Analiz metinleri aktif dilde hazır değilse arayüz not gösterir. */
   analysisLocalized: boolean;
   /** Bu istekten sonraki kredi durumu; defter tutulamıyorsa null. */
@@ -57,6 +62,9 @@ export type ScanRow = {
   adx: number | null;
   atrPercent: number;
   trendLabelKey: string;
+  regimeKey: string;
+  /** Temel analiz puanı (0–100); hisse değilse ya da veri yoksa null. */
+  fundamental: number | null;
   patterns: string[];
 };
 

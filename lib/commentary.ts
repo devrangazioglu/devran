@@ -8,13 +8,22 @@
  * Yorum, göstergelerin tablodaki değerlerini tekrar etmez; onları **birbirine
  * bağlar**: hangi gösterge neyi söylüyor, hangileri çelişiyor, hangi seviye
  * kırılırsa sinyal geçersiz olur. Her paragraf tek bir soruyu yanıtlar —
- * ana eğilim, momentum, para akışı, oynaklık, formasyonlar, seviyeler, üst
- * zaman dilimleri, plan ve “bunu ne bozar”.
+ * genel görünüm, piyasa durumu ve okuma yöntemi, trend, fiyat yapısı,
+ * momentum, para akışı, oynaklık, formasyonlar, seviyeler, üst zaman
+ * dilimleri, geçmiş sınaması, temel analiz, plan ve “bunu ne bozar”.
  */
 
-import { isBuySignal, isSellSignal, type Analysis, type SignalLabel } from "./analysis";
+import {
+  isBuySignal,
+  isSellSignal,
+  type Analysis,
+  type BacktestSide,
+  type SignalLabel,
+} from "./analysis";
 import { intervalLabel, patternName, renderNote } from "./analysis-text";
 import { formatNumber, formatPercent, formatPrice } from "./format";
+import type { Fundamentals } from "./fundamentals";
+import { pillarExtremes, sectorName } from "./fundamentals-text";
 import { intlTag, makeT, type Locale } from "./i18n";
 import type { Interval } from "./markets/types";
 
@@ -34,6 +43,10 @@ export type Commentary = {
 export type CommentaryContext = {
   /** Üst/alt zaman dilimlerinin sinyalleri (detay sayfasındaki karşılaştırma). */
   timeframes?: { interval: Interval; signal: SignalLabel; score: number }[];
+  /** Temel analiz (yalnızca hisseler); yoksa ilgili paragraf yazılmaz. */
+  fundamentals?: Fundamentals | null;
+  /** Teknik + temel birlikte okunuşun çeviri anahtarı. */
+  overallKey?: string | null;
 };
 
 export function buildCommentary(
@@ -76,7 +89,10 @@ export function buildCommentary(
           analysis.price >= indicators.ema200
             ? "commentary.overview.aboveEma200"
             : "commentary.overview.belowEma200",
-          { distance: uzaklik(indicators.ema200), ema200: price(indicators.ema200) },
+          // Uzaklık ortalamaya göre ölçülür: "EMA 200'ün %X altında" cümlesinde
+          // taban EMA'dır. Fiyata göre ölçüldüğünde yarı yarıya düşmüş bir
+          // hisse "%101 altında" görünüyordu.
+          { distance: uzaklik(analysis.price, indicators.ema200), ema200: price(indicators.ema200) },
         )
       : null;
 
@@ -85,7 +101,7 @@ export function buildCommentary(
       asset,
       price: price(analysis.price),
       currency: instrument.currency,
-      change: number(analysis.changePercent),
+      change: formatPercent(analysis.changePercent, intl),
       interval: period,
       summary: t(`commentary.summary.${signal}` as "commentary.summary.BUY"),
       buy: analysis.tally.buy,
@@ -96,6 +112,20 @@ export function buildCommentary(
     }),
     ema200Konum,
     t("commentary.overview.scoreNote"),
+  );
+
+  /* ── 1b) Piyasa durumu ve okuma yöntemi ──────────────── */
+
+  // Göstergelerin nasıl okunduğu sonucu belirlediği için en başta söylenir:
+  // aynı RSI değeri trend takip eden bir okumada güç, ortalamaya dönüş
+  // okumasında uyarıdır.
+  paragraf(
+    t("commentary.regime", {
+      regime: t(analysis.regime.key),
+      trend: number(analysis.regime.trendiness * 100, 0),
+    }),
+    t(`${analysis.regime.key}.note` as "regime.up.note"),
+    t(`${analysis.profileKey}.note` as "profile.equity.note"),
   );
 
   /* ── 2) Trend ────────────────────────────────────────── */
@@ -154,6 +184,16 @@ export function buildCommentary(
   }
 
   paragraf(t("commentary.trend", { parts: trendParts.join(". ") }), t("commentary.trend.explain"));
+
+  /* ── 2b) Fiyat yapısı ────────────────────────────────── */
+
+  const yapiNotlari = ["structure", "breakout", "higher-tf", "rel-strength", "extension"]
+    .map((id) => analysis.checks.find((c) => c.id === id))
+    .filter((c): c is NonNullable<typeof c> => c !== undefined)
+    .map((c) => renderNote(t, c, intl));
+  if (yapiNotlari.length > 0) {
+    paragraf(t("commentary.structure", { parts: yapiNotlari.join(" ") }));
+  }
 
   /* ── 3) Momentum ─────────────────────────────────────── */
 
@@ -360,17 +400,77 @@ export function buildCommentary(
       )
       .join(" · ");
 
-    const ayniYon = digerPeriyotlar.filter((tf) => Math.sign(tf.score) === Math.sign(score)).length;
+    // Uyum skora değil sinyale göre ölçülür: sinyal BEKLE iken "üst periyotlar
+    // tersini söylüyor" demek, ortada olmayan bir sinyale itiraz etmektir.
+    const anaYon = sinyalYonu(signal);
+    const ayniYon = digerPeriyotlar.filter((tf) => sinyalYonu(tf.signal) === anaYon).length;
     const uyumKey =
-      score === 0
+      anaYon === 0
         ? "commentary.timeframes.mixed"
         : ayniYon === digerPeriyotlar.length
           ? "commentary.timeframes.aligned"
-          : ayniYon === 0
+          : digerPeriyotlar.every((tf) => sinyalYonu(tf.signal) === -anaYon)
             ? "commentary.timeframes.against"
             : "commentary.timeframes.mixed";
 
     paragraf(t("commentary.timeframes", { list: liste }), t(uyumKey));
+  }
+
+  /* ── 8b) Geçmiş sınaması ─────────────────────────────── */
+
+  const sinama = analysis.backtest;
+  if (sinama) {
+    const taraf = (ad: "BUY" | "SELL") => {
+      const sonuc = ad === "BUY" ? sinama.buy : sinama.sell;
+      if (!sonuc) return null;
+      const cumle = t("commentary.backtest.side", {
+        side: t(`signal.${ad}` as "signal.BUY"),
+        signals: sonuc.signals,
+        hit: number(sonuc.hitRate * 100, 0),
+        base: number(sonuc.baseRate * 100, 0),
+        edge: formatNumber((sonuc.hitRate - sonuc.baseRate) * 100, intl, 0),
+      });
+      return `${cumle} ${t(backtestVerdictKey(sonuc), { side: t(`signal.${ad}` as "signal.BUY") })}`;
+    };
+    // Sinyal yönü varsa yalnızca o yön anlatılır; BEKLE ise ikisi de.
+    const yonler: ("BUY" | "SELL")[] = isBuySignal(signal)
+      ? ["BUY"]
+      : isSellSignal(signal)
+        ? ["SELL"]
+        : ["BUY", "SELL"];
+    const cumleler = yonler.map(taraf).filter((c): c is string => c !== null);
+    paragraf(
+      t("backtest.intro", { samples: sinama.samples, horizon: sinama.horizon }),
+      cumleler.length > 0 ? cumleler.join(" ") : t("backtest.none"),
+      t("backtest.caveat"),
+    );
+  }
+
+  /* ── 8c) Temel analiz ────────────────────────────────── */
+
+  const temel = context.fundamentals;
+  if (temel) {
+    const uclar = pillarExtremes(temel);
+    paragraf(
+      t(temel.scope === "sector" ? "commentary.fund.sector" : "commentary.fund.market", {
+        asset,
+        sector: sectorName(t, temel.sector),
+        peers: temel.peers,
+        score: temel.score,
+        grade: t(temel.gradeKey),
+      }),
+      uclar && uclar.best.id !== uclar.worst.id
+        ? t("commentary.fund.best", {
+            best: t(`fund.pillar.${uclar.best.id}` as "fund.pillar.growth"),
+            bestScore: number(uclar.best.score, 0),
+            worst: t(`fund.pillar.${uclar.worst.id}` as "fund.pillar.growth"),
+            worstScore: number(uclar.worst.score, 0),
+          })
+        : null,
+      ...temel.flags.map((flag) => t(flag as "fund.flag.loss")),
+      context.overallKey ? t(context.overallKey as "overall.waitMid") : null,
+      t("commentary.fund.caveat"),
+    );
   }
 
   /* ── 9) Plan ─────────────────────────────────────────── */
@@ -447,8 +547,18 @@ export function buildCommentary(
     risks.push(t("risk.weakTrend"));
   }
   if (confidence < 45) risks.push(t("risk.lowConfidence"));
-  if (indicators.rsi !== null && indicators.rsi >= 70 && score > 0) risks.push(t("risk.overboughtBuy"));
-  if (indicators.rsi !== null && indicators.rsi <= 30 && score < 0) risks.push(t("risk.oversoldSell"));
+  // Riskler sinyale bakar, skora değil: sinyal BEKLE iken "satış sinyali aşırı
+  // satımda üretildi" yazmak, verilmemiş bir sinyal hakkında uyarmaktır.
+  if (indicators.rsi !== null && indicators.rsi >= 70 && yon > 0) risks.push(t("risk.overboughtBuy"));
+  if (indicators.rsi !== null && indicators.rsi <= 30 && yon < 0) risks.push(t("risk.oversoldSell"));
+  // Aynı kurallar bu varlıkta geçmişte ters çalıştıysa bu en önemli uyarıdır.
+  const sinananYon = yon > 0 ? sinama?.buy : yon < 0 ? sinama?.sell : null;
+  if (sinananYon && backtestVerdictKey(sinananYon) === "backtest.verdict.bad") {
+    risks.unshift(
+      t("backtest.verdict.bad", { side: t(`signal.${yon > 0 ? "BUY" : "SELL"}` as "signal.BUY") }),
+    );
+  }
+  for (const flag of temel?.flags ?? []) risks.push(t(flag as "fund.flag.loss"));
   if (analysis.volatility.regimeKey === "vol.high") {
     risks.push(
       t("risk.highVolatility", { atrPercent: number(analysis.volatility.atrPercent) }),
@@ -458,10 +568,8 @@ export function buildCommentary(
     risks.push(t("risk.lowRiskReward", { rr: number(trade.riskReward, 2) }));
   }
   // Üst zaman dilimleri ters yöndeyse bu, tek başına en pahalı hatalardan biri.
-  if (digerPeriyotlar.length > 0 && score !== 0) {
-    const tersler = digerPeriyotlar.filter(
-      (tf) => tf.score !== 0 && Math.sign(tf.score) !== Math.sign(score),
-    );
+  if (digerPeriyotlar.length > 0 && yon !== 0) {
+    const tersler = digerPeriyotlar.filter((tf) => sinyalYonu(tf.signal) === -yon);
     if (tersler.length > 0) {
       risks.push(
         t("risk.timeframeConflict", {
@@ -472,7 +580,7 @@ export function buildCommentary(
   }
   for (const pattern of analysis.patterns) {
     const conflicting =
-      (score > 0 && pattern.bias === "SELL") || (score < 0 && pattern.bias === "BUY");
+      (yon > 0 && pattern.bias === "SELL") || (yon < 0 && pattern.bias === "BUY");
     if (conflicting) {
       risks.push(t("risk.conflictingPattern", { pattern: patternName(t, pattern.id) }));
     }
@@ -482,6 +590,26 @@ export function buildCommentary(
   if (risks.length === 0) risks.push(t("risk.none"));
 
   return { headline, paragraphs, highlights, risks };
+}
+
+/** Sinyalin yönü: alış +1, satış −1, bekle 0. */
+function sinyalYonu(signal: SignalLabel): number {
+  return isBuySignal(signal) ? 1 : isSellSignal(signal) ? -1 : 0;
+}
+
+/**
+ * Geçmiş sınamasının bir yönü için hüküm.
+ *
+ * Eşikler `edge` üzerinden (küçük örnek için büzülmüş fark) okunur: ham
+ * isabet oranı 5 sinyalde %80 çıkabilir ama bu bir şey kanıtlamaz.
+ */
+export function backtestVerdictKey(
+  side: BacktestSide,
+): "backtest.verdict.few" | "backtest.verdict.good" | "backtest.verdict.bad" | "backtest.verdict.flat" {
+  if (!side.reliable) return "backtest.verdict.few";
+  if (side.edge >= 0.05) return "backtest.verdict.good";
+  if (side.edge <= -0.05) return "backtest.verdict.bad";
+  return "backtest.verdict.flat";
 }
 
 /** Yüzdelik değişimi işaretiyle biçimlendirir (kartlarda kullanılır). */

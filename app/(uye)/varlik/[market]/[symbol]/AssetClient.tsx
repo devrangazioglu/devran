@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { RejimKarti, SinamaKarti, TemelKarti } from "@/components/AnalizKartlari";
 import CandleChart, { type Gorunum } from "@/components/CandleChart";
 import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
@@ -320,6 +321,22 @@ export default function AssetClient({
               gorunum={gorunum}
             />
           </div>
+
+          {/* ── Bağlam: piyasa durumu, geçmiş sınaması, temel analiz ── */}
+          <div className="grid-2">
+            <Reveal>
+              <RejimKarti analysis={analysis} />
+            </Reveal>
+            <Reveal delay={60}>
+              <SinamaKarti analysis={analysis} />
+            </Reveal>
+          </div>
+
+          {data.fundamentals && (
+            <Reveal>
+              <TemelKarti fundamentals={data.fundamentals} overallKey={data.overallKey} />
+            </Reveal>
+          )}
 
           {/* ── Yorum + plan ────────────────────────────── */}
           <div className="split">

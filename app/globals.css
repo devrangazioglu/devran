@@ -792,6 +792,145 @@ textarea {
   }
 }
 
+/* ── Analiz bağlam kartları (piyasa durumu, geçmiş sınaması, temel analiz) ── */
+
+.yon-cubugu {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.yon-cubugu::after {
+  /* Orta çizgi: sıfır noktası. */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background: var(--text-dim, rgba(255, 255, 255, 0.35));
+}
+
+.yon-cubugu i {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.tablo-kaydir {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sinama-tablo {
+  width: 100%;
+  /* Genel tablo kuralı (tarayıcı tablosu için) en az 760px istiyor; bu küçük
+     tablo mobilde ekrana sığmalı. */
+  min-width: 0;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.sinama-tablo th,
+.sinama-tablo td {
+  padding: 9px 10px 9px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.sinama-tablo thead th {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim, rgba(255, 255, 255, 0.5));
+}
+
+.sinama-tablo tbody tr:last-child th,
+.sinama-tablo tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.sinama-tablo tbody th {
+  font-weight: 600;
+}
+
+.sinama-az {
+  font-size: 11px;
+}
+
+.temel-ust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 28px;
+  margin-bottom: 20px;
+}
+
+.temel-puan {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.temel-puan strong {
+  font-size: 44px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.temel-sutunlar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+}
+
+@media (max-width: 1100px) {
+  .temel-sutunlar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .temel-sutunlar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.temel-sutun-bas {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.temel-olcut {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.temel-olcut strong {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.temel-olcut-alt {
+  display: block;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
 .field {
   display: grid;
   gap: 7px;
@@ -1268,11 +1407,13 @@ canvas {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* minmax(0, …): düz 1fr, içeriğin en küçük genişliğine kadar büyür; geniş
+     bir tablo bütün sütunu (ve sayfayı) yana taşırıyordu. */
   .grid-2,
   .grid-3,
   .grid-4,
   .feature-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .check-row {
