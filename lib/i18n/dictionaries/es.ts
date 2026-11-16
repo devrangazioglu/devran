@@ -7,7 +7,7 @@ export const es: Partial<Dictionary> = {
   "common.loading": "Cargando…",
   "common.refresh": "Actualizar",
   "common.search": "Buscar",
-  "common.searchPlaceholder": "Busca una cripto (BTC, ETH, SOL, Bitcoin…)",
+  "common.searchPlaceholder": "Buscar activos (BTC, THYAO, AAPL, oro…)",
   "common.searchHint": "Escribe al menos 2 caracteres",
   "common.noResults": "Sin resultados",
   "common.all": "Todos",

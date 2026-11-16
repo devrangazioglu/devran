@@ -7,7 +7,7 @@ export const en: Dictionary = {
   "common.loading": "Loading…",
   "common.refresh": "Refresh",
   "common.search": "Search",
-  "common.searchPlaceholder": "Search crypto (BTC, ETH, SOL, Bitcoin…)",
+  "common.searchPlaceholder": "Search assets (BTC, THYAO, AAPL, gold…)",
   "common.searchHint": "Type at least 2 characters",
   "common.noResults": "No results",
   "common.all": "All",

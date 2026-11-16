@@ -7,7 +7,7 @@ export const de: Partial<Dictionary> = {
   "common.loading": "Lädt…",
   "common.refresh": "Aktualisieren",
   "common.search": "Suchen",
-  "common.searchPlaceholder": "Krypto suchen (BTC, ETH, SOL, Bitcoin…)",
+  "common.searchPlaceholder": "Werte suchen (BTC, THYAO, AAPL, Gold…)",
   "common.searchHint": "Mindestens 2 Zeichen eingeben",
   "common.noResults": "Keine Ergebnisse",
   "common.all": "Alle",

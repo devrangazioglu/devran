@@ -28,9 +28,11 @@ jobs:
 
       - run: npm ci
 
+      # Bu adım bir dönem hata veriyordu (kaynak bu makineyi de engelliyordu)
+      # ve hatayı yutmak zorundaydık. Artık aktarıcı üzerinden 6/6 geçiyor, bu
+      # yüzden hata yutulmuyor: bozulursa görünsün.
       - name: Kaynaktan birkaç sembol çek
         run: npm run besle -- --dene
-        continue-on-error: true
 
       # Aday kaynakların tamamını dener: hangisi bu makineden cevap veriyor,
       # gün içi veri var mı, veri kaç dakika gecikmeli.

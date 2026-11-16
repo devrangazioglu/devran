@@ -7,7 +7,7 @@ export const ar: Partial<Dictionary> = {
   "common.loading": "جارٍ التحميل…",
   "common.refresh": "تحديث",
   "common.search": "بحث",
-  "common.searchPlaceholder": "ابحث عن عملة رقمية (BTC، ETH، SOL، Bitcoin…)",
+  "common.searchPlaceholder": "ابحث عن الأصول (BTC، THYAO، AAPL، الذهب…)",
   "common.searchHint": "اكتب حرفين على الأقل",
   "common.noResults": "لا توجد نتائج",
   "common.all": "الكل",

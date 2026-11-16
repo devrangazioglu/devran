@@ -169,7 +169,20 @@ export default function AssetClient({
       {data && !data.analysisLocalized && (
         <div className="notice">{t("asset.analysisLangNote")}</div>
       )}
-      {instrument.market !== "kripto" && <div className="notice">{t("market.closedNote")}</div>}
+      {/* Gecikme analiz sayfasında da yazılır: işlem kararı burada veriliyor.
+          Seans notuyla aynı kutuda, ikisi de verinin güncelliğiyle ilgili. */}
+      {instrument.market !== "kripto" && (
+        <div className="notice">
+          {[
+            t("market.closedNote"),
+            MARKETS[instrument.market].gecikmeDk > 0
+              ? t("market.delayNote", { dakika: MARKETS[instrument.market].gecikmeDk })
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        </div>
+      )}
       {error ? (
         <>
           <HataNotu hata={error} />

@@ -103,9 +103,18 @@ export default async function MarketView({
           </div>
 
           {source === "demo" && <div className="notice notice-warn">{t("common.demoNotice")}</div>}
-          {!market.alwaysOpen && <div className="notice">{t("market.closedNote")}</div>}
-          {market.gecikmeDk > 0 && (
-            <div className="notice">{t("market.delayNote", { dakika: market.gecikmeDk })}</div>
+          {/* Seans ve gecikme tek kutuda: ikisi de aynı konuda (verinin ne
+              kadar güncel olduğu) ve ayrı ayrı yazıldığında tablonun önüne
+              üç kutu birden giriyordu. */}
+          {(!market.alwaysOpen || market.gecikmeDk > 0) && (
+            <div className="notice">
+              {[
+                market.alwaysOpen ? null : t("market.closedNote"),
+                market.gecikmeDk > 0 ? t("market.delayNote", { dakika: market.gecikmeDk }) : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            </div>
           )}
           {error && <div className="notice notice-error">{error}</div>}
 
