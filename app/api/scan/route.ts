@@ -30,7 +30,9 @@ export const maxDuration = 60;
  * Aynı anda en fazla kaç istek. Kripto sağlayıcısı yüksek hacme dayanıklıdır;
  * Yahoo tarafı çok daha çabuk hız sınırı uygular, bu yüzden daha yavaş gidilir.
  */
-const CONCURRENCY = { kripto: 6, diger: 3 } as const;
+// Kripto dışı mumlar artık kotasız grafik akışından (bkz. `tv-mum.ts`); 3'lük
+// sınır aktarıcının dakikada ~20 istek sınırı içindi.
+const CONCURRENCY = { kripto: 6, diger: 6 } as const;
 
 export async function GET(request: Request) {
   const session = await auth();

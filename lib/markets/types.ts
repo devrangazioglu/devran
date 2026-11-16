@@ -45,6 +45,9 @@ export function intervalMinutes(interval: Interval): number {
 
 /* ────────────────────────── Piyasalar ────────────────────────── */
 
+/** Kripto dışı piyasaların periyotları (bkz. `MarketMeta.intervals`). */
+const GUN_ICI_VE_GUNLUK: Interval[] = ["15m", "1h", "4h", "1d", "1w"];
+
 export type MarketId =
   | "kripto"
   | "abd"
@@ -133,15 +136,17 @@ export type MarketMeta = {
   /**
    * Bu piyasada desteklenen zaman dilimleri.
    *
-   * Kripto dışı piyasalarda yalnızca günlük ve haftalık sunulur.
+   * Kripto dışı piyasalarda 15 dk, 1 sa, 4 sa, günlük ve haftalık.
    *
-   * Gün içi periyotlar bir süre açıldı (2026-11-16) ve geri alındı: veri
-   * geliyordu (ölçüldü, `scripts/kaynak-tara.ts`) ama her açılışta ücretsiz
-   * aktarıcıya gidiyor ve aktarıcı dakikada ~20 istekle sınırlı. Birkaç
-   * kullanıcı aynı anda baktığında sınır doluyor ve sayfa "veri kotası dolu"
-   * hatasıyla açılıyordu. Günlük mumlar ise günde bir kez çekilip
-   * paylaşılıyor ve bu sınıra takılmıyor. Ücretli ya da sınırsız bir kaynak
-   * eklenmeden gün içi periyotlar açılmamalı.
+   * Gün içi periyotlar bir kez açılıp (2026-11-16) geri alınmıştı: mumlar
+   * dakikada ~20 istekle sınırlı bir aktarıcıdan geliyordu ve birkaç kullanıcı
+   * aynı anda bakınca sayfa "veri kotası dolu" hatasıyla açılıyordu. Mumlar
+   * artık TradingView grafik akışından geliyor (`tv-mum.ts`): kotasız, sembol
+   * başına ~0,3 sn; ölçümde (`scripts/anlik-tara.ts`) her borsada 15 dk / 1 sa
+   * / 4 sa için 300 mum geldi. Aktarıcı yalnızca yedek.
+   *
+   * 1 dk / 5 dk / 30 dk bilerek yok: gecikmeli borsa verisinde (15–20 dk)
+   * 1 dakikalık mum anlamsız; son 15–20 mum henüz oluşmamış olur.
    */
   intervals: Interval[];
   /** Fiyatların varsayılan para birimi. */
@@ -186,7 +191,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "abd",
     labelKey: "market.abd",
     slug: "abd-borsasi",
-    intervals: ["1d", "1w"],
+    intervals: GUN_ICI_VE_GUNLUK,
     currency: "USD",
     alwaysOpen: false,
     gecikmeDk: 15,
@@ -195,7 +200,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     id: "bist",
     labelKey: "market.bist",
     slug: "turkiye-borsasi",
-    intervals: ["1d", "1w"],
+    intervals: GUN_ICI_VE_GUNLUK,
     currency: "TRY",
     alwaysOpen: false,
     gecikmeDk: 15,
@@ -206,7 +211,7 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
     // Bu piyasa hem vadeli emtiayı (10 dk gecikmeli) hem kurları (gerçek
     // zamanlı) barındırıyor; kullanıcıyı yanıltmamak için kötü olan yazılır.
     slug: "dovizler",
-    intervals: ["1d", "1w"],
+    intervals: GUN_ICI_VE_GUNLUK,
     currency: "USD",
     alwaysOpen: false,
     gecikmeDk: 10,
@@ -243,7 +248,7 @@ function dunyaBorsalari(): Record<(typeof DUNYA_MARKET_IDS)[number], MarketMeta>
         id: id as MarketId,
         labelKey: `market.${id}`,
         slug: v.slug,
-        intervals: ["1d", "1w"],
+        intervals: GUN_ICI_VE_GUNLUK,
         currency: v.currency,
         bayrak: v.bayrak,
         alwaysOpen: false,
@@ -256,10 +261,9 @@ function dunyaBorsalari(): Record<(typeof DUNYA_MARKET_IDS)[number], MarketMeta>
 /**
  * Piyasaya geçildiğinde seçilecek periyot.
  *
- * Borsa ve emtiada günlük: günlük mumlar her gece veritabanına yazılıyor ve
- * veri kaynağına hiç gidilmiyor. Gün içi periyotlar her açılışta kaynaktan
- * çekilir ve kaynak dakikada ~20 istekle sınırlı; 30 hisselik bir tarama bu
- * sınıra takılır. Kullanıcı gün içini kendisi seçebilir, varsayılan olmaz.
+ * Borsa ve emtiada günlük: sinyal motoru en çok günlük grafikte sınandı
+ * (bkz. `scripts/motor-karsilastir.ts`) ve günlük mumlar uzun süre önbellekte
+ * kalıyor. Gün içi periyotlar seçilebilir, varsayılan olmaz.
  */
 export function varsayilanPeriyot(market: MarketId, mevcut: Interval): Interval {
   if (market === "kripto") return MARKETS.kripto.intervals.includes(mevcut) ? mevcut : "4h";
