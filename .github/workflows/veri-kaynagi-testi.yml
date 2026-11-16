@@ -50,6 +50,11 @@ jobs:
             echo "$ulke → $(printf %s "$semboller" | grep -c . ) varlık satırı, demo: $demo"
             echo "   $(printf %s "$semboller" | sed 's#.*/##' | tr '\n' ' ')"
           done
+          # Anlık gelen satırlar "● canlı" işaretiyle basılıyor: kaç tane?
+          for yol in abd-borsasi dovizler almanya-borsasi turkiye-borsasi; do
+            sayfa="$(curl -sS -m 60 "$SITE/piyasa/$yol" || true)"
+            echo "$yol → canlı işaretli satır: $(printf %s "$sayfa" | grep -o 'canli-isaret' | wc -l)"
+          done
           for v in "japonya&symbol=7203.T" "almanya&symbol=SAP.DE" "bist&symbol=THYAO.IS" "abd&symbol=AAPL"; do
             kod="$(curl -sS -m 60 -o yanit.json -w '%{http_code}' "$SITE/api/analyze?market=$v&interval=1d" || true)"
             echo "analyze $v → HTTP $kod $(head -c 300 yanit.json)"

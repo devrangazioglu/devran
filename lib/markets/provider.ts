@@ -291,6 +291,7 @@ async function yahooQuotes(instruments: Instrument[]): Promise<QuoteList> {
           // Karşılaştırılabilir olması için hacim para birimi cinsine çevrilir.
           volume: satir.volume * satir.price,
           updatedAt: satir.updatedAt,
+          anlik: satir.anlik,
         });
       }
       if (yeni.length > 0) {

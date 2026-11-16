@@ -88,9 +88,9 @@ export const tr = {
   "market.dunya.desc": "ABD dışında en çok işlem gören borsalar: Çin, Japonya, Hindistan, Avrupa ve daha fazlası",
   "market.dunya.h1": "{ulke} teknik analiz ve sinyaller",
   "market.dunya.aboutTitle": "{ulke} hisselerinde sinyaller nasıl üretilir?",
-  "market.dunya.about": "Listedeki her hisse için günlük ve haftalık grafikte 20'den fazla gösterge (RSI, MACD, hareketli ortalamalar, Bollinger, hacim) birlikte okunur ve tek bir AL / SAT / BEKLE sinyaline çevrilir. Hisseler kendi borsasının ana endeksiyle ({endeks}) kıyaslanır: endeksten güçlü giden hisse ayrıca işaretlenir. Şirketin değerleme ve kârlılık oranları aynı sektördeki şirketlerle karşılaştırılarak temel analiz kartında gösterilir. Fiyatlar yerel para biriminde ({para}) gösterilir.",
+  "market.dunya.about": "Listedeki her hisse için 15 dakikalıktan haftalığa kadar her periyotta 20'den fazla gösterge (RSI, MACD, hareketli ortalamalar, Bollinger, hacim) birlikte okunur ve tek bir AL / SAT / BEKLE sinyaline çevrilir. Hisseler kendi borsasının ana endeksiyle ({endeks}) kıyaslanır: endeksten güçlü giden hisse ayrıca işaretlenir. Şirketin değerleme ve kârlılık oranları aynı sektördeki şirketlerle karşılaştırılarak temel analiz kartında gösterilir. Fiyatlar yerel para biriminde ({para}) gösterilir.",
   "market.dunya.faq1.q": "Fiyatlar gerçek zamanlı mı?",
-  "market.dunya.faq1.a": "{gecikme} Sinyaller günlük ve haftalık grafikte üretildiği için bu gecikme analizi değiştirmez. Her satırda verinin ne zaman güncellendiği yazar.",
+  "market.dunya.faq1.a": "{gecikme} Günlük ve haftalık sinyallerde bu gecikme analizi değiştirmez; 15 dakikalık grafikte son mum gecikme kadar geriden gelir. Gecikmesiz gelen satırlar (çoğunlukla endeks) ● canlı işaretiyle gösterilir.",
   "market.dunya.faq2.q": "Hangi hisseler listeleniyor?",
   "market.dunya.faq2.a": "Borsanın ana endeksi ({endeks}) ve piyasa değeri en büyük yerli şirketler hazır listede gelir. ABD şirketlerinin bu borsadaki ikincil kotasyonları listeye alınmaz; onları Amerikan borsası sayfasında bulabilirsiniz.",
   "market.dunya.faq3.q": "Borsa saatleri Türkiye'den farklı, sinyal ne zaman yenilenir?",
@@ -106,6 +106,8 @@ export const tr = {
   "home.dunyaSub": "ABD dışında en çok işlem gören borsalar. Her ülkenin ana endeksi ve en büyük şirketleri, aynı analiz motoruyla.",
   "market.closedNote": "Bu piyasa seans saatleri dışında kapalıdır; son kapanış verisi gösterilir.",
   "market.delayNote": "Fiyatlar {dakika} dakika gecikmelidir. Ücretsiz ve gerçek zamanlı borsa verisi bulunmadığı için gecikme kaçınılmaz; işlem kararında bunu göz önünde bulundurun.",
+  "market.canli": "canlı",
+  "market.delayNoteKarma": "Hisse fiyatları {dakika} dakika gecikmelidir; ● canlı işaretli satırlar gecikmesiz (anlık) gelir. Ücretsiz ve gerçek zamanlı borsa verisi bulunmadığı için diğerlerinde gecikme kaçınılmaz.",
 
   /* ── Zaman dilimleri ──────────────────────────────────── */
   "interval.1m": "1 dakika",
@@ -856,10 +858,10 @@ export const tr = {
     "Amerikan borsası hafta içi belirli saatlerde açıktır; kapanış sonrası üretilen sinyaller bir sonraki seansın açılışında değişebilir. Listede endeksler ve işlem hacmi en yüksek hisseler bulunur. Her hisse için trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stokastik), volatilite (Bollinger, ATR) ve hacim göstergeleri ayrı ayrı oy verir; sinyal bu oyların ağırlıklı ortalamasıdır.",
   "market.bist.aboutTitle": "BIST hisselerinde teknik analiz",
   "market.bist.about":
-    "Borsa İstanbul hisseleri için sinyaller günlük ve haftalık grafikte üretilir; fiyatlar 15 dakika gecikmelidir. Tabloda BIST 100 ve BIST 30 endeksleriyle birlikte işlem hacmi yüksek hisseler yer alır. Her hisse için hesaplanan skor −100 ile +100 arasındadır: +45 ve üzeri güçlü alış, −45 ve altı güçlü satış sayılır; arada kalan bölge kararsız piyasayı gösterir ve BEKLE olarak işaretlenir.",
+    "Borsa İstanbul hisseleri için sinyaller 15 dakikalıktan haftalığa kadar beş periyotta üretilir; fiyatlar 15 dakika gecikmelidir. Tabloda BIST 100 ve BIST 30 endeksleriyle birlikte işlem hacmi yüksek hisseler yer alır. Her hisse için hesaplanan skor −100 ile +100 arasındadır: +45 ve üzeri güçlü alış, −45 ve altı güçlü satış sayılır; arada kalan bölge kararsız piyasayı gösterir ve BEKLE olarak işaretlenir.",
   "market.emtia.aboutTitle": "Döviz, altın ve petrolde teknik analiz",
   "market.emtia.about":
-    "Döviz, altın, gümüş ve petrol için sinyaller günlük ve haftalık grafikte üretilir. Döviz kurları gerçek zamanlı, vadeli emtia fiyatları 10 dakika gecikmelidir. Günlük kurlar Avrupa Merkez Bankası'nın referans kurundan gelebilir; bu veri yalnızca kapanış içerdiği için gün içi en yüksek/en düşük seviyeye dayanan göstergeler (ATR, Stokastik, Williams %R) günlük kur grafiğinde dar kalır. Kurlarda işlem hacmi verisi olmadığı için hacme dayanan göstergeler kullanılmaz.",
+    "Döviz, altın, gümüş ve petrol için sinyaller 15 dakikalıktan haftalığa kadar beş periyotta üretilir. Döviz kurları, altın, gümüş, platin, paladyum ve petrol gecikmesiz (anlık) gelir; doğal gaz, bakır, buğday ve kahve vadelileri 10 dakika gecikmelidir. Günlük kurlar Avrupa Merkez Bankası'nın referans kurundan gelebilir; bu veri yalnızca kapanış içerdiği için gün içi en yüksek/en düşük seviyeye dayanan göstergeler (ATR, Stokastik, Williams %R) günlük kur grafiğinde dar kalır. Kurlarda işlem hacmi verisi olmadığı için hacme dayanan göstergeler kullanılmaz.",
 
   "market.methodology":
     "Tüm göstergeler kendi sunucumuzda, açık kaynak formüllerle hesaplanır; dışarıdan hazır sinyal satın alınmaz. Skor, göstergelerin ağırlıklı oyundan üretilir ve aynı veriden her zaman aynı sonucu verir. Üretilen sinyaller yatırım tavsiyesi değildir.",
@@ -876,7 +878,7 @@ export const tr = {
 
   "market.abd.faq1.q": "Hisse verileri gerçek zamanlı mı?",
   "market.abd.faq1.a":
-    "Hayır, fiyatlar 15 dakika gecikmelidir; ücretsiz ve gerçek zamanlı borsa verisi yoktur. Sinyaller günlük ve haftalık grafikte üretilir. Her satırda verinin ne zaman güncellendiği yazar.",
+    "Evet. ABD hisseleri ile S&P 500, Nasdaq ve Dow Jones endeksleri gecikmesiz (anlık) gelir; tabloda ● canlı işaretiyle gösterilir. Sinyaller 15 dakikalıktan haftalığa kadar beş periyotta üretilir.",
   "market.abd.faq2.q": "Hangi hisseler listeleniyor?",
   "market.abd.faq2.a":
     "Endeksler ve işlem hacmi en yüksek hisseler hazır listede gelir. Listede olmayan bir hisseyi arama kutusundan bulup açtığınızda analizi o an hesaplanır.",

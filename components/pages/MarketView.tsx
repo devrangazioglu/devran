@@ -14,6 +14,15 @@ import { marketBySlug, MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS, DUNYA_MARKET_I
 import { piyasaMetni } from "@/lib/piyasa-metni";
 import { breadcrumbJsonLd, faqJsonLd, itemListJsonLd } from "@/lib/seo";
 
+/** Gecikmesiz gelen satırın yanındaki küçük "canlı" işareti. */
+function CanliIsaret({ etiket }: { etiket: string }) {
+  return (
+    <span className="canli-isaret" title={etiket}>
+      ● {etiket}
+    </span>
+  );
+}
+
 export default async function MarketView({
   slug,
   locale: istenen,
@@ -130,7 +139,13 @@ export default async function MarketView({
             <div className="notice">
               {[
                 market.alwaysOpen ? null : t("market.closedNote"),
-                market.gecikmeDk > 0 ? t("market.delayNote", { dakika: market.gecikmeDk }) : null,
+                // Gecikme notu yalnızca gecikmeli satır varsa; bir kısmı anlık
+                // geliyorsa hangileri olduğu "● canlı" işaretiyle söylenir.
+                market.gecikmeDk > 0 && quotes.some((q) => !q.anlik)
+                  ? t(quotes.some((q) => q.anlik) ? "market.delayNoteKarma" : "market.delayNote", {
+                      dakika: market.gecikmeDk,
+                    })
+                  : null,
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -163,7 +178,10 @@ export default async function MarketView({
                         >
                           <AssetAvatar ticker={quote.ticker} market={quote.market} />
                           <span>
-                            <strong style={{ fontWeight: 500 }}>{quote.ticker}</strong>
+                            <strong style={{ fontWeight: 500 }}>
+                              {quote.ticker}
+                              {quote.anlik && <CanliIsaret etiket={t("market.canli")} />}
+                            </strong>
                             <span className="dim block-sub">{quote.name}</span>
                           </span>
                         </Link>
@@ -200,7 +218,10 @@ export default async function MarketView({
               >
                 <AssetAvatar ticker={quote.ticker} market={quote.market} size={34} />
                 <div className="quote-card-main">
-                  <strong>{quote.ticker}</strong>
+                  <strong>
+                    {quote.ticker}
+                    {quote.anlik && <CanliIsaret etiket={t("market.canli")} />}
+                  </strong>
                   <span className="dim">{quote.name}</span>
                 </div>
                 <div className="quote-card-side">

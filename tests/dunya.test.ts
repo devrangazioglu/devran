@@ -8,6 +8,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
+import { anlikMi } from "../lib/markets/anlik";
 import { BORSALAR, borsa, yahooBorsasindanPiyasa } from "../lib/markets/borsalar";
 import { displayTicker, staticInstruments } from "../lib/markets/instruments";
 import { kiyasEndeksi } from "../lib/markets/baglam";
@@ -69,8 +70,9 @@ test("grafik akışı tam adları: borsa, Çin borsası, endeks, vadeli, döviz"
   assert.equal(await tvTamAd("cin", "600519.SS"), "SSE:600519");
   assert.equal(await tvTamAd("bist", "THYAO.IS"), "BIST:THYAO");
   assert.equal(await tvTamAd("tayvan", "^TWII"), "TWSE:IX0001");
-  assert.equal(await tvTamAd("abd", "^GSPC"), "SP:SPX");
-  assert.equal(await tvTamAd("emtia", "GC=F"), "COMEX:GC1!");
+  assert.equal(await tvTamAd("abd", "^GSPC"), "TVC:SPX");
+  assert.equal(await tvTamAd("emtia", "GC=F"), "TVC:GOLD");
+  assert.equal(await tvTamAd("emtia", "NG=F"), "NYMEX:NG1!");
   assert.equal(await tvTamAd("emtia", "USDTRY=X"), "FX:USDTRY");
 });
 
@@ -91,6 +93,19 @@ test("aramadaki borsa kodu doğru piyasaya düşer", () => {
   assert.equal(yahooBorsasindanPiyasa("NMS"), "abd");
   assert.equal(yahooBorsasindanPiyasa("IST"), "bist");
   assert.equal(yahooBorsasindanPiyasa("XYZ"), null);
+});
+
+test("anlık işareti: ABD, TVC endeks/emtia, döviz ve kripto anlık; BIST ve gaz değil", () => {
+  assert.equal(anlikMi("abd", "AAPL"), true);
+  assert.equal(anlikMi("abd", "^GSPC"), true);
+  assert.equal(anlikMi("almanya", "^GDAXI"), true);
+  assert.equal(anlikMi("almanya", "SAP.DE"), false);
+  assert.equal(anlikMi("emtia", "GC=F"), true);
+  assert.equal(anlikMi("emtia", "NG=F"), false);
+  assert.equal(anlikMi("emtia", "USDTRY=X"), true);
+  assert.equal(anlikMi("bist", "THYAO.IS"), false);
+  assert.equal(anlikMi("bist", "XU100.IS"), false);
+  assert.equal(anlikMi("kripto", "BTCUSDT"), true);
 });
 
 test("kısa gösterim: dünya borsası soneki atılır, ABD sınıf harfi kalır", () => {

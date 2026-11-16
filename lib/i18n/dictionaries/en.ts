@@ -87,9 +87,9 @@ export const en: Dictionary = {
   "market.dunya.desc": "The most traded stock markets outside the US: China, Japan, India, Europe and more",
   "market.dunya.h1": "{ulke}: technical analysis and signals",
   "market.dunya.aboutTitle": "How signals are produced for {ulke}",
-  "market.dunya.about": "For every listed stock, more than 20 indicators (RSI, MACD, moving averages, Bollinger, volume) are read together on the daily and weekly charts and turned into a single BUY / SELL / WAIT signal. Stocks are compared with their exchange's main index ({endeks}); stocks outperforming the index are flagged. Valuation and profitability ratios are compared with peers in the same sector on the fundamentals card. Prices are shown in the local currency ({para}).",
+  "market.dunya.about": "For every listed stock, more than 20 indicators (RSI, MACD, moving averages, Bollinger, volume) are read together on every timeframe from 15 minutes to weekly and turned into a single BUY / SELL / WAIT signal. Stocks are compared with their exchange's main index ({endeks}); stocks outperforming the index are flagged. Valuation and profitability ratios are compared with peers in the same sector on the fundamentals card. Prices are shown in the local currency ({para}).",
   "market.dunya.faq1.q": "Are prices real time?",
-  "market.dunya.faq1.a": "{gecikme} Signals are produced on daily and weekly charts, so the delay does not change the analysis. Each row shows when the data was updated.",
+  "market.dunya.faq1.a": "{gecikme} On daily and weekly signals the delay does not change the analysis; on the 15-minute chart the last candle lags by the delay. Rows that arrive in real time (mostly indices) are marked ● live.",
   "market.dunya.faq2.q": "Which stocks are listed?",
   "market.dunya.faq2.a": "The exchange's main index ({endeks}) and the largest domestic companies by market value. Secondary listings of US companies on this exchange are left out; you will find them on the US stocks page.",
   "market.dunya.faq3.q": "The exchange is in another time zone; when do signals update?",
@@ -105,6 +105,8 @@ export const en: Dictionary = {
   "home.dunyaSub": "The most traded stock markets outside the US. Each country's main index and largest companies, analysed by the same engine.",
   "market.closedNote": "This market is closed outside session hours; the last close is shown.",
   "market.delayNote": "Prices are delayed by {dakika} minutes. Free real-time exchange data does not exist, so the delay is unavoidable — keep it in mind before trading.",
+  "market.canli": "live",
+  "market.delayNoteKarma": "Stock prices are delayed by {dakika} minutes; rows marked ● live arrive without delay. Free real-time exchange data does not exist for the rest.",
 
   "interval.1m": "1 minute",
   "interval.5m": "5 minutes",
@@ -832,10 +834,10 @@ export const en: Dictionary = {
     "The US market trades on weekdays during set hours, so a signal produced after the close can change at the next open. The list contains the indices and the most traded stocks. For each stock, trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stochastic), volatility (Bollinger, ATR) and volume indicators each cast a vote; the signal is the weighted average of those votes.",
   "market.bist.aboutTitle": "Technical analysis for BIST stocks",
   "market.bist.about":
-    "Signals for Borsa Istanbul stocks are produced on the daily and weekly charts; prices are delayed by 15 minutes. The table lists the BIST 100 and BIST 30 indices along with the most traded stocks. Each score runs from −100 to +100: +45 and above is a strong buy, −45 and below a strong sell, and the band in between marks an undecided market, shown as WAIT.",
+    "Signals for Borsa Istanbul stocks are produced on five timeframes, from 15 minutes to weekly; prices are delayed by 15 minutes. The table lists the BIST 100 and BIST 30 indices along with the most traded stocks. Each score runs from −100 to +100: +45 and above is a strong buy, −45 and below a strong sell, and the band in between marks an undecided market, shown as WAIT.",
   "market.emtia.aboutTitle": "Technical analysis for forex, gold and oil",
   "market.emtia.about":
-    "Signals for currencies, gold, silver and oil are produced on the daily and weekly charts. Exchange rates are real time; commodity futures are delayed by 10 minutes. Daily exchange rates may come from the European Central Bank's reference rates, which carry closing values only, so indicators that depend on the intraday high and low (ATR, Stochastic, Williams %R) stay narrow on the daily currency chart. Currencies carry no volume data, so volume-based indicators are not used for them.",
+    "Signals for currencies, gold, silver and oil are produced on five timeframes, from 15 minutes to weekly. Exchange rates, gold, silver, platinum, palladium and oil arrive in real time; natural gas, copper, wheat and coffee futures are delayed by 10 minutes. Daily exchange rates may come from the European Central Bank's reference rates, which carry closing values only, so indicators that depend on the intraday high and low (ATR, Stochastic, Williams %R) stay narrow on the daily currency chart. Currencies carry no volume data, so volume-based indicators are not used for them.",
 
   "market.methodology":
     "Every indicator is computed on our own servers from open formulas; no ready-made signals are bought from anyone. The score comes from a weighted vote of the indicators and always returns the same result for the same data. These signals are not investment advice.",
@@ -852,7 +854,7 @@ export const en: Dictionary = {
 
   "market.abd.faq1.q": "Is the stock data real time?",
   "market.abd.faq1.a":
-    "No, prices are delayed by 15 minutes; there is no free real-time exchange data. Signals are produced on the daily and weekly charts. Each row shows when its data was last updated.",
+    "Yes. US stocks and the S&P 500, Nasdaq and Dow Jones indices arrive in real time and are marked ● live in the table. Signals are produced on five timeframes, from 15 minutes to weekly.",
   "market.abd.faq2.q": "Which stocks are listed?",
   "market.abd.faq2.a":
     "The indices and the most traded stocks come in the ready-made list. Any stock outside it can be found through search, and its analysis is computed the moment you open it.",

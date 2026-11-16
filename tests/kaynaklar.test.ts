@@ -18,6 +18,10 @@ import { aktariciJson } from "../lib/markets/aktarici";
 import { fetchMetalQuotes, metalDestekliyor, metalSembolleri } from "../lib/markets/metals";
 import { fetchTradingViewQuotes, tradingViewSembolu } from "../lib/markets/tradingview";
 
+// Bu dosya tarayıcı ucunu sahte yanıtlarla sınıyor; anlık katman (WebSocket)
+// gerçek ağa çıkıp sahte fiyatların üstüne yazmasın.
+process.env.TV_MUM_KAPALI = "1";
+
 /** Çağrıları kaydeden sahte fetch; `yanitla` adrese göre yanıt üretir. */
 function fetchKur(yanitla: (url: string, govde: unknown) => unknown | null) {
   const gercek = globalThis.fetch;

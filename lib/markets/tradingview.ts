@@ -31,7 +31,9 @@
  * uygulama eski kaynaklara düşer.
  */
 
+import { ENDEKS_ANLIK, EMTIA_ANLIK } from "./anlik";
 import { BORSALAR, borsa as borsaTanimi } from "./borsalar";
+import { fetchTvAnlik, tvMumAcik, type TvAnlik } from "./tv-mum";
 import { instrumentId, MARKETS, MarketDataError, type MarketId, type Quote } from "./types";
 
 const BASE = process.env.TRADINGVIEW_API_BASE ?? "https://scanner.tradingview.com";
@@ -104,6 +106,8 @@ const ENDEKS: Record<string, string> = {
   ...Object.fromEntries(
     Object.values(BORSALAR).map((b) => [b!.endeks.symbol, b!.endeks.tv]),
   ),
+  // Gecikmesiz yayınlanan karşılığı olan endeksler onu kullanır (bkz. `anlik.ts`).
+  ...ENDEKS_ANLIK,
 };
 
 type TarayiciYanit = {
@@ -147,6 +151,8 @@ export async function fetchTradingViewQuotes(
 
   const borsa = borsaTanimi(market);
   const endeksler = semboller.filter((s) => ENDEKS[s]);
+  // Anlık karşılığı olan vadeliler de tarayıcıya sorulur: quote oturumu
+  // düşerse gecikmeli fiyat elde kalsın; gelirse anlık katman üstüne yazar.
   const vadeli = semboller.filter((s) => VADELI[s]);
   const doviz = semboller.filter((s) => DOVIZ[s]);
 
@@ -168,11 +174,6 @@ export async function fetchTradingViewQuotes(
   if (doviz.length > 0) {
     isler.push(tarama(market, "forex", secilenler(doviz, DOVIZ)));
   }
-  for (const sembol of endeksler) {
-    isler.push(tekSembol(market, sembol, ENDEKS[sembol]));
-  }
-
-  if (isler.length === 0) return new Map();
 
   // `allSettled`: bir bölge düşse bile diğerlerinden gelen satırlar kalsın.
   // `all` kullanmak, yarısı çalışan bir listeyi tümden hataya çevirirdi.
@@ -181,6 +182,47 @@ export async function fetchTradingViewQuotes(
   for (const parca of parcalar) {
     if (parca.status !== "fulfilled") continue;
     for (const [sembol, quote] of parca.value) sonuc.set(sembol, quote);
+  }
+
+  // Anlık katman: gecikmesiz yayınlanan semboller (ABD hisseleri, TVC endeks
+  // ve emtia) tek bir quote oturumunda çekilir ve gecikmeli fiyatın üstüne
+  // yazılır. Endekslerin tek kaynağı da burası (tarayıcı endeks vermiyor).
+  const anlikAdlar = new Map<string, string>(); // uygulama sembolü → tam ad
+  for (const sembol of semboller) {
+    const tam =
+      ENDEKS[sembol] ??
+      EMTIA_ANLIK[sembol] ??
+      (market === "abd" ? tamAdBellegi.get(`${market}:${sembol}`) : undefined);
+    if (tam) anlikAdlar.set(sembol, tam);
+  }
+  if (anlikAdlar.size > 0 && tvMumAcik()) {
+    const anlik = await fetchTvAnlik([...anlikAdlar.values()]).catch(() => new Map<string, TvAnlik>());
+    for (const [sembol, tam] of anlikAdlar) {
+      const v = anlik.get(tam);
+      if (!v) continue;
+      const onceki = sonuc.get(sembol);
+      const quote = quoteYap(market, sembol, {
+        ad: onceki?.name ?? tam.split(":")[1],
+        ticker: onceki?.ticker ?? tam.split(":")[1],
+        kapanis: v.fiyat,
+        degisim: v.degisimYuzde ?? onceki?.changePercent ?? 0,
+        yuksek: v.yuksek ?? Math.max(v.fiyat, onceki?.high ?? v.fiyat),
+        dusuk: v.dusuk ?? Math.min(v.fiyat, onceki?.low ?? v.fiyat),
+        hacim: v.hacim ?? onceki?.volume ?? 0,
+        paraBirimi: onceki?.currency ?? null,
+      });
+      sonuc.set(sembol, { ...quote, anlik: v.guncelleme === "streaming" });
+    }
+  }
+
+  // Quote oturumu düşerse endeksler eski yoldan (sembol başına uç nokta).
+  const eksikEndeksler = endeksler.filter((s) => !sonuc.has(s));
+  if (eksikEndeksler.length > 0) {
+    const yedek = await Promise.allSettled(eksikEndeksler.map((s) => tekSembol(market, s, ENDEKS[s])));
+    for (const parca of yedek) {
+      if (parca.status !== "fulfilled") continue;
+      for (const [sembol, quote] of parca.value) sonuc.set(sembol, quote);
+    }
   }
 
   if (sonuc.size === 0) {
@@ -205,7 +247,7 @@ const tamAdBellegi = new Map<string, string>();
  */
 export async function tvTamAd(market: MarketId, symbol: string): Promise<string | null> {
   if (!tradingViewAcik()) return null;
-  const sabit = ENDEKS[symbol] ?? VADELI[symbol] ?? DOVIZ[symbol];
+  const sabit = ENDEKS[symbol] ?? EMTIA_ANLIK[symbol] ?? VADELI[symbol] ?? DOVIZ[symbol];
   if (sabit) return sabit;
 
   const tanim = borsaTanimi(market);
@@ -293,6 +335,8 @@ async function borsaTaramasi(
       : ad;
     // Hacme göre sıralı geldiği için ilk satır (en likit olan) kalır.
     if (sonuc.has(sembol)) continue;
+    // Tam ad ("NASDAQ:AAPL") hatırlanır: anlık fiyat ve grafik akışı onu istiyor.
+    tamAdBellegi.set(`${market}:${sembol}`, satir.s);
     sonuc.set(
       sembol,
       quoteYap(market, sembol, {

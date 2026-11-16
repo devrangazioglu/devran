@@ -232,8 +232,9 @@ function dunyaBorsalari(): Record<(typeof DUNYA_MARKET_IDS)[number], MarketMeta>
     japonya: { slug: "japonya-borsasi", currency: "JPY", bayrak: "🇯🇵", gecikmeDk: 20 },
     hongkong: { slug: "hong-kong-borsasi", currency: "HKD", bayrak: "🇭🇰", gecikmeDk: 15 },
     hindistan: { slug: "hindistan-borsasi", currency: "INR", bayrak: "🇮🇳", gecikmeDk: 15 },
-    // Londra tarayıcıda gecikmesiz geliyor (`update_mode = streaming`).
-    ingiltere: { slug: "ingiltere-borsasi", currency: "GBX", bayrak: "🇬🇧", gecikmeDk: 0 },
+    // Tarayıcı bazı Londra satırlarını "streaming" gösteriyor ama hisse başına
+    // quote oturumu 15 dk gecikmeli bildiriyor (LSE:AZN); temkinli olan yazılır.
+    ingiltere: { slug: "ingiltere-borsasi", currency: "GBX", bayrak: "🇬🇧", gecikmeDk: 15 },
     almanya: { slug: "almanya-borsasi", currency: "EUR", bayrak: "🇩🇪", gecikmeDk: 15 },
     fransa: { slug: "fransa-borsasi", currency: "EUR", bayrak: "🇫🇷", gecikmeDk: 15 },
     kanada: { slug: "kanada-borsasi", currency: "CAD", bayrak: "🇨🇦", gecikmeDk: 15 },
@@ -302,6 +303,8 @@ export type Quote = Instrument & {
   /** İşlem hacmi (kriptoda kotasyon cinsinden, hisselerde adet). */
   volume: number;
   updatedAt: number;
+  /** Fiyat gecikmesiz mi geldi (kaynak `update_mode = streaming` bildirdi)? */
+  anlik?: boolean;
 };
 
 export function instrumentId(market: MarketId, symbol: string): string {

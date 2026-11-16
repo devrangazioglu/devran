@@ -37,6 +37,7 @@ import {
   formatPrice,
   formatRelative,
 } from "@/lib/format";
+import { anlikMi } from "@/lib/markets/anlik";
 import { MARKETS, type Instrument, type Interval } from "@/lib/markets/types";
 
 export default function AssetClient({
@@ -184,7 +185,7 @@ export default function AssetClient({
         <div className="notice">
           {[
             t("market.closedNote"),
-            MARKETS[instrument.market].gecikmeDk > 0
+            MARKETS[instrument.market].gecikmeDk > 0 && !anlikMi(instrument.market, instrument.symbol)
               ? t("market.delayNote", { dakika: MARKETS[instrument.market].gecikmeDk })
               : null,
           ]
