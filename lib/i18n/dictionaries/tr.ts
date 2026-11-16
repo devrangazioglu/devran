@@ -132,10 +132,32 @@ export const tr = {
   "category.momentum": "Momentum",
   "category.volatility": "Volatilite",
   "category.volume": "Hacim",
+  "b360.title": "Bakış",
+  "b360.score": "skor",
+  "b360.trend": "Trend",
+  "b360.momentum": "Momentum",
+  "b360.structure": "Fiyat yapısı",
+  "b360.volume": "Hacim",
+  "b360.volatility": "Volatilite",
+  "b360.timeframes": "Zaman uyumu",
+  "b360.relative": "Göreli güç",
+  "b360.fundamental": "Temel",
+  "b360.strongBuy": "güçlü alıcı",
+  "b360.buy": "alıcı",
+  "b360.neutral": "nötr",
+  "b360.sell": "satıcı",
+  "b360.strongSell": "güçlü satıcı",
+  "b360.none": "veri yok",
+  "b360.uyum": "Sinyalle uyum %{oran}",
+  "b360.uyumHint": "Sekiz açının yüzde kaçı sinyalle aynı yönü gösteriyor. Uyum yüksekse sinyal tek bir göstergeye değil, birçok farklı bakışa dayanıyor demektir.",
+  "b360.summary": "Sekiz açıdan {alici} tanesi alıcı, {satici} tanesi satıcı, {notr} tanesi nötr.",
+  "b360.strongest": "En güçlü yanı: {ad}.",
+  "b360.weakest": "En zayıf yanı: {ad}.",
+  "b360.note": "Dilim ne kadar uzunsa o açı o kadar net. Zaman uyumu diğer periyotları, göreli güç endekse (alt coinlerde Bitcoin'e) göre gidişi, temel ise şirketin mali durumunu gösterir; verisi olmayan açı boş kalır.",
 
   /* ── Ana sayfa ────────────────────────────────────────── */
   "home.badge":
-    "Kripto, borsa, döviz ve emtia — tek analiz motoru",
+    "360° bakış: kripto, borsa, döviz ve emtia — tek analiz motoru",
   "home.title": "Analiz et,\nal–sat sinyalini gör",
   "home.lead":
     "Kripto, Borsa İstanbul, ABD hisseleri, döviz ve emtia için 20'den fazla teknik göstergeyi ve fiyat yapısını tek bir skorda birleştiriyor, {signals} sinyali üretiyoruz. Hisselerde şirketin mali durumunu da emsalleriyle kıyaslıyoruz. Her sinyali, teknik analiz bilmeyen birinin de anlayacağı dille anlatıyoruz.",
@@ -827,7 +849,7 @@ export const tr = {
   /* ── Arama motoru başlıkları ve açıklamaları ─────────────────
      Başlık ~60, açıklama ~155 karakteri geçmemeli: fazlası arama
      sonucunda kesiliyor ve cümlenin sonu kullanıcıya ulaşmıyor. */
-  "seo.home.title": "Teknik analiz ve al/sat sinyalleri",
+  "seo.home.title": "Piyasalara 360° bakış: teknik analiz ve al/sat sinyalleri",
   "seo.home.description":
     "Kripto, Borsa İstanbul, ABD hisseleri, döviz ve emtia için 20'den fazla teknik gösterge ve temel analizle AL / SAT / BEKLE sinyali; her sinyal sade bir dille açıklanır.",
 
@@ -980,7 +1002,7 @@ export const tr = {
 
   "seo.plans.title": "Planlar ve fiyatlar",
   "seo.plans.description":
-    "Fibonex planları: aylık analiz kredisi, tarayıcı sınırı ve zaman dilimleri. Her analiz bir kredi; listeleri ve piyasa sayfalarını gezmek ücretsiz.",
+    "Fibonex360 planları: aylık analiz kredisi, tarayıcı sınırı ve zaman dilimleri. Her analiz bir kredi; listeleri ve piyasa sayfalarını gezmek ücretsiz.",
 
   "auth.apple": "Apple ile giriş yap",
   "auth.appleRegister": "Apple ile kaydol",

@@ -129,9 +129,31 @@ export const en: Dictionary = {
   "category.momentum": "Momentum",
   "category.volatility": "Volatility",
   "category.volume": "Volume",
+  "b360.title": "View",
+  "b360.score": "score",
+  "b360.trend": "Trend",
+  "b360.momentum": "Momentum",
+  "b360.structure": "Price structure",
+  "b360.volume": "Volume",
+  "b360.volatility": "Volatility",
+  "b360.timeframes": "Timeframes",
+  "b360.relative": "Relative strength",
+  "b360.fundamental": "Fundamentals",
+  "b360.strongBuy": "strong buy",
+  "b360.buy": "buy",
+  "b360.neutral": "neutral",
+  "b360.sell": "sell",
+  "b360.strongSell": "strong sell",
+  "b360.none": "no data",
+  "b360.uyum": "Agreement {oran}%",
+  "b360.uyumHint": "Share of the eight angles that point the same way as the signal. High agreement means the signal rests on many different views, not on a single indicator.",
+  "b360.summary": "Of the eight angles, {alici} point to buying, {satici} to selling and {notr} are neutral.",
+  "b360.strongest": "Strongest side: {ad}.",
+  "b360.weakest": "Weakest side: {ad}.",
+  "b360.note": "The longer the slice, the clearer that angle. Timeframes compares the other periods, relative strength the move against the index (Bitcoin for altcoins), fundamentals the company's finances; angles without data stay empty.",
 
   "home.badge":
-    "Crypto, stocks, FX and commodities — one analysis engine",
+    "A 360° view: crypto, stocks, FX and commodities — one analysis engine",
   "home.title": "Analyse it,\nsee the buy/sell signal",
   "home.lead":
     "We combine more than 20 technical indicators and price structure into one score for crypto, Borsa Istanbul, US stocks, currencies and commodities, and produce {signals} signals. For stocks we also compare the company's finances with its peers. Every signal is explained in plain language, even for people who know nothing about technical analysis.",
@@ -804,7 +826,7 @@ export const en: Dictionary = {
     "No clear technical contradiction was detected; still, never trade without risk management.",
 
   /* ── Search engine titles and descriptions ── */
-  "seo.home.title": "Technical analysis and buy/sell signals",
+  "seo.home.title": "A 360° view of the markets: technical analysis and buy/sell signals",
   "seo.home.description":
     "BUY / SELL / WAIT signals for crypto, Borsa Istanbul, US stocks, currencies and commodities from 20+ technical indicators and fundamental analysis, each explained in plain language.",
 
@@ -957,7 +979,7 @@ export const en: Dictionary = {
 
   "seo.plans.title": "Plans and pricing",
   "seo.plans.description":
-    "Fibonex plans: monthly analysis credits, scanner limits and timeframes. One credit per analysis; browsing lists and market pages is free.",
+    "Fibonex360 plans: monthly analysis credits, scanner limits and timeframes. One credit per analysis; browsing lists and market pages is free.",
 
   "auth.apple": "Sign in with Apple",
   "auth.appleRegister": "Sign up with Apple",

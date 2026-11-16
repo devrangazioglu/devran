@@ -143,3 +143,35 @@ test("periyotlar: anlık varlıkta 1 dk'dan, gecikmelide 15 dk'dan başlar; en y
   assert.equal(enYakinPeriyot(varlikPeriyotlari("emtia", "NG=F"), "30m"), "1h");
   assert.equal(enYakinPeriyot(varlikPeriyotlari("emtia", "GC=F"), "5m"), "5m");
 });
+
+test("360° bakış: gruplar ayrılır, verisi olmayan açı boş kalır, uyum sinyal yönüne göre", async () => {
+  const { bakis360 } = await import("../lib/bakis360");
+  const c = (id: string, category: string, direction: number, weight = 1) =>
+    ({ id, category, direction, weight, labelKey: "", value: [], verdict: "NEUTRAL", noteKey: "" }) as never;
+  const analysis = {
+    score: 40,
+    checks: [
+      c("ema-cross", "trend", 1),
+      c("adx", "trend", 0.5, 3),
+      c("rsi", "momentum", -0.6),
+      c("structure", "structure", 0.8),
+      c("higher-tf", "structure", -1),
+      c("bollinger", "volatility", 0),
+    ],
+  } as never;
+  const b = bakis360(analysis, { timeframes: [{ score: 30 }, { score: 50 }], fundamentals: null });
+  const deger = (k: string) => b.acilar.find((a) => a.anahtar === k)!.deger;
+  assert.equal(Math.round(deger("trend")!), 63); // (1·1 + 0.5·3) / 4
+  assert.equal(Math.round(deger("momentum")!), -60);
+  assert.equal(deger("structure"), 80); // üst periyot yapıya karışmaz
+  assert.equal(deger("timeframes"), 40);
+  assert.equal(deger("volume"), null);
+  assert.equal(deger("relative"), null);
+  assert.equal(deger("fundamental"), null);
+  assert.equal(b.alici, 3);
+  assert.equal(b.satici, 1);
+  assert.equal(b.notr, 1);
+  assert.equal(b.uyum, 3 / 5);
+  assert.equal(b.enGuclu?.anahtar, "structure");
+  assert.equal(b.enZayif?.anahtar, "momentum");
+});

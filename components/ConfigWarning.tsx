@@ -1,5 +1,6 @@
 import { postgresEnabled } from "@/lib/db";
 import { AKTIF_MARKET_IDS } from "@/lib/markets/types";
+import { tradingViewAcik } from "@/lib/markets/tradingview";
 import { twelveDataEnabled } from "@/lib/markets/twelvedata";
 
 /**
@@ -11,10 +12,12 @@ export default function ConfigWarning() {
   const production = process.env.NODE_ENV === "production";
   const missingSecret = !process.env.AUTH_SECRET;
   const ephemeralStore = production && !postgresEnabled();
-  // Anahtar uyarısı yalnızca o anahtarla beslenen bir piyasa **açıkken**
-  // anlamlı; hepsi kapalıyken kullanıcıya çözemeyeceği bir eksik gösterilir.
+  // Anahtar uyarısı yalnızca anahtarsız kaynak (TradingView tarayıcısı ve
+  // grafik akışı) kapalıyken anlamlı. Bir dönem hisse ve emtia için tek yol
+  // anahtarlı sağlayıcıydı ve bu uyarı giriş sayfasında herkese görünüyordu;
+  // artık veri anahtarsız geliyor, anahtar yalnızca yedek.
   const anahtarliPiyasaAcik = AKTIF_MARKET_IDS.some((id) => id !== "kripto");
-  const missingMarketKey = anahtarliPiyasaAcik && !twelveDataEnabled();
+  const missingMarketKey = anahtarliPiyasaAcik && !tradingViewAcik() && !twelveDataEnabled();
 
   if (!missingSecret && !ephemeralStore && !missingMarketKey) return null;
 
@@ -41,8 +44,8 @@ export default function ConfigWarning() {
           <strong>Hisse ve emtia verisi için anahtar tanımlı değil.</strong> Kripto ve
           dövizler anahtarsız çalışır; ABD borsası, Türkiye borsası ve emtia için ücretsiz
           bir <a href="https://twelvedata.com/pricing" target="_blank" rel="noreferrer">Twelve Data</a>{" "}
-          anahtarı gerekir. Anahtarsız sağlayıcılar sunucu IP&apos;lerini engellediği için
-          başka yolu yok. Anahtarı ortam değişkenlerine <code>TWELVEDATA_API_KEY</code>{" "}
+          anahtarı gerekir (anahtarsız kaynak <code>TRADINGVIEW_KAPALI</code> ile kapatılmış).
+          Anahtarı ortam değişkenlerine <code>TWELVEDATA_API_KEY</code>{" "}
           olarak ekleyip yeniden dağıtın.
         </div>
       )}

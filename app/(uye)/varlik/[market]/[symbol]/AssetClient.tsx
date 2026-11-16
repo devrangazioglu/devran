@@ -11,6 +11,7 @@ import {
   SinamaKarti,
   TemelKarti,
 } from "@/components/AnalizKartlari";
+import Bakis360Karti from "@/components/Bakis360";
 import { Aciklama, SadeOzetKarti } from "@/components/SadeOzet";
 import CandleChart, { type Gorunum } from "@/components/CandleChart";
 import HataNotu from "@/components/HataNotu";
@@ -290,6 +291,13 @@ export default function AssetClient({
           {/* ── Kısaca: teknik terim bilmeden okunabilen özet ── */}
           <Reveal>
             <SadeOzetKarti ozet={data.plain} />
+          </Reveal>
+          <Reveal>
+            <Bakis360Karti
+              analysis={analysis}
+              timeframes={data.timeframes}
+              fundamentals={data.fundamentals}
+            />
           </Reveal>
 
           {/* ── Grafikler ───────────────────────────────── */}

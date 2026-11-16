@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { LogoMark } from "@/components/Logo";
+import { LogoAd, LogoMark } from "@/components/Logo";
 import { redirect } from "next/navigation";
 
 import { appleAuthEnabled, auth, googleAuthEnabled } from "@/auth";
@@ -37,7 +37,7 @@ export default async function LoginPage({
           <Link href="/" className="logo">
             <LogoMark />
             <span>
-              Fibo<em>nex</em>
+              <LogoAd />
             </span>
           </Link>
           <LanguageSwitcher compact />

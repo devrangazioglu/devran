@@ -8,7 +8,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Fibonex — teknik analiz ve al/sat sinyalleri";
+export const alt = "Fibonex360 — piyasalara 360° bakış: teknik analiz ve al/sat sinyalleri";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -44,6 +44,9 @@ export default function OgGorseli() {
             </div>
           </div>
           <span style={{ letterSpacing: -0.5 }}>Fibonex</span>
+          <span style={{ fontSize: 26, fontWeight: 700, color: "#8ff0a4", marginLeft: -12, marginTop: -14 }}>
+            360
+          </span>
         </div>
 
         {/* Görselleştirici, birden çok çocuğu olan her kutuda açık bir düzen
@@ -59,16 +62,16 @@ export default function OgGorseli() {
             marginTop: 34,
           }}
         >
-          <div>Teknik analiz ve</div>
+          <div>Piyasalara 360° bakış:</div>
           <div>al / sat sinyalleri</div>
         </div>
 
         <div style={{ fontSize: 30, color: "#8b95a9", marginTop: 30, lineHeight: 1.4 }}>
-          Kripto · Amerikan borsası · Borsa İstanbul · Döviz ve emtia
+          Kripto · ABD · Borsa İstanbul · 11 dünya borsası · Döviz ve emtia
         </div>
 
         <div style={{ display: "flex", gap: 14, marginTop: 44 }}>
-          {["20+ gösterge", "4 piyasa", "8 dil"].map((etiket) => (
+          {["20+ gösterge", "15 piyasa", "360° bakış"].map((etiket) => (
             <div
               key={etiket}
               style={{

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { LogoMark } from "./Logo";
+import { LogoAd, LogoMark } from "./Logo";
 
 import { auth } from "@/auth";
 import AssetSearch from "./AssetSearch";
@@ -46,7 +46,7 @@ export default async function AppNav() {
         <Link href="/panel" className="logo">
           <LogoMark />
           <span className="only-desktop">
-            Fibo<em>nex</em>
+            <LogoAd />
           </span>
         </Link>
 
