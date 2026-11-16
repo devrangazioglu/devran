@@ -44,6 +44,10 @@ jobs:
       # iddiası buradaki sayılarla ölçülür.
       - name: Sinyal motorlarını karşılaştır
         run: npm run motor-karsilastir
+        env:
+          # Mumlar kütüğe de yazılır; ayar denemeleri aynı veriyle yerelde
+          # yeniden ölçülebilsin diye.
+          MUM_DOK: "1"
         continue-on-error: true
 
       # Asıl soru burada yanıtlanıyor: kaynak **Vercel'in** IP aralığından da
