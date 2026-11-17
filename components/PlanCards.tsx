@@ -150,7 +150,10 @@ export default function PlanCards({
                 </span>
               ) : uyeModu ? (
                 <button
-                  className={`btn btn-block ${oneCikan ? "btn-primary" : "btn-ghost"}`}
+                  // iOS uygulamasında ücretli plan yalnızca Apple'ın uygulama içi
+                  // satın almasıyla alınabilir (App Store 3.1.1); o bağlanana
+                  // kadar düğme orada gizlenir (bkz. globals.css → .platform-ios).
+                  className={`btn btn-block ${oneCikan ? "btn-primary" : "btn-ghost"} ${id === "ucretsiz" ? "" : "satin-al"}`}
                   onClick={() => void planSec(id)}
                   disabled={bekleyen !== null}
                 >
@@ -159,6 +162,7 @@ export default function PlanCards({
                 </button>
               ) : (
                 <Link
+                  // Uygulamada da kayıt ücretsiz; plan seçimi kayıttan sonra.
                   href={kayitHref}
                   className={`btn btn-block ${oneCikan ? "btn-primary" : "btn-ghost"}`}
                 >
@@ -169,6 +173,7 @@ export default function PlanCards({
           );
         })}
       </div>
+      {uyeModu && <p className="notice ios-satin-al-notu">{t("plans.iosSoon")}</p>}
     </>
   );
 }

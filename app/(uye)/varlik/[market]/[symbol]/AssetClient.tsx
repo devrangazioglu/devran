@@ -16,6 +16,7 @@ import { Aciklama, SadeOzetKarti } from "@/components/SadeOzet";
 import CandleChart, { type Gorunum } from "@/components/CandleChart";
 import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
+import PaylasDugmesi from "@/components/PaylasDugmesi";
 import IndicatorChart from "@/components/IndicatorChart";
 import Reveal from "@/components/motion/Reveal";
 import SpotlightCard from "@/components/motion/SpotlightCard";
@@ -46,10 +47,13 @@ export default function AssetClient({
   initialInterval,
   inWatchlist,
   planPeriyotlar,
+  davetKodu = null,
 }: {
   instrument: Instrument;
   initialInterval: string;
   inWatchlist: boolean;
+  /** Paylaşılan bağlantıya eklenen davet kodu. */
+  davetKodu?: string | null;
   /** Planın açtığı periyotlar; defter okunamıyorsa null (kısıtlama yok). */
   planPeriyotlar: Interval[] | null;
 }) {
@@ -173,6 +177,16 @@ export default function AssetClient({
           >
             {loading ? <span className="spinner" /> : "↻"} {t("common.refresh")}
           </button>
+          {analysis && (
+            <PaylasDugmesi
+              metin={t("share.assetText", {
+                ticker: instrument.ticker,
+                signal: t(`signal.${analysis.signal}` as "signal.BUY"),
+                period,
+              })}
+              davetKodu={davetKodu}
+            />
+          )}
         </div>
       </div>
 

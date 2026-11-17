@@ -1,0 +1,24 @@
+{
+  "name": "fibonex360-mobil",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fibonex360 iOS ve Android uygulama kabuğu (Capacitor). Site yayında kalır; uygulama onu yerel bir kabukta açar.",
+  "scripts": {
+    "esitle": "cap sync",
+    "ios": "cap open ios",
+    "android": "cap open android",
+    "ikonlar": "capacitor-assets generate --iconBackgroundColor '#05070c' --splashBackgroundColor '#05070c'"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0",
+    "@capacitor/assets": "3.0.5"
+  }
+}

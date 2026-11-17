@@ -39,6 +39,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#05070c",
   colorScheme: "dark",
+  // Çentikli telefonlarda ve uygulama kabuğunda içerik ekranın kenarına kadar
+  // uzanır; boşluklar CSS'te safe-area-inset ile verilir.
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({

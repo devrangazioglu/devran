@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import Secim from "@/components/Secim";
+import HesapIslemleri from "./HesapIslemleri";
 import { formatDate } from "@/lib/format";
 import { INTERVALS, MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
 import type { UserSettings } from "@/lib/users";
@@ -165,6 +166,8 @@ export default function SettingsClient({
               <strong>{t("settings.watchlistCount", { count: watchlistCount })}</strong>
             </div>
           </div>
+
+          <HesapIslemleri email={email} hasPassword={hasPassword} />
 
           <div className="card">
             <div className="card-title">{t("settings.privacy")}</div>

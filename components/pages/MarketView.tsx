@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import AssetSearch from "@/components/AssetSearch";
 import Reveal from "@/components/motion/Reveal";
 import SiteNav from "@/components/SiteNav";
+import YasalBaglantilar from "@/components/YasalBaglantilar";
 import { AssetAvatar, Change } from "@/components/ui";
 import { formatCompact, formatPrice } from "@/lib/format";
 import { intlTag, type Locale } from "@/lib/i18n";
@@ -263,6 +264,7 @@ export default async function MarketView({
           <p className="disclaimer" style={{ marginTop: 0 }}>
             {t("footer.disclaimerShort")}
           </p>
+          <YasalBaglantilar t={t} />
         </div>
       </footer>
     </>

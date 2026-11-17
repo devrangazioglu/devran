@@ -128,6 +128,29 @@ function storeContract(label: string, getStore: () => UserStore) {
       assert.equal(await getStore().findByEmail("yok@ornek.com"), null);
     });
 
+    test("hesap silinince kayıt tümüyle kaybolur, ikinci silme false döner", async () => {
+      const store = getStore();
+      const user = buildUser({ email: `sil-${Date.now()}@ornek.com`, passwordHash: "scrypt:aa:bb" });
+      await store.insert(user);
+
+      assert.equal(await store.remove(user.email.toUpperCase()), true);
+      assert.equal(await store.findByEmail(user.email), null);
+      assert.equal(await store.findById(user.id), null);
+      assert.equal(await store.remove(user.email), false);
+      // Aynı e-postayla yeniden kayıt olunabilmeli.
+      assert.equal(await store.insert(buildUser({ email: user.email, passwordHash: null })), true);
+    });
+
+    test("parola özeti güncellemede saklanır", async () => {
+      const store = getStore();
+      const user = buildUser({ email: `parola-${Date.now()}@ornek.com`, passwordHash: null });
+      await store.insert(user);
+      await store.update(user.email, (u) => {
+        u.passwordHash = "scrypt:cc:dd";
+      });
+      assert.equal((await store.findByEmail(user.email))?.passwordHash, "scrypt:cc:dd");
+    });
+
     test("güncelleme takip listesini ve ayarları kalıcı yazar", async () => {
       const store = getStore();
       const email = `guncelle-${Date.now()}@ornek.com`;
@@ -236,6 +259,43 @@ after(async () => {
 });
 
 storeContract("Dosya", () => fileStore);
+
+describe("hesap işlemleri", () => {
+  test("hesap silme parolayı ister, doğru parolayla siler", async () => {
+    const { createUser, deleteAccount, findUserByEmail } = await import("../lib/users");
+    const email = `hesap-${Date.now()}@ornek.com`;
+    assert.equal((await createUser({ email, password: "parola12345" })).ok, true);
+
+    const yanlis = await deleteAccount(email, { parola: "yanlis-parola" });
+    assert.equal(yanlis.ok, false);
+    assert.ok(await findUserByEmail(email), "yanlış parolada hesap silinmemeli");
+
+    assert.equal((await deleteAccount(email, { parola: "parola12345" })).ok, true);
+    assert.equal(await findUserByEmail(email), null);
+  });
+
+  test("parolasız (Google/Apple) hesap e-posta yazılarak silinir", async () => {
+    const { upsertOAuthUser, deleteAccount, findUserByEmail } = await import("../lib/users");
+    const email = `oauth-${Date.now()}@ornek.com`;
+    await upsertOAuthUser(email, "Deneme");
+
+    assert.equal((await deleteAccount(email, { eposta: "baska@ornek.com" })).ok, false);
+    assert.equal((await deleteAccount(email, { eposta: email.toUpperCase() })).ok, true);
+    assert.equal(await findUserByEmail(email), null);
+  });
+
+  test("parola değiştirme mevcut parolayı doğrular", async () => {
+    const { createUser, changePassword, authenticate } = await import("../lib/users");
+    const email = `degis-${Date.now()}@ornek.com`;
+    await createUser({ email, password: "eskiparola1" });
+
+    assert.equal((await changePassword(email, "yanlis", "yeniparola1")).ok, false);
+    assert.equal((await changePassword(email, "eskiparola1", "kisa")).ok, false);
+    assert.equal((await changePassword(email, "eskiparola1", "yeniparola1")).ok, true);
+    assert.equal(await authenticate(email, "eskiparola1"), null);
+    assert.ok(await authenticate(email, "yeniparola1"));
+  });
+});
 
 /* ────────────────────── Postgres deposu ────────────────────── */
 

@@ -141,6 +141,8 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 50;
+  /* Çentik / durum çubuğu (viewport-fit=cover): tarayıcıda 0, uygulamada dolu. */
+  padding-top: env(safe-area-inset-top, 0);
   background: rgba(5, 7, 12, 0.82);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-soft);
@@ -1598,7 +1600,7 @@ canvas {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 40px 24px;
+  padding: max(40px, env(safe-area-inset-top, 0px)) 24px max(40px, env(safe-area-inset-bottom, 0px));
 }
 
 .auth-card {
@@ -2462,7 +2464,7 @@ canvas {
   }
 
   .app-main.has-tabbar {
-    padding-bottom: 92px;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
   }
 
   .page-head {
@@ -3122,4 +3124,163 @@ canvas {
     width: 100%;
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Yasal sayfalar ve alt bilgi bağlantıları ───────────────────── */
+.yasal-baglantilar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 13px;
+  margin-top: 14px;
+}
+.yasal-baglantilar a {
+  color: var(--text-muted);
+}
+.yasal-baglantilar a:hover {
+  color: var(--text);
+}
+.yasal {
+  max-width: 780px;
+  padding-top: 28px;
+  padding-bottom: 48px;
+}
+.yasal h1 {
+  font-size: clamp(26px, 4vw, 36px);
+  margin-bottom: 6px;
+}
+.yasal h2 {
+  font-size: 18px;
+  margin: 30px 0 10px;
+  scroll-margin-top: 90px;
+}
+.yasal p {
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+.yasal-tarih {
+  font-size: 13px;
+}
+.yasal-ozet {
+  font-size: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(116, 201, 138, 0.07);
+  border: 1px solid rgba(116, 201, 138, 0.2);
+}
+.yasal-icindekiler ol {
+  margin: 18px 0 6px;
+  padding-left: 22px;
+  columns: 2;
+  column-gap: 28px;
+  font-size: 14px;
+  line-height: 1.9;
+}
+.yasal-icindekiler a {
+  color: var(--accent);
+}
+@media (max-width: 640px) {
+  .yasal-icindekiler ol {
+    columns: 1;
+  }
+}
+
+/* ── Hesap işlemleri ───────────────────── */
+.hesap-islemleri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.hesap-sil {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.btn-danger {
+  background: rgba(198, 39, 66, 0.14);
+  color: #ff8a9b;
+  border: 1px solid rgba(198, 39, 66, 0.45);
+}
+.btn-danger:hover {
+  background: rgba(198, 39, 66, 0.24);
+}
+
+/* ── Mobil uygulama kabuğu (Capacitor) ─────────────────────────
+   UygulamaKabugu bileşeni <html>'e "uygulama" sınıfını ekler. Uygulamada
+   tarayıcıya özgü öğeler gizlenir; metin seçimi ve uzun basma menüsü
+   yalnızca okunacak yerlerde açık kalır, dokunuşta mavi parlama olmaz. */
+.uygulama body {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+.uygulama .nav,
+.uygulama .tabbar,
+.uygulama .btn {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.uygulama .sadece-web {
+  display: none !important;
+}
+.sadece-uygulama {
+  display: none;
+}
+.uygulama .sadece-uygulama {
+  display: revert;
+}
+
+/* ── Deneme ve davet ───────────────────── */
+.deneme-rozeti {
+  display: inline-block;
+  margin: 16px auto 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(143, 240, 164, 0.25);
+}
+.hero-center .deneme-rozeti,
+.hero .deneme-rozeti {
+  display: table;
+}
+.deneme-karti {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(143, 240, 164, 0.1), rgba(198, 39, 66, 0.06));
+  border-color: rgba(143, 240, 164, 0.3);
+}
+.deneme-notu {
+  border-color: rgba(143, 240, 164, 0.35);
+  background: var(--accent-dim);
+}
+.davet-adres {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+/* iOS uygulamasında harici ödeme yönlendirmesi yasak (App Store 3.1.1):
+   uygulama içi satın alma bağlanana kadar ücretli plan düğmeleri gizli. */
+.ios-satin-al-notu {
+  display: none;
+  margin-top: 16px;
+}
+.platform-ios .satin-al {
+  display: none !important;
+}
+.platform-ios .ios-satin-al-notu {
+  display: block;
+}
+/* Satın alınamayan şeyin fiyatı da gösterilmez; kartlar özellik karşılaştırması olarak kalır. */
+.platform-ios .fatura-anahtari,
+.platform-ios .plan-price,
+.platform-ios .plan-price-note {
+  display: none !important;
 }

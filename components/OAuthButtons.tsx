@@ -61,14 +61,17 @@ export default function OAuthButtons({
   const { t } = useI18n();
   if (!google && !apple) return null;
 
+  // Google, uygulama içi tarayıcıda (WebView) girişi reddediyor
+  // ("disallowed_useragent"); mobil uygulamada Google düğmesi gizlenir.
+  // Yalnızca Google açıksa bütün bölüm uygulamada gizlenir.
   return (
-    <>
+    <div className={apple ? undefined : "sadece-web"}>
       <div className="divider">{t("auth.or")}</div>
       <div className="oauth-buttons">
         {google && (
           <button
             type="button"
-            className="btn btn-ghost btn-block"
+            className="btn btn-ghost btn-block sadece-web"
             onClick={() => signIn("google", { callbackUrl: next })}
           >
             <GoogleIcon />
@@ -86,6 +89,6 @@ export default function OAuthButtons({
           </button>
         )}
       </div>
-    </>
+    </div>
   );
 }

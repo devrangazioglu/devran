@@ -4,6 +4,7 @@ import { LogoWord } from "@/components/Logo";
 import Reveal from "@/components/motion/Reveal";
 import PlanCards from "@/components/PlanCards";
 import SiteNav from "@/components/SiteNav";
+import YasalBaglantilar from "@/components/YasalBaglantilar";
 import { auth } from "@/auth";
 import { getI18n } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n";
@@ -67,6 +68,7 @@ export default async function Plans({ locale: istenen }: { locale?: Locale } = {
                 {t("plans.title")}
               </h1>
               <p className="lead">{t("plans.sub")}</p>
+              {!girisli && <p className="deneme-rozeti">✨ {t("trial.badge")}</p>}
             </div>
           </Reveal>
 
@@ -122,6 +124,7 @@ export default async function Plans({ locale: istenen }: { locale?: Locale } = {
               <Link href={yol("/giris")}>{t("nav.login")}</Link>
             </nav>
           </div>
+          <YasalBaglantilar t={t} />
           <p className="disclaimer">
             <strong>{t("footer.legalTitle")}</strong> {t("footer.legal")}
           </p>

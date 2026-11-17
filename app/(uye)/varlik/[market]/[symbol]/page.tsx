@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
 import { kullanicidanDurum } from "@/lib/credits";
+import { davetKodu } from "@/lib/users-shared";
 import { varlikPeriyotlari } from "@/lib/markets/anlik";
 import { getInstrument, normalizeSymbol } from "@/lib/markets/provider";
 import {
@@ -64,6 +65,7 @@ export default async function AssetPage({
       initialInterval={requested ?? preferred}
       inWatchlist={(user?.watchlist ?? []).includes(instrumentId(marketParam, symbol))}
       planPeriyotlar={user ? kullanicidanDurum(user).plan.periyotlar : null}
+      davetKodu={user ? davetKodu(user.id) : null}
     />
   );
 }

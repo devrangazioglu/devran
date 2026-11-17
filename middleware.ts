@@ -1,5 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isLocale, LOCALE_COOKIE } from "@/lib/i18n/config";
+
+/**
+ * Dilsiz sayfalar: yalnızca öneksiz adreste var, dili çerezden okur.
+ *
+ * Herkese açık sayfalardaki bağlantılar dilin önekini taşıyor (`/en/kayit`);
+ * bu sayfaların dilli kopyası olmadığı için o adres 404 veriyordu. Önekli
+ * istek öneksiz adrese yönlendirilir ve dil çereze yazılır, böylece sayfa
+ * kullanıcının geldiği dilde açılır.
+ */
+const DILSIZ = /^\/([a-z]{2})(\/(?:giris|kayit|gizlilik|kosullar|destek)(?:\/.*)?)$/;
+
 /**
  * İstenen yolu bir istek başlığına yazar.
  *
@@ -11,9 +23,26 @@ import { NextResponse, type NextRequest } from "next/server";
  * kullanıcı deposu (pg, scrypt) kenar (edge) çalışma zamanına taşınmaz.
  */
 export function middleware(request: NextRequest) {
+  const eslesme = DILSIZ.exec(request.nextUrl.pathname);
+  if (eslesme && isLocale(eslesme[1])) {
+    const hedef = request.nextUrl.clone();
+    hedef.pathname = eslesme[2];
+    const yanit = NextResponse.redirect(hedef);
+    yanit.cookies.set(LOCALE_COOKIE, eslesme[1], { path: "/", maxAge: 31_536_000, sameSite: "lax" });
+    return yanit;
+  }
+
   const headers = new Headers(request.headers);
   headers.set("x-yol", request.nextUrl.pathname + request.nextUrl.search);
-  return NextResponse.next({ request: { headers } });
+  const yanit = NextResponse.next({ request: { headers } });
+
+  // Davet bağlantısı (?davet=kod): kod, kayıt anına kadar çerezde taşınır;
+  // ziyaretçi önce siteyi gezip sonra kaydolsa da ödül kaybolmaz.
+  const davet = request.nextUrl.searchParams.get("davet");
+  if (davet && /^[0-9a-f]{10}$/.test(davet)) {
+    yanit.cookies.set("davet", davet, { path: "/", maxAge: 30 * 86_400, sameSite: "lax" });
+  }
+  return yanit;
 }
 
 /**
@@ -22,5 +51,7 @@ export function middleware(request: NextRequest) {
  * uçları dışarıda bırakılır.
  */
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|robots.txt|sitemap.xml|sw.js|manifest.webmanifest|ikon/|apple-icon.png|cevrimdisi.html).*)",
+  ],
 };

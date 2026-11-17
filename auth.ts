@@ -4,7 +4,11 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import type { Provider } from "next-auth/providers";
 
+import { cookies } from "next/headers";
+
+import { DAVET_CEREZI, yeniHesapKarsila } from "@/lib/credits";
 import { authenticate, upsertOAuthUser } from "@/lib/users";
+import { gecerliDavetKodu, normalizeSubscription } from "@/lib/users-shared";
 
 const providers: Provider[] = [
   Credentials({
@@ -82,7 +86,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // ayarlar ve kredi defteri bu kayda bağlı).
       if ((account?.provider === "google" || account?.provider === "apple") && user.email) {
         try {
-          await upsertOAuthUser(user.email, user.name);
+          const kayit = await upsertOAuthUser(user.email, user.name);
+          // İlk giriş = yeni hesap: deneme ve davet ödülü bir kez verilir.
+          const yeni =
+            Date.now() - kayit.createdAt < 5 * 60_000 &&
+            normalizeSubscription(kayit.abonelik).deneme === undefined;
+          if (yeni) {
+            const davet = (await cookies()).get(DAVET_CEREZI)?.value;
+            await yeniHesapKarsila(user.email, gecerliDavetKodu(davet) ? davet : null);
+          }
         } catch (error) {
           // Depo yazılamıyorsa (salt okunur disk) girişi engellemeyelim; kullanıcı
           // varsayılan ayarlarla devam eder, ayarları kaydetmeyi denediğinde

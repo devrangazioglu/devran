@@ -26,7 +26,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/planlar", priority: 0.8, changeFrequency: "daily" },
   ];
 
-  return yollar.flatMap(({ path, priority, changeFrequency }) =>
+  // Dilsiz sayfalar (dili çerezden okur): tek adres.
+  const dilsiz: MetadataRoute.Sitemap = ["/destek", "/gizlilik", "/kosullar"].map((path) => ({
+    url: mutlakUrl(path),
+    lastModified: simdi,
+    changeFrequency: "monthly",
+    priority: 0.3,
+  }));
+
+  return [...dilsiz, ...yollar.flatMap(({ path, priority, changeFrequency }) =>
     LOCALES.map((meta) => ({
       url: mutlakUrl(localeHref(meta.code, path)),
       lastModified: simdi,
@@ -34,5 +42,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority,
       alternates: { languages: dilAlternatifleri(path, meta.code).languages },
     })),
-  );
+  )];
 }

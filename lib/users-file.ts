@@ -11,6 +11,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import {
+  davetKodu,
   normalizeEmail,
   normalizeSettings,
   normalizeSubscription,
@@ -131,5 +132,21 @@ export const fileStore: UserStore = {
       await writeAll(users);
       return toPublicUser(user);
     });
+  },
+
+  async remove(email) {
+    const normalized = normalizeEmail(email);
+    return serialize(async () => {
+      const users = await readAll();
+      const kalan = users.filter((u) => u.email !== normalized);
+      if (kalan.length === users.length) return false;
+      await writeAll(kalan);
+      return true;
+    });
+  },
+
+  async findByDavetKodu(kod) {
+    const users = await readAll();
+    return users.find((u) => davetKodu(u.id) === kod) ?? null;
   },
 };

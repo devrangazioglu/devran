@@ -169,3 +169,52 @@ export async function saveSettings(
     current.settings = { ...DEFAULT_SETTINGS, ...current.settings, ...settings };
   });
 }
+
+/* ────────────────────── Hesap yönetimi ────────────────────── */
+
+/**
+ * Parola değiştirir. Parolası olan hesapta mevcut parola doğrulanır; Google
+ * veya Apple ile açılmış (parolasız) hesap bu adımla parola edinir, böylece
+ * e-postayla da giriş yapabilir.
+ */
+export async function changePassword(
+  email: string,
+  mevcut: string,
+  yeni: string,
+): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
+  if (yeni.length < 8) return { ok: false, error: "Yeni parola en az 8 karakter olmalı.", status: 400 };
+  const user = await findUserByEmail(email);
+  if (!user) return { ok: false, error: "Hesap bulunamadı.", status: 404 };
+  if (user.passwordHash && !(await verifyPassword(mevcut, user.passwordHash))) {
+    return { ok: false, error: "Mevcut parola yanlış.", status: 403 };
+  }
+  const hash = await hashPassword(yeni);
+  await store().update(email, (current) => {
+    current.passwordHash = hash;
+  });
+  return { ok: true };
+}
+
+/**
+ * Hesabı siler (App Store 5.1.1(v): uygulama içinden silme zorunlu).
+ *
+ * Parolası olan hesapta parola yeniden istenir: açık unutulmuş bir oturumdan
+ * başkasının hesabı silmesini önler. Parolasız (Google/Apple) hesapta
+ * arayüz, e-postanın elle yazılmasını ister; sunucu bunu da doğrular.
+ */
+export async function deleteAccount(
+  email: string,
+  dogrulama: { parola?: string; eposta?: string },
+): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
+  const user = await findUserByEmail(email);
+  if (!user) return { ok: false, error: "Hesap bulunamadı.", status: 404 };
+  if (user.passwordHash) {
+    if (!dogrulama.parola || !(await verifyPassword(dogrulama.parola, user.passwordHash))) {
+      return { ok: false, error: "Parola yanlış.", status: 403 };
+    }
+  } else if (normalizeEmail(dogrulama.eposta ?? "") !== user.email) {
+    return { ok: false, error: "Onay için e-posta adresinizi aynen yazın.", status: 400 };
+  }
+  await store().remove(email);
+  return { ok: true };
+}

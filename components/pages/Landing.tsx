@@ -6,6 +6,7 @@ import Reveal from "@/components/motion/Reveal";
 import SpotlightCard from "@/components/motion/SpotlightCard";
 import { LogoWord } from "@/components/Logo";
 import SiteNav from "@/components/SiteNav";
+import YasalBaglantilar from "@/components/YasalBaglantilar";
 import { AssetAvatar, Change } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { getI18n } from "@/lib/i18n/server";
@@ -136,6 +137,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
                   {t("home.ctaSecondary")}
                 </a>
               </div>
+              <p className="deneme-rozeti">✨ {t("trial.badge")}</p>
             </Reveal>
           </div>
         </div>
@@ -431,6 +433,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
               <Link href={yol("/giris")}>{t("nav.login")}</Link>
             </nav>
           </div>
+          <YasalBaglantilar t={t} />
           <p className="disclaimer">
             <strong>{t("footer.legalTitle")}</strong> {t("footer.legal")}
           </p>

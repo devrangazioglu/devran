@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -128,7 +129,14 @@ export default function RegisterForm({
       <OAuthButtons google={googleEnabled} apple={appleEnabled} next={next} kayit />
 
       <p className="dim" style={{ fontSize: 12, marginTop: 16, lineHeight: 1.6 }}>
-        {t("auth.registerTerms")}
+        {t("auth.registerTerms")}{" "}
+        <Link href="/kosullar" style={{ color: "var(--accent)" }}>
+          {t("legal.terms")}
+        </Link>
+        {" · "}
+        <Link href="/gizlilik" style={{ color: "var(--accent)" }}>
+          {t("legal.privacy")}
+        </Link>
       </p>
     </>
   );

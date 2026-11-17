@@ -115,7 +115,8 @@ export const postgresStore: UserStore = {
 
       await client.query(
         `update users
-            set name = $2, watchlist = $3::jsonb, settings = $4::jsonb, abonelik = $5::jsonb
+            set name = $2, watchlist = $3::jsonb, settings = $4::jsonb, abonelik = $5::jsonb,
+                password_hash = $6
           where email = $1`,
         [
           normalized,
@@ -123,9 +124,27 @@ export const postgresStore: UserStore = {
           JSON.stringify(user.watchlist),
           JSON.stringify(user.settings),
           JSON.stringify(user.abonelik),
+          user.passwordHash,
         ],
       );
       return toPublicUser(user) as PublicUser;
     });
+  },
+
+  async remove(email) {
+    await ensureSchema();
+    const rows = await query<{ id: string }>(`delete from users where email = $1 returning id`, [
+      normalizeEmail(email),
+    ]);
+    return rows.length > 0;
+  },
+
+  async findByDavetKodu(kod) {
+    await ensureSchema();
+    if (!/^[0-9a-f]{10}$/.test(kod)) return null;
+    const rows = await query<Row>(`${SELECT} where replace(id::text, '-', '') like $1 limit 1`, [
+      `${kod}%`,
+    ]);
+    return rows[0] ? toUser(rows[0]) : null;
   },
 };

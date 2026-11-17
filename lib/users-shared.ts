@@ -47,6 +47,21 @@ export type Subscription = {
    * Aynı analizi kısa süre içinde yeniden açmak kredi yakmaz.
    */
   sonAnalizler: Record<string, number>;
+  /**
+   * Ücretsiz Premium deneme. Hiç yoksa hesap denemeyi henüz kullanmamış
+   * demektir; her hesap bir kez dener. `kapandi`: bitişten sonraki ilk
+   * dokunuşta dönem baştan başlatıldı mı (bkz. credits.ts → donemiTazele).
+   */
+  deneme?: { bitis: number; kapandi: boolean };
+  /**
+   * Devreden ek kredi (davet ödülü). Aylık kredi bitince buradan harcanır,
+   * dönem yenilenince sıfırlanmaz.
+   */
+  bonus: number;
+  /** Bu hesabın davetiyle kayıt olan kişi sayısı (ödül sınırı için). */
+  davetSayisi: number;
+  /** Bu hesabı davet eden kullanıcının kimliği (bir kez yazılır). */
+  davetEden?: string;
 };
 
 export type User = {
@@ -106,6 +121,13 @@ export type UserStore = {
    * kullanıcı yoksa null döner.
    */
   update(email: string, mutate: (user: User) => void): Promise<PublicUser | null>;
+  /**
+   * Kullanıcıyı ve ona bağlı her şeyi (takip listesi, ayarlar, abonelik ve
+   * kredi defteri aynı kayıtta) geri dönüşsüz siler. Kayıt yoksa false.
+   */
+  remove(email: string): Promise<boolean>;
+  /** Davet kodundan (bkz. `davetKodu`) kullanıcıyı bulur. */
+  findByDavetKodu(kod: string): Promise<User | null>;
 };
 
 /* ────────────────────── Parola ────────────────────── */
@@ -166,7 +188,15 @@ export function buildUser(input: {
 /* ────────────────────── Abonelik ────────────────────── */
 
 export function yeniAbonelik(now = Date.now()): Subscription {
-  return { plan: "ucretsiz", faturalama: "aylik", donemBasi: now, harcanan: 0, sonAnalizler: {} };
+  return {
+    plan: "ucretsiz",
+    faturalama: "aylik",
+    donemBasi: now,
+    harcanan: 0,
+    sonAnalizler: {},
+    bonus: 0,
+    davetSayisi: 0,
+  };
 }
 
 /**
@@ -195,7 +225,35 @@ export function normalizeSubscription(raw: unknown, now = Date.now()): Subscript
         ? Math.floor(value.harcanan)
         : 0,
     sonAnalizler,
+    ...(value.deneme &&
+    typeof value.deneme === "object" &&
+    typeof value.deneme.bitis === "number" &&
+    Number.isFinite(value.deneme.bitis)
+      ? { deneme: { bitis: value.deneme.bitis, kapandi: value.deneme.kapandi === true } }
+      : {}),
+    bonus: sayiyaTamamla(value.bonus),
+    davetSayisi: sayiyaTamamla(value.davetSayisi),
+    ...(typeof value.davetEden === "string" && value.davetEden ? { davetEden: value.davetEden } : {}),
   };
+}
+
+/** Negatif olmayan tam sayı; bozuk değer 0. */
+function sayiyaTamamla(x: unknown): number {
+  return typeof x === "number" && Number.isFinite(x) && x > 0 ? Math.floor(x) : 0;
+}
+
+/**
+ * Davet kodu: kullanıcı kimliğinin tiresiz ilk 10 karakteri.
+ *
+ * Kimlik rastgele bir UUID olduğundan 10 onaltılık hane (≈10¹² olasılık)
+ * çakışmaya karşı fazlasıyla yeter; ayrı bir sütun ve dizin gerektirmez.
+ */
+export function davetKodu(userId: string): string {
+  return userId.replace(/-/g, "").slice(0, 10).toLowerCase();
+}
+
+export function gecerliDavetKodu(kod: unknown): kod is string {
+  return typeof kod === "string" && /^[0-9a-f]{10}$/.test(kod);
 }
 
 /** Depodan gelen ham ayarları eksiksiz bir UserSettings'e tamamlar. */

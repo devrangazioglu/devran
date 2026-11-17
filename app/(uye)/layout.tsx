@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import AppNav from "@/components/AppNav";
 import MobileTabBar from "@/components/MobileTabBar";
+import YasalBaglantilar from "@/components/YasalBaglantilar";
 import { getI18n } from "@/lib/i18n/server";
 import { safeNextPath, withNextPath } from "@/lib/next-path";
 
@@ -28,6 +29,7 @@ export default async function MemberLayout({
           <p className="disclaimer" style={{ marginTop: 0 }}>
             {t("footer.disclaimerShort")}
           </p>
+          <YasalBaglantilar t={t} />
         </div>
       </footer>
       <MobileTabBar />

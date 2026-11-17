@@ -1,6 +1,9 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { DAVET_CEREZI, yeniHesapKarsila } from "@/lib/credits";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { gecerliDavetKodu } from "@/lib/users-shared";
 import { createUser, UserStoreError } from "@/lib/users";
 
 export const runtime = "nodejs";
@@ -42,6 +45,10 @@ export async function POST(request: Request) {
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 409 });
     }
+
+    // 7 gün Premium denemesi ve davet bağlantısıyla geldiyse ödül.
+    const davet = (await cookies()).get(DAVET_CEREZI)?.value;
+    await yeniHesapKarsila(result.user.email, gecerliDavetKodu(davet) ? davet : null);
 
     return NextResponse.json({ user: result.user }, { status: 201 });
   } catch (error) {
