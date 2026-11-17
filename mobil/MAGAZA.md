@@ -14,7 +14,7 @@ metinler. `SITE` yazan yerlere `https://www.fibonex360.com` yazın.
 | Birincil kategori | Finans |
 | İkincil kategori | İş |
 | Paket kimliği | iOS: com.devrangaziolu.fibonex · Android: com.fibonex360.app |
-| SKU | fibonex360-ios-1 |
+| SKU | fibonex-ios |
 | Gizlilik politikası adresi | SITE/gizlilik |
 | Destek adresi | SITE/destek |
 | Pazarlama adresi | SITE |

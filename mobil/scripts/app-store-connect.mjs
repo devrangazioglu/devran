@@ -129,7 +129,7 @@ if (!uygulama) {
       "sonra bu iş akışını yeniden çalıştırın:\n\n" +
       "1. appstoreconnect.apple.com → **Uygulamalar** → **+** → **Yeni Uygulama**\n" +
       "2. Platform: **iOS** · Ad: **Fibonex360** · Birincil dil: **Türkçe**\n" +
-      `3. Paket kimliği: **${kimlik}** · SKU: **fibonex360-ios-1** · Erişim: **Tam erişim**\n` +
+      `3. Paket kimliği: **${kimlik}** · SKU: **fibonex-ios** · Erişim: **Tam erişim**\n` +
       "4. **Oluştur**",
   );
 }
