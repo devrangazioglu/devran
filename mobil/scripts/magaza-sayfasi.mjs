@@ -162,21 +162,27 @@ async function bilgiYereliYaz(dil, alanlar) {
 for (const dil of Object.keys(DILLER)) {
   await adim(`Ad, alt başlık, gizlilik adresi (${dil})`, async () => {
     const temel = { subtitle: DILLER[dil].altBaslik, privacyPolicyUrl: ADRESLER.gizlilik };
-    await bilgiYereliYaz(dil, temel);
     // Ad mağazada benzersiz olmalı; alınmışsa sıradaki aday denenir.
+    // Yeni dil eklerken Apple adı da zorunlu tutuyor, o yüzden birlikte gönderilir.
     let sonHata = null;
     for (const ad of AD_ADAYLARI) {
       try {
-        await bilgiYereliYaz(dil, { name: ad });
+        await bilgiYereliYaz(dil, { ...temel, name: ad });
         return `ad: ${ad}`;
       } catch (hata) {
         sonHata = hata;
+        if (hata?.durum === 401 || hata?.durum === 403) break;
       }
     }
-    elle.push(
-      `Uygulama adı (${dil}) değiştirilemedi: App Store Connect → Uygulama Bilgileri → Ad. Apple'ın cevabı: ${sonHata?.ayrinti ?? sonHata?.message}`,
-    );
-    return "ad değiştirilemedi, mevcut ad kaldı";
+    const varMi = bilgiYerelleri.data.some((y) => y.attributes.locale === dil);
+    if (varMi) {
+      await bilgiYereliYaz(dil, temel);
+      elle.push(
+        `Uygulama adı (${dil}) değiştirilemedi: App Store Connect → Uygulama Bilgileri → Ad. Apple'ın cevabı: ${sonHata?.ayrinti ?? sonHata?.message}`,
+      );
+      return "alt başlık yazıldı; ad değiştirilemedi";
+    }
+    throw sonHata;
   });
 }
 
@@ -214,10 +220,25 @@ await adim("Yaş derecelendirmesi", async () => {
     healthOrWellnessTopics: false,
   };
   const gonderilecek = Object.fromEntries(Object.entries(istenen).filter(([k]) => k in mevcut));
-  await istek(`/ageRatingDeclarations/${kayit.id}`, {
-    method: "PATCH",
-    body: { data: { type: "ageRatingDeclarations", id: kayit.id, attributes: gonderilecek } },
-  });
+  // Apple yeni bir soru eklediyse adını hata mesajında söylüyor: önce "hayır"
+  // (false), değer türü uymazsa "yok" (NONE) olarak yanıtlanır.
+  for (let deneme = 0; deneme < 12; deneme++) {
+    try {
+      await istek(`/ageRatingDeclarations/${kayit.id}`, {
+        method: "PATCH",
+        body: { data: { type: "ageRatingDeclarations", id: kayit.id, attributes: gonderilecek } },
+      });
+      break;
+    } catch (hata) {
+      const eksik = /attribute '([A-Za-z]+)'/.exec(hata?.ayrinti ?? "")?.[1];
+      if (!eksik || deneme === 11) throw hata;
+      if (!(eksik in gonderilecek)) gonderilecek[eksik] = false;
+      else if (gonderilecek[eksik] === false) gonderilecek[eksik] = YOK;
+      else throw hata;
+      istenen[eksik] = gonderilecek[eksik];
+      console.log(`  yaş sorusu eklendi: ${eksik} = ${gonderilecek[eksik]}`);
+    }
+  }
   const bilinmeyen = Object.keys(mevcut).filter(
     (k) => !(k in istenen) && mevcut[k] === null && !["kidsAgeBand", "ageRatingOverride", "ageRatingOverrideV2", "koreaAgeRatingOverride", "seventeenPlus", "developerAgeRatingInfoUrl"].includes(k),
   );
@@ -359,6 +380,7 @@ await adim("Ülkeler (Çin hariç tümü)", async () => {
     ulkeler.push(...sayfa.data.map((t) => t.id));
     sonraki = sayfa.links?.next ?? null;
   }
+  // Apple listede bütün ülkeleri istiyor; Çin "kapalı" olarak gönderilir.
   const acik = ulkeler.filter((id) => id !== "CHN");
   await istek(`/v2/appAvailabilities`, {
     method: "POST",
@@ -368,13 +390,13 @@ await adim("Ülkeler (Çin hariç tümü)", async () => {
         attributes: { availableInNewTerritories: true },
         relationships: {
           app: { data: { type: "apps", id: APP } },
-          territoryAvailabilities: { data: acik.map((id) => ({ type: "territoryAvailabilities", id: `\${${id}}` })) },
+          territoryAvailabilities: { data: ulkeler.map((id) => ({ type: "territoryAvailabilities", id: `\${${id}}` })) },
         },
       },
-      included: acik.map((id) => ({
+      included: ulkeler.map((id) => ({
         type: "territoryAvailabilities",
         id: `\${${id}}`,
-        attributes: { available: true },
+        attributes: { available: id !== "CHN" },
         relationships: { territory: { data: { type: "territories", id } } },
       })),
     },

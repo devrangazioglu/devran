@@ -55,6 +55,12 @@ export function istemci({ keyId, issuerId, p8 }) {
         headers: { Authorization: `Bearer ${jeton}`, "Content-Type": "application/json" },
         body: body ? JSON.stringify(body) : undefined,
       });
+      // Apple bazen geçerli jetonu da 401 ile reddediyor; yeni jetonla bir kez daha dene.
+      if (yanit.status === 401 && deneme === 0) {
+        jeton = yeniJeton();
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
       if (yanit.status === 429 || yanit.status >= 500) {
         await new Promise((r) => setTimeout(r, 2000 * (deneme + 1)));
         continue;
