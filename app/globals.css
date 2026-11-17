@@ -3352,3 +3352,66 @@ canvas {
     letter-spacing: 0;
   }
 }
+
+/* ── Yönetim paneli ───────────────────── */
+.yonetim-ozet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.yonetim-kutu strong {
+  display: block;
+  font-size: 24px;
+  margin-top: 4px;
+}
+.yonetim-detay {
+  margin-bottom: 18px;
+  border-color: rgba(143, 240, 164, 0.3);
+}
+.yonetim-satir {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-soft);
+}
+.yonetim-arac {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.yonetim-tablo-sarici {
+  overflow-x: auto;
+}
+.yonetim-tablo {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.yonetim-tablo th,
+.yonetim-tablo td {
+  text-align: left;
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+.yonetim-tablo th {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.yonetim-tablo tbody tr {
+  cursor: pointer;
+}
+.yonetim-tablo tbody tr:hover,
+.yonetim-tablo tbody tr.secili {
+  background: var(--card-hover);
+}
+@media (max-width: 560px) {
+  .yonetim-arac {
+    grid-template-columns: 1fr;
+  }
+}

@@ -29,6 +29,7 @@ import {
   type Plan,
   type PlanId,
 } from "./plans";
+import { yoneticiMi } from "./admin";
 import { store } from "./users";
 import {
   davetKodu,
@@ -52,6 +53,8 @@ export type KrediDurumu = {
   denemeHakki: boolean;
   /** Devreden ek kredi (kalan'ın içinde). */
   bonus: number;
+  /** Yönetici hesabı: kredi harcamaz, en üst planın sınırlarına sahiptir. */
+  yonetici: boolean;
   /** Aylık mı yıllık mı ödeniyor. */
   faturalama: Faturalama;
   /** Dönem başına düşen kredi + ek kredi. */
@@ -76,6 +79,8 @@ export type KrediOzeti = {
   donemSonu: number;
   /** Süren Premium denemesinin bitişi (ms) ya da null. */
   denemeBitis: number | null;
+  /** Yönetici: kalan kredi sınırsız gösterilir. */
+  yonetici: boolean;
 };
 
 export function krediOzeti(durum: KrediDurumu | null): KrediOzeti | null {
@@ -89,6 +94,7 @@ export function krediOzeti(durum: KrediDurumu | null): KrediOzeti | null {
     toplam: durum.toplam,
     donemSonu: durum.donemSonu,
     denemeBitis: durum.denemeBitis,
+    yonetici: durum.yonetici,
   };
 }
 
@@ -175,9 +181,34 @@ function budaAnahtarlar(abonelik: Subscription, now: number): Subscription {
   return { ...abonelik, sonAnalizler: Object.fromEntries(taze) };
 }
 
-export function durumOlustur(abonelik: Subscription, now = Date.now()): KrediDurumu {
+/** Yöneticiye gösterilen "sınırsız" kredi (JSON'da Infinity taşınamıyor). */
+export const YONETICI_KREDISI = 999_999;
+
+export function durumOlustur(
+  abonelik: Subscription,
+  now = Date.now(),
+  yonetici = false,
+): KrediDurumu {
+  if (yonetici) {
+    const ust = plan("ultimate");
+    return {
+      plan: ust,
+      kayitliPlan: abonelik.plan,
+      denemeBitis: null,
+      denemeHakki: false,
+      bonus: abonelik.bonus,
+      yonetici: true,
+      faturalama: abonelik.faturalama,
+      toplam: YONETICI_KREDISI,
+      harcanan: 0,
+      kalan: YONETICI_KREDISI,
+      donemBasi: abonelik.donemBasi,
+      donemSonu: abonelik.donemBasi + DONEM_MS,
+    };
+  }
   const secili = plan(etkinPlanId(abonelik, now));
   return {
+    yonetici: false,
     plan: secili,
     kayitliPlan: abonelik.plan,
     denemeBitis: denemeSuruyor(abonelik, now) ? abonelik.deneme!.bitis : null,
@@ -194,7 +225,11 @@ export function durumOlustur(abonelik: Subscription, now = Date.now()): KrediDur
 
 /** Kullanıcı kaydından, dönem yenilemesi uygulanmış durum. */
 export function kullanicidanDurum(user: User, now = Date.now()): KrediDurumu {
-  return durumOlustur(donemiTazele(normalizeSubscription(user.abonelik, now), now), now);
+  return durumOlustur(
+    donemiTazele(normalizeSubscription(user.abonelik, now), now),
+    now,
+    yoneticiMi(user.email),
+  );
 }
 
 /* ────────────────────── Okuma ────────────────────── */
@@ -210,7 +245,7 @@ export async function abonelikDurumu(email: string): Promise<KrediDurumu | null>
     await store().update(email, (user) => {
       const now = Date.now();
       user.abonelik = donemiTazele(normalizeSubscription(user.abonelik, now), now);
-      durum = durumOlustur(user.abonelik, now);
+      durum = durumOlustur(user.abonelik, now, yoneticiMi(user.email));
     });
   } catch (error) {
     console.error("Kredi durumu okunamadı:", error);
@@ -241,6 +276,13 @@ export async function krediHarca(
       const now = Date.now();
       const abonelik = donemiTazele(normalizeSubscription(user.abonelik, now), now);
       const oncekiOdeme = abonelik.sonAnalizler[anahtar];
+      const yonetici = yoneticiMi(user.email);
+      if (yonetici) {
+        // Yönetici kredi harcamaz.
+        user.abonelik = abonelik;
+        sonuc = { ok: true, ucretsiz: true, durum: durumOlustur(abonelik, now, true) };
+        return;
+      }
       const ucretsiz = oncekiOdeme !== undefined && now - oncekiOdeme < TEKRAR_UCRETSIZ_MS;
 
       if (!ucretsiz) {

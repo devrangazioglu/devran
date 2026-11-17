@@ -147,4 +147,12 @@ export const postgresStore: UserStore = {
     ]);
     return rows[0] ? toUser(rows[0]) : null;
   },
+
+  async list(limit) {
+    await ensureSchema();
+    const rows = await query<Row>(`${SELECT} order by created_at desc limit $1`, [
+      Math.max(1, Math.min(limit, 5000)),
+    ]);
+    return rows.map(toUser);
+  },
 };

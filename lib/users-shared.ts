@@ -133,6 +133,8 @@ export type UserStore = {
   remove(email: string): Promise<boolean>;
   /** Davet kodundan (bkz. `davetKodu`) kullanıcıyı bulur. */
   findByDavetKodu(kod: string): Promise<User | null>;
+  /** Yönetim paneli için: en yeni kayıttan başlayarak en fazla `limit` kullanıcı. */
+  list(limit: number): Promise<User[]>;
 };
 
 /* ────────────────────── Parola ────────────────────── */

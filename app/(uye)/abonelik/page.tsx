@@ -39,6 +39,12 @@ export default async function AbonelikSayfasi() {
         </div>
       </div>
 
+      {durum?.yonetici && (
+        <div className="notice deneme-notu" style={{ marginBottom: 18 }}>
+          <strong>🛡️ {t("nav.admin")}</strong> · {t("sub.adminNote")}
+        </div>
+      )}
+
       {durum?.denemeBitis && (
         <div className="notice deneme-notu" style={{ marginBottom: 18 }}>
           <strong>✨ {t("trial.active", { gun: kalanGun })}</strong>{" "}
@@ -75,9 +81,9 @@ export default async function AbonelikSayfasi() {
               </span>
             </div>
             <div className="credit-numbers">
-              <b>{durum.kalan}</b>
+              <b>{durum.yonetici ? "∞" : durum.kalan}</b>
               <span>
-                / {durum.toplam} {t("credit.remaining")}
+                / {durum.yonetici ? "∞" : durum.toplam} {t("credit.remaining")}
               </span>
             </div>
           </div>

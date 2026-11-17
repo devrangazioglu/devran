@@ -292,3 +292,48 @@ test("plan değişimi ek krediyi ve deneme geçmişini korur", async () => {
   assert.equal(durum?.bonus, 30);
   assert.equal(durum?.denemeHakki, false);
 });
+
+/* ────────────────────── Yönetici ────────────────────── */
+
+test("yönetici kredi harcamaz ve Ultimate sınırlarına sahiptir", async () => {
+  const email = await yeniKullanici();
+  const onceki = process.env.ADMIN_EPOSTALAR;
+  process.env.ADMIN_EPOSTALAR = `baska@ornek.com, ${email.toUpperCase()}`;
+  try {
+    const durum = await abonelikDurumu(email);
+    assert.equal(durum?.yonetici, true);
+    assert.equal(durum?.plan.id, "ultimate");
+    for (let i = 0; i < 5; i++) {
+      const sonuc = await krediHarca(email, `kripto:Y${i}:1h`);
+      assert.equal(sonuc.ok, true);
+    }
+    assert.equal((await abonelikDurumu(email))?.harcanan, 0, "yönetici kredisi düşmemeli");
+  } finally {
+    if (onceki === undefined) delete process.env.ADMIN_EPOSTALAR;
+    else process.env.ADMIN_EPOSTALAR = onceki;
+  }
+  // Yönetici listesinden çıkınca normal hesaba döner.
+  const normal = await abonelikDurumu(email);
+  assert.equal(normal?.yonetici, false);
+  assert.equal(normal?.plan.id, "ucretsiz");
+});
+
+test("yönetim: ek kredi verilir, geri alınır, deneme hakkı sıfırlanır", async () => {
+  const { bonusVer, denemeSifirla, yonetimVerisi } = await import("../lib/yonetim");
+  const email = await yeniKullanici();
+  assert.equal(await bonusVer(email, 100), true);
+  assert.equal((await abonelikDurumu(email))?.bonus, 100);
+  assert.equal(await bonusVer(email, -500), true);
+  assert.equal((await abonelikDurumu(email))?.bonus, 0, "sıfırın altına inmez");
+
+  await denemeBaslat(email);
+  assert.equal((await abonelikDurumu(email))?.denemeHakki, false);
+  assert.equal(await denemeSifirla(email), true);
+  assert.equal((await abonelikDurumu(email))?.denemeHakki, true);
+
+  const veri = await yonetimVerisi();
+  const satir = veri.uyeler.find((u) => u.email === email);
+  assert.ok(satir);
+  assert.equal("passwordHash" in (satir as object), false, "parola özeti dışarı verilmez");
+  assert.ok(veri.ozet.toplam >= 1);
+});

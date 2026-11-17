@@ -149,4 +149,9 @@ export const fileStore: UserStore = {
     const users = await readAll();
     return users.find((u) => davetKodu(u.id) === kod) ?? null;
   },
+
+  async list(limit) {
+    const users = await readAll();
+    return [...users].sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+  },
 };

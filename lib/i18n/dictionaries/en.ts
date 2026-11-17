@@ -1177,4 +1177,6 @@ export const en: Dictionary = {
   "consent.point3": "You make your own investment decisions and are responsible for their outcome. You can lose all the money you invest.",
   "consent.accept": "I have read and understood",
   "legal.spk": "Legal notice: The information, commentary and outlooks here are not investment advice. Investment advice is provided only by licensed institutions under a written advisory agreement. The outlooks are based on automated calculations and may not suit your financial situation or your risk and return preferences, so making investment decisions based solely on this information may not produce results that meet your expectations.",
+  "nav.admin": "Admin",
+  "sub.adminNote": "Admin account: you never spend credits and every limit of the top plan is open.",
 };

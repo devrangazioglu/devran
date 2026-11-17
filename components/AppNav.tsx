@@ -7,6 +7,7 @@ import AssetSearch from "./AssetSearch";
 import LanguageSwitcher from "./LanguageSwitcher";
 import MobileMenu from "./MobileMenu";
 import SignOutButton from "./SignOutButton";
+import { yoneticiMi } from "@/lib/admin";
 import { kullanicidanDurum } from "@/lib/credits";
 import { getI18n } from "@/lib/i18n/server";
 import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS } from "@/lib/markets/types";
@@ -30,6 +31,8 @@ export default async function AppNav() {
     { href: "/dogruluk", label: t("nav.accuracy") },
     { href: "/abonelik", label: t("nav.subscription") },
     { href: "/ayarlar", label: t("nav.settings") },
+    // Yönetim bağlantısı yalnızca yöneticide görünür.
+    ...(yoneticiMi(session?.user?.email) ? [{ href: "/yonetim", label: t("nav.admin") }] : []),
   ];
 
   const marketLinks = [
@@ -70,7 +73,7 @@ export default async function AppNav() {
               title={t("credit.remaining")}
             >
               <span aria-hidden>◆</span>
-              {durum.kalan}
+              {durum.yonetici ? "∞" : durum.kalan}
             </Link>
           )}
           <span className="only-desktop">
