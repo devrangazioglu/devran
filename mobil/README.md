@@ -38,7 +38,7 @@ yükler. Sertifika ya da profil dosyası tutmak gerekmez.
 
 **Bir kerelik hazırlık**
 
-1. **Team ID:** developer.apple.com → Account → Membership details → *Team ID* (10 karakter).
+1. **Team ID:** iş akışında hazır (`NM3HFXD52H`); başka bir ekip kullanılacaksa `APPLE_TEAM_ID` secret'ı girin.
 2. **API anahtarı:** appstoreconnect.apple.com → Kullanıcılar ve Erişim → Entegrasyonlar →
    App Store Connect API → Ekip Anahtarları → **+**. Ad: `GitHub`, Erişim: **Admin**.
    *Issuer ID* ve *Key ID*'yi not edin, `.p8` dosyasını indirin (yalnızca bir kez indirilebilir).
@@ -46,7 +46,6 @@ yükler. Sertifika ya da profil dosyası tutmak gerekmez.
 
    | Ad | Değer |
    |---|---|
-   | `APPLE_TEAM_ID` | Team ID |
    | `ASC_KEY_ID` | Key ID |
    | `ASC_ISSUER_ID` | Issuer ID |
    | `ASC_KEY_P8` | `.p8` dosyasının tüm içeriği (BEGIN/END satırları dahil) |
