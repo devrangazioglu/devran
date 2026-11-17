@@ -101,7 +101,7 @@ export const tr = {
   "seo.dunya.title": "{ulke} teknik analiz ve hisse görünümü",
   "seo.dunya.description": "{endeks} endeksi ve {ulke} hisseleri için teknik ve temel analiz: 20'den fazla gösterge, destek-direnç seviyeleri ve gerekçesiyle birlikte teknik görünüm.",
   "market.dunya.sec": "Dünya borsaları",
-  "market.dunya.secBos": "🌍 Dünya borsası seçin",
+  "market.dunya.secBos": "Dünya borsası seçin",
   "home.dunyaTitle": "Dünya borsaları",
   "home.dunyaSub": "ABD dışında en çok işlem gören borsalar. Her ülkenin ana endeksi ve en büyük şirketleri, aynı analiz motoruyla.",
   "market.closedNote": "Bu piyasa seans saatleri dışında kapalıdır; son kapanış verisi gösterilir.",
@@ -187,7 +187,7 @@ export const tr = {
   "home.feature.timeframes.desc": "1 dakikadan haftalığa kadar periyotlar ve trend uyumu",
   "home.feature.comment": "Sade dille yorum",
   "home.feature.comment.desc": "Görünümün gerekçesi, riskleri ve seviyeleri düz metin olarak",
-  "home.feature.plan": "İşlem planı",
+  "home.feature.plan": "Senaryo ve seviyeler",
   "home.feature.plan.desc": "ATR tabanlı geçersizlik seviyesi, teknik seviyeler ve risk/ödül oranı",
   "home.feature.scanner": "Teknik tarayıcı",
   "home.feature.scanner.desc": "Onlarca varlığı tek seferde tarayıp teknik görünümü en güçlü olanları sıralar",
@@ -366,7 +366,7 @@ export const tr = {
   "asset.analysisComment": "Analiz yorumu",
   "asset.highlights": "Öne çıkanlar",
   "asset.risks": "Riskler ve uyarılar",
-  "asset.plan": "İşlem planı",
+  "asset.plan": "Senaryo ve teknik seviyeler",
   "asset.planLong": "YÜKSELİŞ SENARYOSU",
   "asset.planShort": "DÜŞÜŞ SENARYOSU",
   "asset.planAdvisory": "Görünüm NÖTR olduğu için bu senaryo yalnızca bilgi amaçlıdır.",
@@ -700,8 +700,8 @@ export const tr = {
   "dogru.colSell": "Düşüş tuttu",
   "dogru.recent": "Son kayıtlar",
   "dogru.pending": "bekliyor",
-  "dogru.hit": "✓ tuttu",
-  "dogru.miss": "✗ tutmadı",
+  "dogru.hit": "tuttu",
+  "dogru.miss": "tutmadı",
   "dogru.howTitle": "Nasıl ölçülüyor?",
   "dogru.how1": "Liste sabit: BIST'ten 8, ABD'den 8 hisse, 4 emtia/döviz ve 4 kripto. Varlıklar iyi sonuç verdiği için seçilmedi.",
   "dogru.how2": "Görünüm günlük grafikten, gün kapandıktan sonra alınır. {ufuk} işlem günü sonraki kapanış fiyatı sonuç sayılır.",
@@ -874,7 +874,7 @@ export const tr = {
 
   "market.kripto.aboutTitle": "Kripto paralarda teknik analiz nasıl okunur?",
   "market.kripto.about":
-    "Kripto piyasası 7 gün 24 saat açıktır; bu yüzden hafta sonu boşluğu yoktur ve göstergeler kesintisiz veriyle çalışır. Buradaki tabloda her parite için son fiyat, günlük değişim ve işlem hacmi yer alır; bir satıra tıkladığınızda o parite için 20'den fazla gösterge, destek-direnç seviyeleri, formasyonlar ve bir işlem planı hesaplanır. Yüksek volatilite nedeniyle stop mesafesi ATR'ye göre genişletilir.",
+    "Kripto piyasası 7 gün 24 saat açıktır; bu yüzden hafta sonu boşluğu yoktur ve göstergeler kesintisiz veriyle çalışır. Buradaki tabloda her parite için son fiyat, günlük değişim ve işlem hacmi yer alır; bir satıra tıkladığınızda o parite için 20'den fazla gösterge, destek-direnç seviyeleri, formasyonlar ve bir senaryo hesaplanır. Yüksek volatilite nedeniyle geçersizlik mesafesi ATR'ye göre genişletilir.",
   "market.abd.aboutTitle": "Amerikan hisselerinde teknik görünüm nasıl hesaplanır?",
   "market.abd.about":
     "Amerikan borsası hafta içi belirli saatlerde açıktır; kapanış sonrası hesaplanan görünüm bir sonraki seansın açılışında değişebilir. Listede endeksler ve işlem hacmi en yüksek hisseler bulunur. Her hisse için trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stokastik), volatilite (Bollinger, ATR) ve hacim göstergeleri ayrı ayrı oy verir; görünüm bu oyların ağırlıklı ortalamasıdır.",
@@ -916,7 +916,7 @@ export const tr = {
     "Veri sağlayıcının düzeltilmiş kapanış serisi kullanılır; temettü ve bölünme kaynaklı boşluklar bu seride düzeltilmiş olarak gelir.",
   "market.bist.faq3.q": "Analiz Türkçe mi?",
   "market.bist.faq3.a":
-    "Evet. Gösterge yorumları ve işlem planı Türkçe üretilir; ayrıca İngilizce dahil sekiz dilde arayüz desteği vardır.",
+    "Evet. Gösterge yorumları ve senaryolar Türkçe üretilir; ayrıca İngilizce dahil sekiz dilde arayüz desteği vardır.",
 
   "market.emtia.faq1.q": "Dolar/TL kuru nereden geliyor?",
   "market.emtia.faq1.a":
@@ -1205,6 +1205,9 @@ export const tr = {
   "sub.adminNote": "Yönetici hesabı: kredi harcamazsınız ve en üst planın bütün hakları açıktır.",
   "settings.accountType": "Hesap türü",
   "settings.member": "Üye",
+  "nav.short.scanner": "Tarayıcı",
+  "nav.short.watchlist": "Takip",
+  "nav.short.subscription": "Abonelik",
 } as const;
 
 export type DictionaryKey = keyof typeof tr;

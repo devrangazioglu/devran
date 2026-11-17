@@ -14,6 +14,7 @@ import { getJson, type MarketsResponse, type ScanResponse, type ScanRow } from "
 import { formatCompact, formatNumber, formatPrice, formatRelative } from "@/lib/format";
 import { displayTicker } from "@/lib/markets/instruments";
 import { MARKETS, AKTIF_MARKET_IDS, parseInstrumentId, type Interval, type MarketId, type Quote, varsayilanPeriyot } from "@/lib/markets/types";
+import Ikon from "@/components/Ikon";
 
 const SCAN_SIZE = 30;
 
@@ -177,7 +178,11 @@ export default function PanelClient({
                   disabled={!periyotAcik(value)}
                   title={periyotAcik(value) ? undefined : t("credit.periodLocked")}
                 >
-                  {periyotAcik(value) ? value : `🔒 ${value}`}
+                  {periyotAcik(value) ? value : (
+                    <>
+                      <Ikon ad="kilit" boyut={12} /> {value}
+                    </>
+                  )}
                 </button>
               ))}
           </div>
@@ -189,7 +194,7 @@ export default function PanelClient({
             }}
             disabled={loadingMarkets || loadingScan}
           >
-            {loadingMarkets || loadingScan ? <span className="spinner" /> : "↻"}{" "}
+            {loadingMarkets || loadingScan ? <span className="spinner" /> : <Ikon ad="yenile" boyut={14} />}{" "}
             {t("common.refresh")}
           </button>
         </div>

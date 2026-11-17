@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useI18n } from "./I18nProvider";
 import { LOCALES, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { localeHref, splitLocale } from "@/lib/i18n/routing";
+import Ikon from "./Ikon";
 
 /**
  * Dil seçici.
@@ -56,7 +57,7 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
         aria-label={t("common.language")}
         aria-expanded={open}
       >
-        <span aria-hidden>🌐</span>
+        <Ikon ad="kure" boyut={14} />
         <span>{compact ? active.short : active.name}</span>
       </button>
 

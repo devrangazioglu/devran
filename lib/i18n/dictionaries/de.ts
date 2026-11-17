@@ -274,7 +274,7 @@ export const de: Partial<Dictionary> = {
   "asset.analysisComment": "Analyse-Kommentar",
   "asset.highlights": "Höhepunkte",
   "asset.risks": "Risiken und Warnungen",
-  "asset.plan": "Handelsplan",
+  "asset.plan": "Szenario und technische Niveaus",
   "asset.planLong": "BULLISCHES SZENARIO",
   "asset.planShort": "BÄRISCHES SZENARIO",
   "asset.planAdvisory": "Der Ausblick ist NEUTRAL; dieses Szenario dient nur zur Information.",

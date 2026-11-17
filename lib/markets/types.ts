@@ -158,7 +158,7 @@ export type MarketMeta = {
   intervals: Interval[];
   /** Fiyatların varsayılan para birimi. */
   currency: string;
-  /** Ülke bayrağı (dünya borsaları için); seçicide adın önünde durur. */
+  /** Ülkenin ISO kodu ("JP"); dünya borsalarında ülke rozetinde gösterilir (bkz. UlkeRozeti). */
   bayrak?: string;
   /** 7/24 açık mı (kripto) yoksa seans saatleri mi var. */
   alwaysOpen: boolean;
@@ -235,19 +235,19 @@ export const MARKETS: Record<MarketId, MarketMeta> = {
  */
 function dunyaBorsalari(): Record<(typeof DUNYA_MARKET_IDS)[number], MarketMeta> {
   const tablo: Record<(typeof DUNYA_MARKET_IDS)[number], { slug: string; currency: string; bayrak: string; gecikmeDk: number }> = {
-    cin: { slug: "cin-borsasi", currency: "CNY", bayrak: "🇨🇳", gecikmeDk: 15 },
-    japonya: { slug: "japonya-borsasi", currency: "JPY", bayrak: "🇯🇵", gecikmeDk: 20 },
-    hongkong: { slug: "hong-kong-borsasi", currency: "HKD", bayrak: "🇭🇰", gecikmeDk: 15 },
-    hindistan: { slug: "hindistan-borsasi", currency: "INR", bayrak: "🇮🇳", gecikmeDk: 15 },
+    cin: { slug: "cin-borsasi", currency: "CNY", bayrak: "CN", gecikmeDk: 15 },
+    japonya: { slug: "japonya-borsasi", currency: "JPY", bayrak: "JP", gecikmeDk: 20 },
+    hongkong: { slug: "hong-kong-borsasi", currency: "HKD", bayrak: "HK", gecikmeDk: 15 },
+    hindistan: { slug: "hindistan-borsasi", currency: "INR", bayrak: "IN", gecikmeDk: 15 },
     // Tarayıcı bazı Londra satırlarını "streaming" gösteriyor ama hisse başına
     // quote oturumu 15 dk gecikmeli bildiriyor (LSE:AZN); temkinli olan yazılır.
-    ingiltere: { slug: "ingiltere-borsasi", currency: "GBX", bayrak: "🇬🇧", gecikmeDk: 15 },
-    almanya: { slug: "almanya-borsasi", currency: "EUR", bayrak: "🇩🇪", gecikmeDk: 15 },
-    fransa: { slug: "fransa-borsasi", currency: "EUR", bayrak: "🇫🇷", gecikmeDk: 15 },
-    kanada: { slug: "kanada-borsasi", currency: "CAD", bayrak: "🇨🇦", gecikmeDk: 15 },
-    kore: { slug: "kore-borsasi", currency: "KRW", bayrak: "🇰🇷", gecikmeDk: 20 },
-    tayvan: { slug: "tayvan-borsasi", currency: "TWD", bayrak: "🇹🇼", gecikmeDk: 15 },
-    suudi: { slug: "suudi-arabistan-borsasi", currency: "SAR", bayrak: "🇸🇦", gecikmeDk: 15 },
+    ingiltere: { slug: "ingiltere-borsasi", currency: "GBX", bayrak: "GB", gecikmeDk: 15 },
+    almanya: { slug: "almanya-borsasi", currency: "EUR", bayrak: "DE", gecikmeDk: 15 },
+    fransa: { slug: "fransa-borsasi", currency: "EUR", bayrak: "FR", gecikmeDk: 15 },
+    kanada: { slug: "kanada-borsasi", currency: "CAD", bayrak: "CA", gecikmeDk: 15 },
+    kore: { slug: "kore-borsasi", currency: "KRW", bayrak: "KR", gecikmeDk: 20 },
+    tayvan: { slug: "tayvan-borsasi", currency: "TWD", bayrak: "TW", gecikmeDk: 15 },
+    suudi: { slug: "suudi-arabistan-borsasi", currency: "SAR", bayrak: "SA", gecikmeDk: 15 },
   };
   return Object.fromEntries(
     Object.entries(tablo).map(([id, v]) => [

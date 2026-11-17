@@ -4,6 +4,7 @@ import { useI18n } from "./I18nProvider";
 import type { SignalLabel, Verdict } from "@/lib/analysis";
 import { formatPercent } from "@/lib/format";
 import { MARKETS, type AssetKind, type MarketId } from "@/lib/markets/types";
+import { UlkeRozeti } from "./Ikon";
 
 /* ────────────────────────── Varlık ikonu ────────────────────────── */
 
@@ -83,7 +84,7 @@ export function MarketBadge({ market }: { market: MarketId }) {
       className="market-badge"
       style={{ color: tint(market), borderColor: `${tint(market)}55` }}
     >
-      {MARKETS[market].bayrak ? `${MARKETS[market].bayrak} ` : ""}
+      {MARKETS[market].bayrak && <UlkeRozeti kod={MARKETS[market].bayrak!} />}
       {t(`market.${market}` as "market.kripto")}
     </span>
   );

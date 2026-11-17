@@ -274,7 +274,7 @@ export const fr: Partial<Dictionary> = {
   "asset.analysisComment": "Commentaire d'analyse",
   "asset.highlights": "Points clés",
   "asset.risks": "Risques et avertissements",
-  "asset.plan": "Plan de trade",
+  "asset.plan": "Scénario et niveaux techniques",
   "asset.planLong": "SCÉNARIO HAUSSIER",
   "asset.planShort": "SCÉNARIO BAISSIER",
   "asset.planAdvisory": "La perspective est NEUTRE ; ce scénario est donné à titre d'information.",

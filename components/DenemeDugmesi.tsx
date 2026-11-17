@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useI18n } from "./I18nProvider";
+import Ikon from "./Ikon";
 
 /** 7 gün ücretsiz Premium denemesini başlatan düğme. */
 export default function DenemeDugmesi({ className = "btn btn-primary" }: { className?: string }) {
@@ -28,7 +29,7 @@ export default function DenemeDugmesi({ className = "btn btn-primary" }: { class
   return (
     <>
       <button className={className} type="button" onClick={baslat} disabled={bekliyor}>
-        {bekliyor ? <span className="spinner" /> : "✨"} {t("trial.start")}
+        {bekliyor ? <span className="spinner" /> : <Ikon ad="parilti" boyut={15} />} {t("trial.start")}
       </button>
       {hata && <div className="notice notice-error" style={{ marginTop: 10 }}>{hata}</div>}
     </>

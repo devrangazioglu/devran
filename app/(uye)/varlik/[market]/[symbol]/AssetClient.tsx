@@ -42,6 +42,7 @@ import {
 } from "@/lib/format";
 import { anlikMi, varlikPeriyotlari } from "@/lib/markets/anlik";
 import { MARKETS, type Instrument, type Interval } from "@/lib/markets/types";
+import Ikon from "@/components/Ikon";
 
 export default function AssetClient({
   instrument,
@@ -166,20 +167,27 @@ export default function AssetClient({
                   disabled={!acik}
                   title={acik ? undefined : t("credit.periodLocked")}
                 >
-                  {acik ? value : `🔒 ${value}`}
+                  {acik ? (
+                    value
+                  ) : (
+                    <>
+                      <Ikon ad="kilit" boyut={12} /> {value}
+                    </>
+                  )}
                 </button>
               );
             })}
           </div>
           <button className="btn btn-ghost btn-sm" onClick={toggleWatch} disabled={savingWatch}>
-            {watched ? `★ ${t("watch.unfollow")}` : `☆ ${t("watch.follow")}`}
+            <Ikon ad="yildiz" boyut={14} dolu={watched} />{" "}
+            {watched ? t("watch.unfollow") : t("watch.follow")}
           </button>
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => void load(period)}
             disabled={loading}
           >
-            {loading ? <span className="spinner" /> : "↻"} {t("common.refresh")}
+            {loading ? <span className="spinner" /> : <Ikon ad="yenile" boyut={14} />} {t("common.refresh")}
           </button>
           {analysis && (
             <PaylasDugmesi

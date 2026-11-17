@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { useI18n } from "./I18nProvider";
+import Ikon from "./Ikon";
 
 /**
  * Paylaş düğmesi.
@@ -53,7 +54,7 @@ export default function PaylasDugmesi({
 
   return (
     <button className={className} type="button" onClick={paylas}>
-      <span aria-hidden>{kopyalandi ? "✓" : "↗"}</span> {kopyalandi ? t("share.copied") : (etiket ?? t("share.button"))}
+      <Ikon ad={kopyalandi ? "onay" : "paylas"} boyut={14} /> {kopyalandi ? t("share.copied") : (etiket ?? t("share.button"))}
     </button>
   );
 }

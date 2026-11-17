@@ -12,6 +12,7 @@ import { useI18n } from "./I18nProvider";
 import { MarketBadge } from "./ui";
 import { getJson, type SearchResponse } from "@/lib/api-types";
 import type { Instrument } from "@/lib/markets/types";
+import Ikon from "./Ikon";
 
 export default function AssetSearch({
   size = "normal",
@@ -101,7 +102,7 @@ export default function AssetSearch({
     <div className={`search ${size === "large" ? "search-large" : ""}`} ref={wrapper}>
       <div className="search-field">
         <span className="search-icon" aria-hidden>
-          ⌕
+          <Ikon ad="ara" boyut={15} />
         </span>
         <input
           className="input search-input"

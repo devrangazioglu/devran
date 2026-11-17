@@ -15,6 +15,7 @@ import { localeHref } from "@/lib/i18n/routing";
 import { faqJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { getQuotes } from "@/lib/markets/provider";
 import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS, DUNYA_MARKET_IDS, type MarketId, type Quote } from "@/lib/markets/types";
+import Ikon, { UlkeRozeti, type IkonAdi } from "@/components/Ikon";
 
 // Tanıtım sayfası dakikada bir yeniden üretilir.
 export const revalidate = 60;
@@ -140,7 +141,9 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
                   {t("home.ctaSecondary")}
                 </a>
               </div>
-              <p className="deneme-rozeti">✨ {t("trial.badge")}</p>
+              <p className="deneme-rozeti">
+                <Ikon ad="parilti" boyut={14} /> {t("trial.badge")}
+              </p>
             </Reveal>
           </div>
         </div>
@@ -205,7 +208,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
         <div className="container">
           <Reveal>
             <p className="eyebrow">
-              <em>🌍 {t("market.dunya")}</em>
+              <em>{t("market.dunya")}</em>
             </p>
             <h2 className="section-title">{t("home.dunyaTitle")}</h2>
             <p className="section-sub">{t("home.dunyaSub")}</p>
@@ -214,9 +217,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
             {DUNYA_MARKET_IDS.map((id, index) => (
               <Reveal key={id} delay={Math.min(index, 6) * 50}>
                 <Link href={yol(`/piyasa/${MARKETS[id].slug}`)} className="dunya-kart">
-                  <span className="bayrak" aria-hidden>
-                    {MARKETS[id].bayrak}
-                  </span>
+                  <UlkeRozeti kod={MARKETS[id].bayrak ?? ""} />
                   <span>
                     <strong>{t(`market.${id}` as "market.kripto")}</strong>
                     <small>{t(`market.${id}.desc` as "market.kripto.desc")}</small>
@@ -246,16 +247,18 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
 
             <div className="feature-grid">
               {[
-                ["📊", "home.feature.indicators", "home.feature.indicators.desc"],
-                ["🌍", "home.feature.markets", "home.feature.markets.desc"],
-                ["🧭", "home.feature.timeframes", "home.feature.timeframes.desc"],
-                ["🗣️", "home.feature.comment", "home.feature.comment.desc"],
-                ["🎯", "home.feature.plan", "home.feature.plan.desc"],
-                ["🔎", "home.feature.scanner", "home.feature.scanner.desc"],
+                ["grafik", "home.feature.indicators", "home.feature.indicators.desc"],
+                ["kure", "home.feature.markets", "home.feature.markets.desc"],
+                ["pusula", "home.feature.timeframes", "home.feature.timeframes.desc"],
+                ["mesaj", "home.feature.comment", "home.feature.comment.desc"],
+                ["hedef", "home.feature.plan", "home.feature.plan.desc"],
+                ["radar", "home.feature.scanner", "home.feature.scanner.desc"],
               ].map(([icon, title, desc], index) => (
                 <Reveal key={title} delay={index * 60}>
                   <div className="feature">
-                    <span className="feature-icon">{icon}</span>
+                    <span className="feature-icon">
+                      <Ikon ad={icon as IkonAdi} boyut={18} />
+                    </span>
                     <div>
                       <strong>{t(title as "home.feature.plan")}</strong>
                       <span>{t(desc as "home.feature.plan.desc")}</span>
@@ -429,7 +432,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
                   {t(`market.${id}` as "market.kripto")}
                 </Link>
               ))}
-              <a href="#dunya">🌍 {t("market.dunya")}</a>
+              <a href="#dunya">{t("market.dunya")}</a>
               <Link href={yol("/planlar")}>{t("nav.plans")}</Link>
               <a href="#nasil">{t("nav.how")}</a>
               <a href="#sss">{t("nav.faq")}</a>

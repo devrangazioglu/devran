@@ -48,7 +48,7 @@ export default function PiyasaSecici({
               { value: "", label: t("market.dunya.secBos") },
               ...dunya.map((id) => ({
                 value: id,
-                label: `${MARKETS[id].bayrak ?? ""} ${t(`market.${id}` as "market.kripto")}`.trim(),
+                label: t(`market.${id}` as "market.kripto"),
               })),
             ]}
             onChange={(secilen) => {

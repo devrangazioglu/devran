@@ -12,6 +12,7 @@ import { kullanicidanDurum } from "@/lib/credits";
 import { getI18n } from "@/lib/i18n/server";
 import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS } from "@/lib/markets/types";
 import { findUserByEmail } from "@/lib/users";
+import Ikon from "./Ikon";
 
 /** Üye alanının üst menüsü. */
 export default async function AppNav() {
@@ -40,7 +41,7 @@ export default async function AppNav() {
       href: `/piyasa/${MARKETS[id].slug}`,
       label: t(`market.${id}` as "market.kripto"),
     })),
-    { href: "/#dunya", label: `🌍 ${t("market.dunya")}` },
+    { href: "/#dunya", label: t("market.dunya") },
   ];
 
   return (
@@ -72,7 +73,7 @@ export default async function AppNav() {
               className={`credit-chip${durum.kalan === 0 ? " credit-chip-empty" : ""}`}
               title={t("credit.remaining")}
             >
-              <span aria-hidden>◆</span>
+              <Ikon ad="elmas" boyut={11} dolu />
               {durum.yonetici ? "∞" : durum.kalan}
             </Link>
           )}

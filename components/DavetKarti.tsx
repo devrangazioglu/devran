@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useI18n } from "./I18nProvider";
 import PaylasDugmesi from "./PaylasDugmesi";
+import Ikon from "./Ikon";
 
 /**
  * "Davet et, kredi kazan" kartı.
@@ -28,7 +29,9 @@ export default function DavetKarti({
 
   return (
     <div className="card davet-karti">
-      <div className="card-title">🎁 {t("invite.title")}</div>
+      <div className="card-title ikonlu-baslik">
+        <Ikon ad="hediye" boyut={18} /> {t("invite.title")}
+      </div>
       <p className="muted" style={{ fontSize: 14, marginTop: 0 }}>
         {t("invite.text", { odul })}
       </p>

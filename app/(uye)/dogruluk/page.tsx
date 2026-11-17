@@ -14,6 +14,7 @@ import { intlTag, type Translator } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
 import { isBuySignal, isSellSignal } from "@/lib/analysis";
 import { istatistikHesapla, kayitlariOku, UFUK, type Istatistik, type YonOzeti } from "@/lib/sinyal-gunlugu";
+import Ikon from "@/components/Ikon";
 
 export const dynamic = "force-dynamic";
 
@@ -220,7 +221,12 @@ export default async function DogrulukSayfasi() {
                         {k.getiri === null ? t("dogru.pending") : formatPercent(k.getiri, intl)}
                       </span>
                       <span className={tuttu === null ? "dim" : tuttu ? "up" : "down"}>
-                        {tuttu === null ? "" : tuttu ? t("dogru.hit") : t("dogru.miss")}
+                        {tuttu === null ? "" : (
+                          <span className="ikonlu-baslik">
+                            <Ikon ad={tuttu ? "onay" : "kapat"} boyut={13} />
+                            {tuttu ? t("dogru.hit") : t("dogru.miss")}
+                          </span>
+                        )}
                       </span>
                     </div>
                   );

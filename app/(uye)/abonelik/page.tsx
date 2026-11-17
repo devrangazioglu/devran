@@ -7,6 +7,7 @@ import { intlTag } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
 import { odemeAcik, odemeTestModu } from "@/lib/odeme";
 import { findUserByEmail } from "@/lib/users";
+import Ikon from "@/components/Ikon";
 
 // Üye alanı: içerik kişiye özel, arama sonuçlarında yeri yok.
 export const metadata = {
@@ -41,13 +42,17 @@ export default async function AbonelikSayfasi() {
 
       {durum?.yonetici && (
         <div className="notice deneme-notu" style={{ marginBottom: 18 }}>
-          <strong>🛡️ {t("nav.admin")}</strong> · {t("sub.adminNote")}
+          <strong className="ikonlu-baslik">
+            <Ikon ad="yonetim" boyut={16} /> {t("nav.admin")}
+          </strong> · {t("sub.adminNote")}
         </div>
       )}
 
       {durum?.denemeBitis && (
         <div className="notice deneme-notu" style={{ marginBottom: 18 }}>
-          <strong>✨ {t("trial.active", { gun: kalanGun })}</strong>{" "}
+          <strong className="ikonlu-baslik">
+            <Ikon ad="parilti" boyut={16} /> {t("trial.active", { gun: kalanGun })}
+          </strong>{" "}
           {t("trial.activeText", { date: tarih(durum.denemeBitis) })}
         </div>
       )}

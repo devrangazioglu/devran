@@ -273,7 +273,7 @@ export const ar: Partial<Dictionary> = {
   "asset.analysisComment": "تعليق التحليل",
   "asset.highlights": "أبرز النقاط",
   "asset.risks": "المخاطر والتحذيرات",
-  "asset.plan": "خطة التداول",
+  "asset.plan": "السيناريو والمستويات الفنية",
   "asset.planLong": "سيناريو صاعد",
   "asset.planShort": "سيناريو هابط",
   "asset.planAdvisory": "النظرة محايدة؛ هذا السيناريو للمعلومات فقط.",

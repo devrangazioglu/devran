@@ -14,12 +14,13 @@ import { getQuotes } from "@/lib/markets/provider";
 import { marketBySlug, MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS, DUNYA_MARKET_IDS, type Quote } from "@/lib/markets/types";
 import { piyasaMetni } from "@/lib/piyasa-metni";
 import { breadcrumbJsonLd, faqJsonLd, itemListJsonLd } from "@/lib/seo";
+import Ikon, { UlkeRozeti } from "@/components/Ikon";
 
 /** Gecikmesiz gelen satırın yanındaki küçük "canlı" işareti. */
 function CanliIsaret({ etiket }: { etiket: string }) {
   return (
     <span className="canli-isaret" title={etiket}>
-      ● {etiket}
+      {etiket}
     </span>
   );
 }
@@ -92,7 +93,7 @@ export default async function MarketView({
           <div className="page-head">
             <div>
               <h1>
-                {market.bayrak ? `${market.bayrak} ` : ""}
+                {market.bayrak && <UlkeRozeti kod={market.bayrak} />}
                 {piyasaMetni(t, market, "h1")}
               </h1>
               <p className="sub">{piyasaMetni(t, market, "desc")}</p>
@@ -116,14 +117,17 @@ export default async function MarketView({
               arama motoru her ülke sayfasına buradan da ulaşsın; dar ekranda
               yana kayar, sayfayı taşırmaz. */}
           <nav className="dunya-seritleri" aria-label={t("market.dunya.sec")}>
-            <span className="dunya-baslik">🌍 {t("market.dunya")}</span>
+            <span className="dunya-baslik">
+              <Ikon ad="kure" boyut={14} /> {t("market.dunya")}
+            </span>
             {DUNYA_MARKET_IDS.map((id) => (
               <Link
                 key={id}
                 href={yol(`/piyasa/${MARKETS[id].slug}`)}
                 className={`dunya-link ${id === market.id ? "active" : ""}`}
               >
-                {MARKETS[id].bayrak} {t(`market.${id}` as "market.kripto")}
+                {MARKETS[id].bayrak && <UlkeRozeti kod={MARKETS[id].bayrak!} />}
+                {t(`market.${id}` as "market.kripto")}
               </Link>
             ))}
           </nav>

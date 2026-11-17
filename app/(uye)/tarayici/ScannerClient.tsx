@@ -13,6 +13,7 @@ import { patternName } from "@/lib/analysis-text";
 import { getJson, type ScanResponse, type ScanRow } from "@/lib/api-types";
 import { formatCompact, formatNumber, formatPrice, formatRelative } from "@/lib/format";
 import { MARKETS, AKTIF_MARKET_IDS, type Interval, type MarketId, varsayilanPeriyot } from "@/lib/markets/types";
+import Ikon from "@/components/Ikon";
 
 type Filter = "all" | "buy" | "sell" | "watch";
 type SortKey = "score" | "confidence" | "change" | "volume" | "rsi" | "fundamental";
@@ -167,7 +168,11 @@ export default function ScannerClient({
                 disabled={!periyotAcik(value)}
                 title={periyotAcik(value) ? undefined : t("credit.periodLocked")}
               >
-                {periyotAcik(value) ? value : `🔒 ${value}`}
+                {periyotAcik(value) ? value : (
+                    <>
+                      <Ikon ad="kilit" boyut={12} /> {value}
+                    </>
+                  )}
               </button>
             ))}
           </div>

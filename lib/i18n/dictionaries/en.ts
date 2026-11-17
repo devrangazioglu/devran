@@ -100,7 +100,7 @@ export const en: Dictionary = {
   "seo.dunya.title": "{ulke}: technical analysis and stock outlook",
   "seo.dunya.description": "Technical and fundamental analysis for the {endeks} index and {ulke}: more than 20 indicators, support and resistance levels and a reasoned technical outlook.",
   "market.dunya.sec": "World markets",
-  "market.dunya.secBos": "🌍 Choose a world market",
+  "market.dunya.secBos": "Choose a world market",
   "home.dunyaTitle": "World markets",
   "home.dunyaSub": "The most traded stock markets outside the US. Each country's main index and largest companies, analysed by the same engine.",
   "market.closedNote": "This market is closed outside session hours; the last close is shown.",
@@ -184,7 +184,7 @@ export const en: Dictionary = {
   "home.feature.timeframes.desc": "From one minute to weekly, plus higher-timeframe agreement",
   "home.feature.comment": "Plain-language commentary",
   "home.feature.comment.desc": "The reasoning, risks and levels behind the outlook in plain text",
-  "home.feature.plan": "Trade plan",
+  "home.feature.plan": "Scenario and levels",
   "home.feature.plan.desc": "ATR-based invalidation level, technical levels and risk/reward ratio",
   "home.feature.scanner": "Technical scanner",
   "home.feature.scanner.desc": "Scans dozens of assets at once and ranks those with the strongest technical outlook",
@@ -357,7 +357,7 @@ export const en: Dictionary = {
   "asset.analysisComment": "Analysis commentary",
   "asset.highlights": "Highlights",
   "asset.risks": "Risks and warnings",
-  "asset.plan": "Trade plan",
+  "asset.plan": "Scenario and technical levels",
   "asset.planLong": "BULLISH SCENARIO",
   "asset.planShort": "BEARISH SCENARIO",
   "asset.planAdvisory": "The outlook is NEUTRAL, so this scenario is for information only.",
@@ -684,8 +684,8 @@ export const en: Dictionary = {
   "dogru.colSell": "Bearish right",
   "dogru.recent": "Latest records",
   "dogru.pending": "waiting",
-  "dogru.hit": "✓ worked",
-  "dogru.miss": "✗ missed",
+  "dogru.hit": "worked",
+  "dogru.miss": "missed",
   "dogru.howTitle": "How is it measured?",
   "dogru.how1": "The list is fixed: 8 BIST stocks, 8 US stocks, 4 commodities/currencies and 4 cryptos. They were not picked for good results.",
   "dogru.how2": "The outlook is taken from the daily chart after the day closes. The closing price {ufuk} trading days later is the result.",
@@ -850,7 +850,7 @@ export const en: Dictionary = {
 
   "market.kripto.aboutTitle": "How to read technical analysis in crypto",
   "market.kripto.about":
-    "The crypto market trades around the clock, so there are no weekend gaps and indicators work on an unbroken series. The table lists the last price, daily change and traded volume for each pair; opening a row computes more than 20 indicators, support and resistance levels, chart patterns and a trade plan for that pair. Because volatility is high, the stop distance is widened according to ATR.",
+    "The crypto market trades around the clock, so there are no weekend gaps and indicators work on an unbroken series. The table lists the last price, daily change and traded volume for each pair; opening a row computes more than 20 indicators, support and resistance levels, chart patterns and a scenario for that pair. Because volatility is high, the invalidation distance is widened according to ATR.",
   "market.abd.aboutTitle": "How the technical outlook is calculated for US stocks",
   "market.abd.about":
     "The US market trades on weekdays during set hours, so an outlook calculated after the close can change at the next open. The list contains the indices and the most traded stocks. For each stock, trend (EMA, Supertrend, ADX), momentum (RSI, MACD, Stochastic), volatility (Bollinger, ATR) and volume indicators each cast a vote; the outlook is the weighted average of those votes.",
@@ -892,7 +892,7 @@ export const en: Dictionary = {
     "The provider's adjusted close series is used, so gaps caused by dividends and splits arrive already corrected.",
   "market.bist.faq3.q": "Is the analysis available in English?",
   "market.bist.faq3.a":
-    "Yes. Indicator commentary and the trade plan are produced in both Turkish and English, and the interface is available in eight languages.",
+    "Yes. Indicator commentary and scenarios are produced in both Turkish and English, and the interface is available in eight languages.",
 
   "market.emtia.faq1.q": "Where does the USD/TRY rate come from?",
   "market.emtia.faq1.a":
@@ -1181,4 +1181,7 @@ export const en: Dictionary = {
   "sub.adminNote": "Admin account: you never spend credits and every limit of the top plan is open.",
   "settings.accountType": "Account type",
   "settings.member": "Member",
+  "nav.short.scanner": "Scanner",
+  "nav.short.watchlist": "Watchlist",
+  "nav.short.subscription": "Plan",
 };

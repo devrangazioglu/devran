@@ -28,7 +28,7 @@ export default async function SiteNav({ locale: istenen }: { locale?: Locale } =
       href: yol(`/piyasa/${MARKETS[id].slug}`),
       label: t(`market.${id}` as "market.kripto"),
     })),
-    { href: `${yol("/")}#dunya`, label: `🌍 ${t("market.dunya")}` },
+    { href: `${yol("/")}#dunya`, label: t("market.dunya") },
   ];
 
   const menuLinks = [

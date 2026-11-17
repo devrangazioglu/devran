@@ -10,6 +10,7 @@ import { AssetAvatar, Change, MarketBadge, Score, SignalBadge } from "@/componen
 import { getJson, type ScanResponse } from "@/lib/api-types";
 import { formatNumber, formatPrice } from "@/lib/format";
 import { MARKETS, type Instrument, type Interval } from "@/lib/markets/types";
+import Ikon from "@/components/Ikon";
 
 const PERIODS: Interval[] = ["15m", "1h", "4h", "1d", "1w"];
 
@@ -111,7 +112,7 @@ export default function WatchlistClient({
             onClick={() => void load(ids, period)}
             disabled={loading || ids.length === 0}
           >
-            {loading ? <span className="spinner" /> : "↻"} {t("common.refresh")}
+            {loading ? <span className="spinner" /> : <Ikon ad="yenile" boyut={14} />} {t("common.refresh")}
           </button>
         </div>
       </div>
@@ -231,8 +232,9 @@ export default function WatchlistClient({
                   className="btn btn-ghost btn-sm"
                   onClick={() => void toggle(row.id)}
                   disabled={saving}
+                  aria-label={t("watch.unfollow")}
                 >
-                  ✕
+                  <Ikon ad="kapat" boyut={14} />
                 </button>
               </div>
             ))}

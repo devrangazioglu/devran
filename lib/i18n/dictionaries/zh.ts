@@ -270,7 +270,7 @@ export const zh: Partial<Dictionary> = {
   "asset.analysisComment": "分析解读",
   "asset.highlights": "重点",
   "asset.risks": "风险与提示",
-  "asset.plan": "交易计划",
+  "asset.plan": "情景与技术价位",
   "asset.planLong": "看涨情景",
   "asset.planShort": "看跌情景",
   "asset.planAdvisory": "展望为中性；此情景仅供参考。",

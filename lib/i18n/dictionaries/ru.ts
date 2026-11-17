@@ -274,7 +274,7 @@ export const ru: Partial<Dictionary> = {
   "asset.analysisComment": "Комментарий к анализу",
   "asset.highlights": "Главное",
   "asset.risks": "Риски и предупреждения",
-  "asset.plan": "Торговый план",
+  "asset.plan": "Сценарий и технические уровни",
   "asset.planLong": "БЫЧИЙ СЦЕНАРИЙ",
   "asset.planShort": "МЕДВЕЖИЙ СЦЕНАРИЙ",
   "asset.planAdvisory": "Обзор НЕЙТРАЛЬНЫЙ; этот сценарий носит информационный характер.",

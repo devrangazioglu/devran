@@ -9,6 +9,7 @@ import HesapIslemleri from "./HesapIslemleri";
 import { formatDate } from "@/lib/format";
 import { INTERVALS, MARKETS, AKTIF_MARKET_IDS } from "@/lib/markets/types";
 import type { UserSettings } from "@/lib/users";
+import Ikon from "@/components/Ikon";
 
 export default function SettingsClient({
   email,
@@ -82,7 +83,7 @@ export default function SettingsClient({
                   onChange={(defaultMarket) => setForm({ ...form, defaultMarket })}
                   options={AKTIF_MARKET_IDS.map((id) => ({
                     value: id as string,
-                    label: `${MARKETS[id].bayrak ? `${MARKETS[id].bayrak} ` : ""}${t(`market.${id}` as "market.kripto")}`,
+                    label: t(`market.${id}` as "market.kripto"),
                   }))}
                 />
               </div>
@@ -165,7 +166,10 @@ export default function SettingsClient({
             </div>
             <div className="kv">
               <span>{t("settings.accountType")}</span>
-              <strong>{yonetici ? `🛡️ ${t("nav.admin")}` : t("settings.member")}</strong>
+              <strong className="ikonlu-baslik">
+                {yonetici && <Ikon ad="yonetim" boyut={15} />}
+                {yonetici ? t("nav.admin") : t("settings.member")}
+              </strong>
             </div>
             <div className="kv">
               <span>{t("nav.watchlist")}</span>

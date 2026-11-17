@@ -11,6 +11,7 @@ import type { Locale } from "@/lib/i18n";
 import { localeHref } from "@/lib/i18n/routing";
 import { PLAN_IDS, PLANS } from "@/lib/plans";
 import { breadcrumbJsonLd, faqJsonLd, planJsonLd } from "@/lib/seo";
+import Ikon from "@/components/Ikon";
 
 /**
  * Herkese açık planlar sayfası.
@@ -68,7 +69,11 @@ export default async function Plans({ locale: istenen }: { locale?: Locale } = {
                 {t("plans.title")}
               </h1>
               <p className="lead">{t("plans.sub")}</p>
-              {!girisli && <p className="deneme-rozeti">✨ {t("trial.badge")}</p>}
+              {!girisli && (
+                <p className="deneme-rozeti">
+                  <Ikon ad="parilti" boyut={14} /> {t("trial.badge")}
+                </p>
+              )}
             </div>
           </Reveal>
 
