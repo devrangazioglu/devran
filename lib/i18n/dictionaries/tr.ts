@@ -1208,6 +1208,8 @@ export const tr = {
   "nav.short.scanner": "Tarayıcı",
   "nav.short.watchlist": "Takip",
   "nav.short.subscription": "Abonelik",
+  "search.popular": "Sık bakılanlar",
+  "search.hint": "Hisse kodu, şirket adı ya da kripto yazın: THYAO, Apple, Bitcoin, altın… Kripto, ABD, Borsa İstanbul, 11 dünya borsası, döviz ve emtia birlikte aranır.",
 } as const;
 
 export type DictionaryKey = keyof typeof tr;

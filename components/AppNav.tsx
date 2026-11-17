@@ -13,6 +13,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS } from "@/lib/markets/types";
 import { findUserByEmail } from "@/lib/users";
 import Ikon from "./Ikon";
+import MobilArama from "./MobilArama";
 
 /** Üye alanının üst menüsü. */
 export default async function AppNav() {
@@ -85,6 +86,9 @@ export default async function AppNav() {
           </span>
           <span className="only-desktop">
             <SignOutButton />
+          </span>
+          <span className="only-mobile">
+            <MobilArama />
           </span>
           <span className="only-mobile">
             <MobileMenu

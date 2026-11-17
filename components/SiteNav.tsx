@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { LogoWord } from "./Logo";
 import MobileMenu from "./MobileMenu";
+import MobilArama from "./MobilArama";
 import { getI18n } from "@/lib/i18n/server";
 import { localeHref } from "@/lib/i18n/routing";
 import type { Locale } from "@/lib/i18n";
@@ -79,6 +80,12 @@ export default async function SiteNav({ locale: istenen }: { locale?: Locale } =
                 {t("nav.register")}
               </Link>
             </>
+          )}
+          {/* Girişli kullanıcı telefonda da her sayfadan varlık arayabilsin. */}
+          {session?.user && (
+            <span className="only-mobile">
+              <MobilArama />
+            </span>
           )}
           <span className="only-mobile">
             <MobileMenu links={menuLinks} />

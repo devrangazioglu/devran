@@ -3518,3 +3518,77 @@ h1 .ulke-rozeti {
 .feature-icon {
   color: var(--accent);
 }
+
+/* ── Mobil arama ───────────────────── */
+.arama-dugmesi {
+  color: var(--text);
+}
+.nav-actions .only-mobile + .only-mobile {
+  margin-left: -2px;
+}
+.mobil-arama {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  background: rgba(5, 7, 12, 0.97);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  padding-top: env(safe-area-inset-top, 0px);
+  animation: mobil-arama-gel 0.16s ease-out;
+}
+@keyframes mobil-arama-gel {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.mobil-arama-ust {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.mobil-arama-kutu {
+  flex: 1;
+  min-width: 0;
+}
+.mobil-arama-kutu .search {
+  max-width: none;
+}
+.mobil-arama-kutu .search-results {
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+}
+.mobil-arama-govde {
+  padding: 18px 16px;
+  overflow-y: auto;
+}
+.mobil-arama-baslik {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 10px;
+}
+.mobil-arama-cipler {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mobil-arama-cip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.mobil-arama-cip:active {
+  background: var(--card-hover);
+}

@@ -1184,4 +1184,6 @@ export const en: Dictionary = {
   "nav.short.scanner": "Scanner",
   "nav.short.watchlist": "Watchlist",
   "nav.short.subscription": "Plan",
+  "search.popular": "Popular",
+  "search.hint": "Type a ticker, company name or crypto: THYAO, Apple, Bitcoin, gold… Crypto, US stocks, Borsa Istanbul, 11 world exchanges, FX and commodities are searched together.",
 };
