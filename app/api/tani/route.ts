@@ -12,6 +12,7 @@
 
 import { NextResponse } from "next/server";
 
+import { yoneticiEpostalari } from "@/lib/admin";
 import { fetchTvCandles, tvMumAcik } from "@/lib/markets/tv-mum";
 
 export const runtime = "nodejs";
@@ -166,6 +167,11 @@ export async function GET(request: Request) {
     {
       commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "(yerel)",
       node: process.version,
+      // Yönetici ayarı okunuyor mu? E-posta gösterilmez, yalnızca sayı.
+      yoneticiAyari: {
+        tanimli: Boolean(process.env.ADMIN_EPOSTALAR?.trim()),
+        epostaSayisi: yoneticiEpostalari().length,
+      },
       grafikAkisi,
       dal: process.env.VERCEL_GIT_COMMIT_REF ?? "(yerel)",
       bolge: process.env.VERCEL_REGION ?? "(yerel)",

@@ -1203,6 +1203,8 @@ export const tr = {
   "legal.spk": "Yasal uyarı: Burada yer alan yatırım bilgi, yorum ve görünümleri yatırım danışmanlığı kapsamında değildir. Yatırım danışmanlığı hizmeti; aracı kurumlar, portföy yönetim şirketleri, mevduat kabul etmeyen bankalar ile müşteri arasında imzalanacak yatırım danışmanlığı sözleşmesi çerçevesinde sunulmaktadır. Burada yer alan görünümler otomatik hesaplamalara dayanır ve mali durumunuz ile risk ve getiri tercihlerinize uygun olmayabilir. Bu nedenle, sadece burada yer alan bilgilere dayanılarak yatırım kararı verilmesi beklentilerinize uygun sonuçlar doğurmayabilir.",
   "nav.admin": "Yönetim",
   "sub.adminNote": "Yönetici hesabı: kredi harcamazsınız ve en üst planın bütün hakları açıktır.",
+  "settings.accountType": "Hesap türü",
+  "settings.member": "Üye",
 } as const;
 
 export type DictionaryKey = keyof typeof tr;

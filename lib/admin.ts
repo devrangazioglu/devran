@@ -14,10 +14,10 @@
 import { normalizeEmail } from "./users-shared";
 
 export function yoneticiEpostalari(): string[] {
-  return (process.env.ADMIN_EPOSTALAR ?? "")
-    .split(/[,;\s]+/)
-    .map((e) => normalizeEmail(e))
-    .filter((e) => e.includes("@"));
+  // Yazım hatalarına toleranslı: değere tırnak, boşluk ya da yanlışlıkla
+  // "ADMIN_EPOSTALAR=" eklenmiş olsa da içindeki e-postalar ayıklanır.
+  const ham = process.env.ADMIN_EPOSTALAR ?? "";
+  return (ham.match(/[^\s,;"'`=<>]+@[^\s,;"'`=<>]+/g) ?? []).map((e) => normalizeEmail(e));
 }
 
 export function yoneticiMi(email: string | null | undefined): boolean {

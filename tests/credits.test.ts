@@ -337,3 +337,19 @@ test("yönetim: ek kredi verilir, geri alınır, deneme hakkı sıfırlanır", a
   assert.equal("passwordHash" in (satir as object), false, "parola özeti dışarı verilmez");
   assert.ok(veri.ozet.toplam >= 1);
 });
+
+test("yönetici e-posta ayarı yazım hatalarına toleranslı okunur", async () => {
+  const { yoneticiEpostalari, yoneticiMi } = await import("../lib/admin");
+  const onceki = process.env.ADMIN_EPOSTALAR;
+  try {
+    process.env.ADMIN_EPOSTALAR = ' ADMIN_EPOSTALAR="Bir@Ornek.com" ; iki@ornek.com ';
+    assert.deepEqual(yoneticiEpostalari(), ["bir@ornek.com", "iki@ornek.com"]);
+    assert.equal(yoneticiMi("BIR@ornek.com"), true);
+    assert.equal(yoneticiMi("uc@ornek.com"), false);
+    process.env.ADMIN_EPOSTALAR = "";
+    assert.equal(yoneticiMi("bir@ornek.com"), false);
+  } finally {
+    if (onceki === undefined) delete process.env.ADMIN_EPOSTALAR;
+    else process.env.ADMIN_EPOSTALAR = onceki;
+  }
+});

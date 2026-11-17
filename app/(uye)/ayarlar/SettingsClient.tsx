@@ -17,6 +17,7 @@ export default function SettingsClient({
   watchlistCount,
   settings,
   hasPassword,
+  yonetici = false,
 }: {
   email: string;
   name: string;
@@ -24,6 +25,7 @@ export default function SettingsClient({
   watchlistCount: number;
   settings: UserSettings;
   hasPassword: boolean;
+  yonetici?: boolean;
 }) {
   const { t, intl } = useI18n();
   const [form, setForm] = useState<UserSettings>(settings);
@@ -160,6 +162,10 @@ export default function SettingsClient({
               <strong>
                 {hasPassword ? t("settings.loginPassword") : t("settings.loginGoogle")}
               </strong>
+            </div>
+            <div className="kv">
+              <span>{t("settings.accountType")}</span>
+              <strong>{yonetici ? `🛡️ ${t("nav.admin")}` : t("settings.member")}</strong>
             </div>
             <div className="kv">
               <span>{t("nav.watchlist")}</span>

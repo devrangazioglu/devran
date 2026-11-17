@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { yoneticiMi } from "@/lib/admin";
 import { DEFAULT_SETTINGS, findUserByEmail } from "@/lib/users";
 import SettingsClient from "./SettingsClient";
 
@@ -20,6 +21,7 @@ export default async function SettingsPage() {
       watchlistCount={user?.watchlist.length ?? 0}
       settings={user?.settings ?? DEFAULT_SETTINGS}
       hasPassword={Boolean(user?.passwordHash)}
+      yonetici={yoneticiMi(session?.user?.email)}
     />
   );
 }
