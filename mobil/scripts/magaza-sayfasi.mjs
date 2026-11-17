@@ -240,7 +240,7 @@ await adim("Yaş derecelendirmesi", async () => {
     }
   }
   const bilinmeyen = Object.keys(mevcut).filter(
-    (k) => !(k in istenen) && mevcut[k] === null && !["kidsAgeBand", "ageRatingOverride", "ageRatingOverrideV2", "koreaAgeRatingOverride", "seventeenPlus", "developerAgeRatingInfoUrl"].includes(k),
+    (k) => !(k in istenen) && mevcut[k] === null && !["kidsAgeBand", "ageRatingOverride", "ageRatingOverrideV2", "koreaAgeRatingOverride", "seventeenPlus", "developerAgeRatingInfoUrl", "socialMediaAgeRestricted", "gracRatingClassificationNumber"].includes(k),
   );
   if (bilinmeyen.length) {
     elle.push(`Yaş derecelendirmesinde yanıtlanmamış soru(lar): ${bilinmeyen.join(", ")} — App Store Connect → Uygulama Bilgileri → Yaş Derecelendirmesi.`);
@@ -417,22 +417,6 @@ async function siteyeKaydol(eposta, parola) {
   return yanit.status; // 201 açıldı, 409 zaten var
 }
 
-async function siteyeGirebilir(eposta, parola) {
-  // Auth.js kimlik bilgisi girişi: önce CSRF, sonra form gönderimi.
-  const csrfYanit = await fetch(`${SITE}/api/auth/csrf`);
-  const { csrfToken } = await csrfYanit.json();
-  const cerez = (csrfYanit.headers.getSetCookie?.() ?? []).map((c) => c.split(";")[0]).join("; ");
-  const yanit = await fetch(`${SITE}/api/auth/callback/credentials`, {
-    method: "POST",
-    redirect: "manual",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", cookie: cerez },
-    body: new URLSearchParams({ csrfToken, email: eposta, password: parola, callbackUrl: `${SITE}/panel` }),
-  });
-  const yer = yanit.headers.get("location") ?? "";
-  const oturum = (yanit.headers.getSetCookie?.() ?? []).some((c) => /session-token=/.test(c));
-  return oturum && !/error=/.test(yer);
-}
-
 await adim("Demo hesap ve inceleme notu", async () => {
   if (!surum) throw new Error("düzenlenebilir sürüm yok");
   let detay = null;
@@ -442,11 +426,13 @@ await adim("Demo hesap ve inceleme notu", async () => {
     detay = null;
   }
   const kayitli = detay?.attributes;
+  // Daha önce kaydedilen demo hesap kullanılır; her çalıştırmada yeni hesap açılmaz.
   if (kayitli?.demoAccountName && kayitli?.demoAccountPassword) {
     console.log(`::add-mask::${kayitli.demoAccountPassword}`);
-    if (await siteyeGirebilir(kayitli.demoAccountName, kayitli.demoAccountPassword)) {
-      demo = { eposta: kayitli.demoAccountName, parola: kayitli.demoAccountPassword };
-    }
+    demo = { eposta: kayitli.demoAccountName, parola: kayitli.demoAccountPassword };
+  } else if (kayitli?.demoAccountName && kayitli?.notes) {
+    // Apple parolayı geri vermiyorsa var olan kayda dokunma, yeni hesap açma.
+    return `${kayitli.demoAccountName} zaten kayıtlı (değiştirilmedi)`;
   }
   let yeniAcildi = false;
   if (!demo) {
@@ -465,14 +451,18 @@ await adim("Demo hesap ve inceleme notu", async () => {
     if (!demo) throw new Error("boş bir demo e-postası bulunamadı");
   }
 
-  const iletisim = Object.fromEntries(
-    [
-      ["contactFirstName", ENV.INCELEME_AD],
-      ["contactLastName", ENV.INCELEME_SOYAD],
-      ["contactPhone", ENV.INCELEME_TELEFON],
-      ["contactEmail", ENV.INCELEME_EPOSTA],
-    ].filter(([, v]) => v && v.trim()),
-  );
+  // İletişim bilgisi: secret verilmişse o, yoksa App Store Connect'te elle
+  // girilmiş olan korunur (Apple güncellemede dördünü de zorunlu tutuyor).
+  const iletisim = {};
+  for (const [alan, deger] of [
+    ["contactFirstName", ENV.INCELEME_AD],
+    ["contactLastName", ENV.INCELEME_SOYAD],
+    ["contactPhone", ENV.INCELEME_TELEFON],
+    ["contactEmail", ENV.INCELEME_EPOSTA],
+  ]) {
+    const v = deger?.trim() || kayitli?.[alan];
+    if (v) iletisim[alan] = v;
+  }
   const alanlar = {
     demoAccountRequired: true,
     demoAccountName: demo.eposta,
@@ -480,11 +470,23 @@ await adim("Demo hesap ve inceleme notu", async () => {
     notes: INCELEME_NOTU,
     ...iletisim,
   };
+  const iletisimTam = Object.keys(iletisim).length === 4;
+  const degisiklikYok =
+    kayitli &&
+    kayitli.demoAccountName === alanlar.demoAccountName &&
+    kayitli.demoAccountPassword === alanlar.demoAccountPassword &&
+    kayitli.notes === alanlar.notes &&
+    kayitli.demoAccountRequired === true;
   if (detay?.id) {
-    await istek(`/appStoreReviewDetails/${detay.id}`, {
-      method: "PATCH",
-      body: { data: { type: "appStoreReviewDetails", id: detay.id, attributes: alanlar } },
-    });
+    if (!degisiklikYok || iletisimTam) {
+      if (!iletisimTam) {
+        throw new Error("inceleme bilgisini güncellemek için önce iletişim bilgisi girilmeli (aşağıdaki elle yapılacaklar)");
+      }
+      await istek(`/appStoreReviewDetails/${detay.id}`, {
+        method: "PATCH",
+        body: { data: { type: "appStoreReviewDetails", id: detay.id, attributes: alanlar } },
+      });
+    }
   } else {
     await istek(`/appStoreReviewDetails`, {
       method: "POST",
@@ -497,8 +499,7 @@ await adim("Demo hesap ve inceleme notu", async () => {
       },
     });
   }
-  const eksikIletisim = !kayitli?.contactPhone && !iletisim.contactPhone;
-  if (eksikIletisim) {
+  if (!iletisimTam) {
     elle.push(
       "İnceleme iletişim bilgisi: App Store Connect → sürüm 1.0.0 → App İnceleme Bilgileri → ad, soyad, telefon, e-posta (Apple yalnızca soru sormak için kullanır).",
     );
@@ -535,7 +536,7 @@ const SAHNE = (baslik, alt, resim) => `<!doctype html><html><head><meta charset=
 const gorseller = [];
 
 await adim("Ekran görüntüleri: çekim", async () => {
-  if (!demo) throw new Error("demo hesap yok, üye sayfaları çekilemedi");
+  if (!demo) return "atlandı: demo hesap parolası okunamadı, mevcut görseller korunuyor";
   const { chromium } = await import("playwright");
   mkdirSync(join(GORSEL, "ham"), { recursive: true });
   const tarayici = await chromium.launch();
@@ -593,7 +594,7 @@ await adim("Ekran görüntüleri: çekim", async () => {
 });
 
 await adim("Ekran görüntüleri: yükleme (6.9 inç iPhone)", async () => {
-  if (!gorseller.length) throw new Error("yüklenecek görsel yok");
+  if (!gorseller.length) return "atlandı: yeni görsel yok, mevcutlar korunuyor";
   const yerel = await surumYereli("tr");
   const setler = await istek(`/appStoreVersionLocalizations/${yerel.id}/appScreenshotSets?limit=50`);
   const TUR = "APP_IPHONE_67";
