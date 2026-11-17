@@ -2,7 +2,7 @@
 /**
  * App Store Connect hazırlığı (GitHub Actions'ta, derlemeden önce çalışır).
  *
- * 1. Paket kimliği (com.fibonex360.app) Apple Developer hesabında yoksa kaydeder.
+ * 1. Paket kimliği (PAKET_KIMLIGI) Apple Developer hesabında yoksa kaydeder.
  * 2. App Store Connect'te bu kimlikle bir uygulama kaydı var mı bakar. Yoksa
  *    derlemeyi boşuna yapmamak için durur ve ne yapılacağını yazar: uygulama
  *    kaydı API ile açılamıyor, App Store Connect'te elle oluşturulmalı.

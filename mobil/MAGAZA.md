@@ -13,7 +13,7 @@ metinler. `SITE` yazan yerlere `https://www.fibonex360.com` yazın.
 | Alt başlık (30) | **Borsa ve kripto teknik analiz** |
 | Birincil kategori | Finans |
 | İkincil kategori | İş |
-| Paket kimliği | com.fibonex360.app |
+| Paket kimliği | iOS: com.devrangaziolu.fibonex · Android: com.fibonex360.app |
 | SKU | fibonex360-ios-1 |
 | Gizlilik politikası adresi | SITE/gizlilik |
 | Destek adresi | SITE/destek |

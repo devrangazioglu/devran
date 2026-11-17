@@ -7,7 +7,7 @@ gerekir.
 
 | | |
 |---|---|
-| Paket kimliği | `com.fibonex360.app` (iOS ve Android aynı) |
+| Paket kimliği | iOS: `com.devrangaziolu.fibonex` (App Store Connect'teki uygulama bu kimlikle açıldı) · Android: `com.fibonex360.app` |
 | Uygulama adı | Fibonex360 |
 | Açılış adresi | `https://www.fibonex360.com/panel` |
 | iOS | iPhone, iOS 15+, yalnızca dikey |
@@ -59,7 +59,7 @@ Derleme numarası otomatik artar. 10–30 dakika sonra derleme TestFlight'ta gö
 ## iOS'u Mac'te derlemek (isteğe bağlı)
 
 1. `npm run ios` → Xcode açılır.
-2. *Signing & Capabilities* → Team: Apple Developer hesabınız. Bundle ID `com.fibonex360.app`.
+2. *Signing & Capabilities* → Team: Apple Developer hesabınız. Bundle ID `com.devrangaziolu.fibonex`.
 3. Üst menü: *Product → Archive* → *Distribute App → App Store Connect → Upload*.
 
 ## Android'i derleyip göndermek (Android Studio)
