@@ -9,17 +9,18 @@ gerekir.
 |---|---|
 | Paket kimliği | `com.fibonex360.app` (iOS ve Android aynı) |
 | Uygulama adı | Fibonex360 |
-| Açılış adresi | `https://analiz-brown.vercel.app/panel` (alan adı alınınca değişecek) |
+| Açılış adresi | `https://www.fibonex360.com/panel` |
 | iOS | iPhone, iOS 15+, yalnızca dikey |
 | Android | Android 7+ (API 24), hedef API 36, yalnızca dikey |
 
-## Kalan iki adım
+## Alan adı
 
-1. **Alan adı.** Aldığınızda şu üç yeri yeni adresle güncelleyin, sonra `npm run esitle`:
-   - `capacitor.config.ts` → `SITE`
-   - `www/hata.html` → `ADRES`
-   - Vercel → Ortam değişkenleri → `NEXT_PUBLIC_SITE_URL`
-2. **Apple Developer hesabı** (yıllık 99 $). Açıldıktan sonra aşağıdaki "iOS'u derleyip göndermek" adımları.
+`https://www.fibonex360.com` (çıplak `fibonex360.com` buraya yönlenir).
+Adres değişirse şu üç yeri güncelleyin, sonra `npm run esitle`:
+
+- `capacitor.config.ts` → `SITE`
+- `www/hata.html` → `ADRES`
+- Vercel → Ortam değişkenleri → `NEXT_PUBLIC_SITE_URL`
 
 ## Kurulum
 

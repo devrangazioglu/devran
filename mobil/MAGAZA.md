@@ -1,8 +1,7 @@
 # Mağaza başvuru metinleri
 
 App Store Connect ve Google Play Console'daki alanlara doğrudan yapıştırılacak
-metinler. `SITE` yazan yerlere alan adınızı koyun (şimdilik
-`https://analiz-brown.vercel.app`).
+metinler. `SITE` yazan yerlere `https://www.fibonex360.com` yazın.
 
 ---
 
