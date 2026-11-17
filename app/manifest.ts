@@ -12,10 +12,10 @@ import { SITE_NAME } from "@/lib/seo";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: `${SITE_NAME} — teknik analiz ve al/sat sinyalleri`,
+    name: `${SITE_NAME} — teknik analiz ve piyasa görünümü`,
     short_name: SITE_NAME,
     description:
-      "Kripto, Amerikan borsası, Borsa İstanbul, dünya borsaları, döviz ve emtia için 20'den fazla teknik göstergeye dayalı AL / SAT / BEKLE sinyalleri.",
+      "Kripto, Amerikan borsası, Borsa İstanbul, dünya borsaları, döviz ve emtia için 20'den fazla teknik göstergeye dayalı teknik analiz ve piyasa görünümü.",
     lang: "tr",
     start_url: "/panel",
     scope: "/",
@@ -32,7 +32,7 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
     ],
     shortcuts: [
-      { name: "Sinyal tarayıcı", url: "/tarayici", icons: [{ src: "/ikon/ikon-192.png", sizes: "192x192" }] },
+      { name: "Teknik tarayıcı", url: "/tarayici", icons: [{ src: "/ikon/ikon-192.png", sizes: "192x192" }] },
       { name: "Takip listem", url: "/takip", icons: [{ src: "/ikon/ikon-192.png", sizes: "192x192" }] },
     ],
   };

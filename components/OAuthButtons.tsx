@@ -51,12 +51,15 @@ export default function OAuthButtons({
   apple,
   next = "/panel",
   kayit = false,
+  kapali = false,
 }: {
   google: boolean;
   apple: boolean;
   next?: string;
   /** Kayıt sayfasında metin "… ile kaydol" olur. */
   kayit?: boolean;
+  /** Kayıt sayfasında koşullar onaylanmadan düğmeler kapalı. */
+  kapali?: boolean;
 }) {
   const { t } = useI18n();
   if (!google && !apple) return null;
@@ -72,6 +75,7 @@ export default function OAuthButtons({
           <button
             type="button"
             className="btn btn-ghost btn-block sadece-web"
+            disabled={kapali}
             onClick={() => signIn("google", { callbackUrl: next })}
           >
             <GoogleIcon />
@@ -82,6 +86,7 @@ export default function OAuthButtons({
           <button
             type="button"
             className="btn btn-ghost btn-block"
+            disabled={kapali}
             onClick={() => signIn("apple", { callbackUrl: next })}
           >
             <AppleIcon />

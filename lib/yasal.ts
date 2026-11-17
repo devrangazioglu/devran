@@ -220,7 +220,7 @@ export function kullanimKosullari(locale: Locale, k = yasalKimlik()): YasalBelge
     return {
       baslik: "Kullanım Koşulları",
       ozet:
-        "Fibonex360 bir teknik analiz aracıdır; yatırım danışmanlığı değildir. Sinyaller geçmiş fiyatlardan otomatik hesaplanır ve kâr garantisi vermez. Yatırım kararlarınızın sorumluluğu size aittir.",
+        "Fibonex360 bir teknik analiz aracıdır; yatırım danışmanlığı değildir. Teknik görünümler geçmiş fiyatlardan otomatik hesaplanır, herkese aynı gösterilir ve kâr garantisi vermez. Abonelik ücreti analiz aracına erişimin bedelidir, alım-satım önerisinin değil. Yatırım kararlarınızın sorumluluğu size aittir.",
       guncelleme: YASAL_GUNCELLEME,
       bolumler: [
         {
@@ -232,57 +232,65 @@ export function kullanimKosullari(locale: Locale, k = yasalKimlik()): YasalBelge
         {
           baslik: "2. Yatırım tavsiyesi değildir",
           paragraflar: [
-            "Hizmet'teki AL / SAT / BEKLE sinyalleri, skorlar, hedef ve destek/direnç seviyeleri, olasılıklar ve yorumlar; geçmiş fiyat ve hacim verisine uygulanan matematiksel göstergelerden yazılım tarafından otomatik ve herkes için aynı şekilde üretilir. Kişisel mali durumunuz, risk tercihiniz veya yatırım amacınız dikkate alınmaz.",
-            "Bu içerikler 6362 sayılı Sermaye Piyasası Kanunu ve ilgili mevzuat kapsamında yatırım danışmanlığı veya yatırım tavsiyesi değildir. Yatırım danışmanlığı hizmeti; aracı kurumlar, portföy yönetim şirketleri ve yetkili kuruluşlarla imzalanacak sözleşme çerçevesinde sunulur.",
+            "Hizmet'teki teknik görünümler (yükseliş eğilimi / düşüş eğilimi / nötr), skorlar, teknik seviyeler, destek/direnç seviyeleri, senaryolar, olasılıklar ve yorumlar; geçmiş fiyat ve hacim verisine uygulanan matematiksel göstergelerden yazılım tarafından otomatik ve herkes için aynı şekilde üretilir. Kişisel mali durumunuz, risk tercihiniz veya yatırım amacınız dikkate alınmaz.",
+            "Burada yer alan yatırım bilgi, yorum ve görünümleri yatırım danışmanlığı kapsamında değildir. Yatırım danışmanlığı hizmeti; aracı kurumlar, portföy yönetim şirketleri, mevduat kabul etmeyen bankalar ile müşteri arasında imzalanacak yatırım danışmanlığı sözleşmesi çerçevesinde sunulmaktadır. Burada yer alan yorum ve görünümler, yorum ve tavsiyede bulunanların kişisel görüşlerine değil, otomatik hesaplamalara dayanmaktadır. Bu görüşler mali durumunuz ile risk ve getiri tercihlerinize uygun olmayabilir. Bu nedenle, sadece burada yer alan bilgilere dayanılarak yatırım kararı verilmesi beklentilerinize uygun sonuçlar doğurmayabilir.",
+            "Hizmet hiçbir kullanıcıya kişiye özel öneri sunmaz, kullanıcı adına işlem yapmaz, bir aracı kuruma yönlendirmez ve herhangi bir sermaye piyasası aracının alınmasını veya satılmasını teşvik etmez.",
             "Geçmiş performans gelecekteki sonuçların göstergesi değildir. Kaldıraçlı ürünler ve kripto varlıklar yüksek risk taşır; yatırdığınız paranın tamamını kaybedebilirsiniz. Karar vermeden önce kendi araştırmanızı yapın ve gerekirse yetkili bir danışmana başvurun.",
           ],
         },
         {
-          baslik: "3. Veri doğruluğu",
+          baslik: "3. Kullanıcı beyanı",
+          paragraflar: [
+            "Hizmet'i kullanarak; içerikleri yalnızca kendi araştırmanızın bir parçası olarak ve genel bilgi amacıyla kullandığınızı, yatırım kararlarınızı kendi değerlendirmenizle verdiğinizi ve bu kararların sonuçlarından yalnızca sizin sorumlu olduğunuzu kabul edersiniz. Bu beyan kayıt sırasında ayrıca onayınıza sunulur.",
+          ],
+        },
+        {
+          baslik: "4. Veri doğruluğu",
           paragraflar: [
             "Fiyatlar herkese açık üçüncü taraf kaynaklardan alınır. Bazı piyasalar borsanın kuralı gereği 10–20 dakika gecikmelidir; gecikmeli olanlar arayüzde belirtilir. Veriler kesintiye uğrayabilir, eksik veya hatalı olabilir. Fiyatın gerçek zamanlı ve doğru olduğunu garanti etmeyiz.",
           ],
         },
         {
-          baslik: "4. Hesap",
+          baslik: "5. Hesap",
           paragraflar: [
             "Hizmet'i kullanmak için 18 yaşından büyük olmalısınız. Hesap bilgilerinizin doğruluğundan ve parolanızın gizliliğinden siz sorumlusunuz. Hesabınızı dilediğiniz an Ayarlar → Hesabı sil adımıyla kapatabilirsiniz.",
           ],
         },
         {
-          baslik: "5. Planlar, krediler ve ödemeler",
+          baslik: "6. Planlar, krediler ve ödemeler",
           paragraflar: [
-            "Ücretsiz planda aylık sınırlı sayıda analiz kredisi bulunur. Ücretli planlar daha fazla kredi, tarama ve takip hakkı verir. Krediler her dönem yenilenir ve devretmez.",
+            "Ücretsiz planda aylık sınırlı sayıda analiz kredisi bulunur. Ücretli planlar daha fazla kredi, tarama ve takip hakkı verir. Krediler her dönem yenilenir ve devretmez; davetle kazanılan ek krediler dönem sonunda silinmez.",
+            "Ücretli planların bedeli; analiz aracına, veriye ve hesaplama kapasitesine (analiz kredisi, tarama ve takip listesi hakkı) erişimin karşılığıdır. Kişiye özel yatırım tavsiyesinin veya alım-satım önerisinin karşılığı değildir; ücretli ve ücretsiz kullanıcılar aynı hesaplama yöntemiyle aynı sonucu görür.",
             "Mobil uygulamada satın alınan abonelikler Apple App Store veya Google Play üzerinden tahsil edilir; yenileme, iptal ve iade bu mağazaların kurallarına tabidir ve mağaza hesabınızın abonelik ayarlarından yönetilir. Abonelik, dönem sonundan en az 24 saat önce iptal edilmezse otomatik yenilenir.",
             "Fiyat değişiklikleri yürürlüğe girmeden önce duyurulur ve mevcut dönemi etkilemez.",
           ],
         },
         {
-          baslik: "6. Kabul edilemez kullanım",
+          baslik: "7. Kabul edilemez kullanım",
           paragraflar: [
-            "Hizmet'i otomatik araçlarla toplu veri çekmek, sinyalleri ticari olarak yeniden yayımlamak veya satmak, sistemin güvenliğini aşmaya çalışmak, başkasının hesabını kullanmak ve yasalara aykırı amaçlarla kullanmak yasaktır. Bu durumlarda hesabı askıya alma veya kapatma hakkımız saklıdır.",
+            "Hizmet'i otomatik araçlarla toplu veri çekmek, analizleri ticari olarak yeniden yayımlamak veya satmak, sistemin güvenliğini aşmaya çalışmak, başkasının hesabını kullanmak ve yasalara aykırı amaçlarla kullanmak yasaktır. Bu durumlarda hesabı askıya alma veya kapatma hakkımız saklıdır.",
           ],
         },
         {
-          baslik: "7. Fikri mülkiyet",
+          baslik: "8. Fikri mülkiyet",
           paragraflar: [
             "Hizmet'in yazılımı, tasarımı, analiz yöntemleri ve metinleri bize aittir. Size Hizmet'i kişisel ve ticari olmayan amaçla kullanmanız için devredilemez ve sınırlı bir kullanım hakkı verilir.",
           ],
         },
         {
-          baslik: "8. Sorumluluğun sınırlandırılması",
+          baslik: "9. Sorumluluğun sınırlandırılması",
           paragraflar: [
             "Hizmet “olduğu gibi” sunulur. Yürürlükteki mevzuatın izin verdiği ölçüde; Hizmet'teki bilgilere dayanarak verilen yatırım kararlarından, veri gecikmesi veya hatasından, hizmet kesintisinden doğan doğrudan veya dolaylı zararlardan sorumlu değiliz. Tüketici mevzuatından doğan haklarınız saklıdır.",
           ],
         },
         {
-          baslik: "9. Değişiklik ve fesih",
+          baslik: "10. Değişiklik ve fesih",
           paragraflar: [
             "Bu koşulları güncelleyebiliriz; güncel metin bu sayfada yayımlanır ve önemli değişiklikler uygulama içinde duyurulur. Hizmet'i kullanmaya devam etmeniz güncel koşulları kabul ettiğiniz anlamına gelir.",
           ],
         },
         {
-          baslik: "10. Uygulanacak hukuk",
+          baslik: "11. Uygulanacak hukuk",
           paragraflar: [
             `Bu koşullar Türkiye Cumhuriyeti hukukuna tabidir. Tüketici işlemlerinde tüketici hakem heyetleri ve tüketici mahkemeleri yetkilidir. ${iletisim(k, d)}`,
           ],
@@ -294,7 +302,7 @@ export function kullanimKosullari(locale: Locale, k = yasalKimlik()): YasalBelge
   return {
     baslik: "Terms of Use",
     ozet:
-      "Fibonex360 is a technical analysis tool, not investment advice. Signals are calculated automatically from past prices and do not guarantee profit. You are responsible for your own investment decisions.",
+      "Fibonex360 is a technical analysis tool, not investment advice. Technical outlooks are calculated automatically from past prices, are identical for every user and do not guarantee profit. The subscription fee pays for access to the tool, not for trade recommendations. You are responsible for your own investment decisions.",
     guncelleme: YASAL_GUNCELLEME,
     bolumler: [
       {
@@ -306,56 +314,63 @@ export function kullanimKosullari(locale: Locale, k = yasalKimlik()): YasalBelge
       {
         baslik: "2. Not investment advice",
         paragraflar: [
-          "BUY / SELL / HOLD signals, scores, targets, support and resistance levels, probabilities and commentary in the Service are generated automatically by software from historical price and volume data, identically for every user. Your personal financial situation, risk tolerance and objectives are not taken into account.",
-          "Nothing in the Service is investment advice or a recommendation to buy or sell any instrument. Past performance does not indicate future results. Leveraged products and crypto assets are high risk and you may lose all of your capital. Do your own research and consult a licensed adviser if needed.",
+          "Technical outlooks (bullish / bearish / neutral), scores, technical levels, support and resistance levels, scenarios, probabilities and commentary in the Service are generated automatically by software from historical price and volume data, identically for every user. Your personal financial situation, risk tolerance and objectives are not taken into account.",
+          "The Service never gives personalised recommendations, never trades on your behalf, never refers you to a broker and does not encourage buying or selling any instrument. Nothing in the Service is investment advice or a recommendation to buy or sell any instrument. Past performance does not indicate future results. Leveraged products and crypto assets are high risk and you may lose all of your capital. Do your own research and consult a licensed adviser if needed.",
         ],
       },
       {
-        baslik: "3. Data accuracy",
+        baslik: "3. Your acknowledgement",
+        paragraflar: [
+          "By using the Service you confirm that you use its content only as part of your own research and for general information, that you make your own investment decisions, and that you alone are responsible for their outcome. You are also asked to confirm this when signing up.",
+        ],
+      },
+      {
+        baslik: "4. Data accuracy",
         paragraflar: [
           "Prices come from public third-party sources. Some markets are delayed by 10–20 minutes under exchange rules; delayed markets are labelled in the app. Data may be interrupted, incomplete or wrong, and we do not guarantee it is real-time or accurate.",
         ],
       },
       {
-        baslik: "4. Account",
+        baslik: "5. Account",
         paragraflar: [
           "You must be at least 18 to use the Service. You are responsible for the accuracy of your account details and for keeping your password secret. You can close your account at any time under Settings → Delete account.",
         ],
       },
       {
-        baslik: "5. Plans, credits and payments",
+        baslik: "6. Plans, credits and payments",
         paragraflar: [
-          "The free plan includes a limited number of analysis credits per month. Paid plans give more credits, scans and watchlist slots. Credits renew every period and do not roll over.",
+          "The free plan includes a limited number of analysis credits per month. Paid plans give more credits, scans and watchlist slots. Credits renew every period and do not roll over; bonus credits earned through invitations do not expire at period end.",
+          "Paid plans pay for access to the analysis tool, data and computing capacity (analysis credits, scans and watchlist slots). They do not pay for personalised investment advice or trade recommendations; paid and free users see the same result from the same method.",
           "Subscriptions bought in the mobile app are charged through the Apple App Store or Google Play; renewal, cancellation and refunds follow the store's rules and are managed in your store account's subscription settings. A subscription renews automatically unless cancelled at least 24 hours before the end of the current period.",
           "Price changes are announced before they take effect and do not affect the current period.",
         ],
       },
       {
-        baslik: "6. Acceptable use",
+        baslik: "7. Acceptable use",
         paragraflar: [
-          "You may not scrape the Service with automated tools, republish or sell its signals commercially, attempt to breach its security, use someone else's account, or use it for unlawful purposes. We may suspend or close accounts that do.",
+          "You may not scrape the Service with automated tools, republish or sell its analyses commercially, attempt to breach its security, use someone else's account, or use it for unlawful purposes. We may suspend or close accounts that do.",
         ],
       },
       {
-        baslik: "7. Intellectual property",
+        baslik: "8. Intellectual property",
         paragraflar: [
           "The software, design, analysis methods and texts of the Service belong to us. You receive a limited, non-transferable right to use the Service for personal, non-commercial purposes.",
         ],
       },
       {
-        baslik: "8. Limitation of liability",
+        baslik: "9. Limitation of liability",
         paragraflar: [
           "The Service is provided “as is”. To the extent permitted by law, we are not liable for losses arising from investment decisions based on the Service, data delays or errors, or service interruptions. Your statutory consumer rights are not affected.",
         ],
       },
       {
-        baslik: "9. Changes and termination",
+        baslik: "10. Changes and termination",
         paragraflar: [
           "We may update these terms; the current version is published on this page and material changes are announced in the app. Continuing to use the Service means you accept the updated terms.",
         ],
       },
       {
-        baslik: "10. Governing law",
+        baslik: "11. Governing law",
         paragraflar: [
           `These terms are governed by the laws of the Republic of Türkiye, without prejudice to mandatory consumer protection rules of your country of residence. ${iletisim(k, d)}`,
         ],
@@ -372,14 +387,14 @@ export function destekSss(locale: Locale): SssMaddesi[] {
   if (dil(locale) === "tr") {
     return [
       {
-        soru: "Sinyaller nasıl hesaplanıyor?",
+        soru: "Teknik görünüm nasıl hesaplanıyor?",
         cevap:
-          "Her varlık için trend, momentum, hacim, oynaklık ve yapı gruplarından 20'den fazla teknik gösterge hesaplanır; bunlar tek bir skorda birleştirilir. Skor yeterince güçlüyse AL veya SAT, değilse BEKLE çıkar. Kişiye özel değildir, herkes aynı sonucu görür.",
+          "Her varlık için trend, momentum, hacim, oynaklık ve yapı gruplarından 20'den fazla teknik gösterge hesaplanır; bunlar tek bir skorda birleştirilir. Skor yeterince güçlüyse yükseliş ya da düşüş eğilimi, değilse nötr görünür. Kişiye özel değildir, herkes aynı sonucu görür ve bir alım-satım önerisi değildir.",
       },
       {
-        soru: "Sinyaller ne kadar isabetli?",
+        soru: "Analizler ne kadar isabetli?",
         cevap:
-          "Bunu saklamıyoruz: Doğruluk sayfasında her gün kaydedilen sinyallerin 10 işlem günü sonraki gerçek sonucu herkese açık olarak yayımlanır. Hiçbir sinyal kesin değildir; yatırım tavsiyesi değildir.",
+          "Bunu saklamıyoruz: Doğruluk sayfasında her gün kaydedilen teknik görünümlerin 10 işlem günü sonraki gerçek sonucu herkese açık olarak yayımlanır. Hiçbir analiz kesin değildir; yatırım danışmanlığı kapsamında değildir.",
       },
       {
         soru: "Fiyatlar canlı mı?",
@@ -389,7 +404,7 @@ export function destekSss(locale: Locale): SssMaddesi[] {
       {
         soru: "Kredi nedir, ne zaman yenilenir?",
         cevap:
-          "Bir varlığın ayrıntılı analizini açmak 1 kredi, sinyal tarayıcıyı bir kez çalıştırmak 1 kredi harcar. Aynı analizi 30 dakika içinde yeniden açmak ücretsizdir. Krediler planınızın dönemi dolunca yenilenir; kalan sayıyı Aboneliğim sayfasında görürsünüz.",
+          "Bir varlığın ayrıntılı analizini açmak 1 kredi, teknik tarayıcıyı bir kez çalıştırmak 1 kredi harcar. Aynı analizi 30 dakika içinde yeniden açmak ücretsizdir. Krediler planınızın dönemi dolunca yenilenir; kalan sayıyı Aboneliğim sayfasında görürsünüz.",
       },
       {
         soru: "Aboneliğimi nasıl iptal ederim?",
@@ -410,14 +425,14 @@ export function destekSss(locale: Locale): SssMaddesi[] {
   }
   return [
     {
-      soru: "How are signals calculated?",
+      soru: "How is the technical outlook calculated?",
       cevap:
-        "For each asset we compute 20+ technical indicators across trend, momentum, volume, volatility and structure, and combine them into a single score. A strong score gives BUY or SELL, otherwise HOLD. Signals are not personalised; everyone sees the same result.",
+        "For each asset we compute 20+ technical indicators across trend, momentum, volume, volatility and structure, and combine them into a single score. A strong score reads bullish or bearish, otherwise neutral. It is not personalised, everyone sees the same result, and it is not a recommendation to buy or sell.",
     },
     {
-      soru: "How accurate are the signals?",
+      soru: "How accurate is the analysis?",
       cevap:
-        "We publish it: the Accuracy page shows the real outcome of signals recorded every day, 10 trading days later. No signal is certain and nothing here is investment advice.",
+        "We publish it: the Accuracy page shows the real outcome of outlooks recorded every day, 10 trading days later. No analysis is certain and nothing here is investment advice.",
     },
     {
       soru: "Are prices real-time?",
@@ -427,7 +442,7 @@ export function destekSss(locale: Locale): SssMaddesi[] {
     {
       soru: "What is a credit and when does it renew?",
       cevap:
-        "Opening a detailed analysis costs 1 credit and running the scanner once costs 1 credit. Reopening the same analysis within 30 minutes is free. Credits renew at the end of your plan period; you can see the balance on My subscription.",
+        "Opening a detailed analysis costs 1 credit and running the technical scanner once costs 1 credit. Reopening the same analysis within 30 minutes is free. Credits renew at the end of your plan period; you can see the balance on My subscription.",
     },
     {
       soru: "How do I cancel my subscription?",

@@ -24,10 +24,17 @@ export default function RegisterForm({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Koşulların ve "yatırım danışmanlığı değildir" beyanının açık onayı.
+  const [kabul, setKabul] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+
+    if (!kabul) {
+      setError(t("consent.required"));
+      return;
+    }
 
     if (password.length < 8) {
       setError(t("auth.shortPassword"));
@@ -40,7 +47,7 @@ export default function RegisterForm({
       response = await fetch("/api/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, kabul }),
       });
     } catch {
       setError(t("auth.networkError"));
@@ -120,24 +127,27 @@ export default function RegisterForm({
             placeholder={t("auth.passwordPlaceholder")}
           />
         </div>
-        <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
+        <label className="onay-kutusu">
+          <input type="checkbox" checked={kabul} onChange={(e) => setKabul(e.target.checked)} required />
+          <span>
+            {t("consent.text")}{" "}
+            <Link href="/kosullar" target="_blank" style={{ color: "var(--accent)" }}>
+              {t("legal.terms")}
+            </Link>
+            {" · "}
+            <Link href="/gizlilik" target="_blank" style={{ color: "var(--accent)" }}>
+              {t("legal.privacy")}
+            </Link>
+          </span>
+        </label>
+        <button className="btn btn-primary btn-block" type="submit" disabled={loading || !kabul}>
           {loading ? <span className="spinner" /> : null}
           {loading ? t("auth.registering") : t("auth.register")}
         </button>
       </form>
 
-      <OAuthButtons google={googleEnabled} apple={appleEnabled} next={next} kayit />
+      <OAuthButtons google={googleEnabled} apple={appleEnabled} next={next} kayit kapali={!kabul} />
 
-      <p className="dim" style={{ fontSize: 12, marginTop: 16, lineHeight: 1.6 }}>
-        {t("auth.registerTerms")}{" "}
-        <Link href="/kosullar" style={{ color: "var(--accent)" }}>
-          {t("legal.terms")}
-        </Link>
-        {" · "}
-        <Link href="/gizlilik" style={{ color: "var(--accent)" }}>
-          {t("legal.privacy")}
-        </Link>
-      </p>
     </>
   );
 }

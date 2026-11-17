@@ -18,7 +18,7 @@ import { istatistikHesapla, kayitlariOku, UFUK, type Istatistik, type YonOzeti }
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Sinyal doğruluğu",
+  title: "Analiz doğruluğu",
   robots: { index: false, follow: false },
 };
 

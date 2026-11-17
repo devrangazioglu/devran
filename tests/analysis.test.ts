@@ -205,7 +205,7 @@ test("ters yöndeki üst zaman dilimi risk olarak yazılır", () => {
     timeframes: [{ interval: "1w", signal: "STRONG_SELL", score: -60 }],
   });
   assert.ok(
-    yorum.risks.some((risk) => risk.includes("ters yönde")),
+    yorum.risks.some((risk) => risk.includes("ters yön")),
     `çelişki uyarısı yok: ${JSON.stringify(yorum.risks)}`,
   );
 });

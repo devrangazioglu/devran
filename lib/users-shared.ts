@@ -25,6 +25,11 @@ export type UserSettings = {
   scanLimit: number;
   /** Sinyal listesinde yalnızca güçlü sinyalleri göster. */
   onlyStrongSignals: boolean;
+  /**
+   * Kullanım koşulları ve "yatırım danışmanlığı değildir" beyanının
+   * onaylandığı an (ms). Kayıtta ya da ilk analizdeki uyarıda yazılır.
+   */
+  kosulOnayi?: number;
 };
 
 /**
@@ -276,6 +281,9 @@ export function normalizeSettings(raw: unknown): UserSettings {
       typeof value.onlyStrongSignals === "boolean"
         ? value.onlyStrongSignals
         : DEFAULT_SETTINGS.onlyStrongSignals,
+    ...(typeof value.kosulOnayi === "number" && Number.isFinite(value.kosulOnayi)
+      ? { kosulOnayi: value.kosulOnayi }
+      : {}),
   };
 }
 

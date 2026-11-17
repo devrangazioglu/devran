@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { DAVET_CEREZI, yeniHesapKarsila } from "@/lib/credits";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { gecerliDavetKodu } from "@/lib/users-shared";
-import { createUser, UserStoreError } from "@/lib/users";
+import { createUser, saveSettings, UserStoreError } from "@/lib/users";
 
 export const runtime = "nodejs";
 
@@ -25,14 +25,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
   }
 
-  const { email, password, name } = (body ?? {}) as {
+  const { email, password, name, kabul } = (body ?? {}) as {
     email?: unknown;
     password?: unknown;
     name?: unknown;
+    kabul?: unknown;
   };
 
   if (typeof email !== "string" || typeof password !== "string") {
     return NextResponse.json({ error: "E-posta ve parola zorunludur." }, { status: 400 });
+  }
+  // Koşulların açık onayı olmadan hesap açılmaz (onay anı kayda yazılır).
+  if (kabul !== true) {
+    return NextResponse.json(
+      { error: "Devam etmek için kullanım koşullarını ve yasal uyarıyı onaylayın." },
+      { status: 400 },
+    );
   }
 
   try {
@@ -47,6 +55,7 @@ export async function POST(request: Request) {
     }
 
     // 7 gün Premium denemesi ve davet bağlantısıyla geldiyse ödül.
+    await saveSettings(result.user.email, { kosulOnayi: Date.now() }).catch(() => null);
     const davet = (await cookies()).get(DAVET_CEREZI)?.value;
     await yeniHesapKarsila(result.user.email, gecerliDavetKodu(davet) ? davet : null);
 

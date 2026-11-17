@@ -16,6 +16,7 @@ import { Aciklama, SadeOzetKarti } from "@/components/SadeOzet";
 import CandleChart, { type Gorunum } from "@/components/CandleChart";
 import HataNotu from "@/components/HataNotu";
 import { useI18n } from "@/components/I18nProvider";
+import IlkUyari from "@/components/IlkUyari";
 import PaylasDugmesi from "@/components/PaylasDugmesi";
 import IndicatorChart from "@/components/IndicatorChart";
 import Reveal from "@/components/motion/Reveal";
@@ -48,12 +49,15 @@ export default function AssetClient({
   inWatchlist,
   planPeriyotlar,
   davetKodu = null,
+  kosulOnayli = true,
 }: {
   instrument: Instrument;
   initialInterval: string;
   inWatchlist: boolean;
   /** Paylaşılan bağlantıya eklenen davet kodu. */
   davetKodu?: string | null;
+  /** Kullanıcı yasal uyarıyı daha önce onayladı mı (onaylamadıysa pencere açılır). */
+  kosulOnayli?: boolean;
   /** Planın açtığı periyotlar; defter okunamıyorsa null (kısıtlama yok). */
   planPeriyotlar: Interval[] | null;
 }) {
@@ -651,6 +655,11 @@ export default function AssetClient({
           </div>
         </div>
       )}
+
+      {/* Standart yasal uyarı: her analizin altında, görünür biçimde. */}
+      <p className="yasal-uyari">{t("legal.spk")}</p>
+
+      {!kosulOnayli && <IlkUyari />}
     </>
   );
 }

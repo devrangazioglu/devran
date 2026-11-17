@@ -167,9 +167,9 @@ test("temel analiz metinleri: sektör adı, birim ve analist etiketi", () => {
   assert.equal(metricValue("roe", 18.26, "tr-TR"), "%18,3");
   assert.equal(metricValue("roe", null, "tr-TR"), "—");
 
-  assert.equal(analystLabel(tr, 1.2), "Güçlü al");
-  assert.equal(analystLabel(tr, 3), "Tut");
-  assert.equal(analystLabel(tr, 4.8), "Güçlü sat");
+  assert.equal(analystLabel(tr, 1.2), "Çok olumlu");
+  assert.equal(analystLabel(tr, 3), "Nötr");
+  assert.equal(analystLabel(tr, 4.8), "Çok olumsuz");
   assert.equal(analystLabel(tr, null), null);
 });
 

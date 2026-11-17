@@ -13,12 +13,12 @@ export const metadata: Metadata = {
   // Kanonik ve paylaşım adresleri mutlak olmak zorunda; taban burada tanımlanır.
   metadataBase: new URL(siteUrl()),
   title: {
-    default: `${SITE_NAME} — teknik analiz ve al/sat sinyalleri`,
+    default: `${SITE_NAME} — teknik analiz ve piyasa görünümü`,
     // Alt sayfalar kendi başlığını verir, site adı sonuna eklenir.
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "Kripto, Borsa İstanbul, ABD hisseleri, döviz ve emtia için 20'den fazla teknik gösterge ve temel analizle AL / SAT / BEKLE sinyali üreten ve sonucu sade bir dille yorumlayan analiz platformu.",
+    "Kripto, Borsa İstanbul, ABD hisseleri, döviz ve emtia için 20'den fazla teknik gösterge ve temel analizi birleştiren ve sonucu sade bir dille yorumlayan teknik analiz platformu.",
   applicationName: SITE_NAME,
   robots: {
     index: true,

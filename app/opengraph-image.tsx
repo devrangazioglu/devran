@@ -8,7 +8,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Fibonex360 — piyasalara 360° bakış: teknik analiz ve al/sat sinyalleri";
+export const alt = "Fibonex360 — piyasalara 360° bakış: teknik analiz ve piyasa görünümü";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -63,7 +63,7 @@ export default function OgGorseli() {
           }}
         >
           <div>Piyasalara 360° bakış:</div>
-          <div>al / sat sinyalleri</div>
+          <div>teknik analiz</div>
         </div>
 
         <div style={{ fontSize: 30, color: "#8b95a9", marginTop: 30, lineHeight: 1.4 }}>

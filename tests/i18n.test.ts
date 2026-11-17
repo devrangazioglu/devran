@@ -55,14 +55,14 @@ test("eksik anahtar İngilizceye, oradan Türkçeye düşer", () => {
 
 test("yer tutucular verilen değerlerle dolduruluyor", () => {
   const text = translate("tr", "asset.target", { n: 2 });
-  assert.equal(text, "Hedef 2");
+  assert.equal(text, "Seviye 2");
   assert.ok(!text.includes("{"));
 
   const t = makeT("en");
-  assert.equal(t("asset.target", { n: 3 }), "Target 3");
+  assert.equal(t("asset.target", { n: 3 }), "Level 3");
 
   // Değer verilmezse yer tutucu olduğu gibi kalır (sessizce yanlış metin üretmez).
-  assert.equal(translate("tr", "asset.target"), "Hedef {n}");
+  assert.equal(translate("tr", "asset.target"), "Seviye {n}");
 });
 
 test("analiz metinleri yalnızca hazır dillerde işaretli", () => {

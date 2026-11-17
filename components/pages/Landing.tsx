@@ -86,7 +86,10 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
   ];
 
   const yapisalVeri = [
-    websiteJsonLd(locale, t("home.lead", { signals: "" }).trim()),
+    websiteJsonLd(
+      locale,
+      t("home.lead", { signals: `${t("signal.BUY")} / ${t("signal.SELL")} / ${t("signal.WAIT")}` }),
+    ),
     organizationJsonLd(t("home.marketsSub")),
     faqJsonLd(sss),
   ];

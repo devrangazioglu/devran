@@ -38,6 +38,10 @@ export async function POST(request: Request) {
   if (typeof body.onlyStrongSignals === "boolean") {
     patch.onlyStrongSignals = body.onlyStrongSignals;
   }
+  // Yasal uyarının onayı: an sunucuda yazılır, istemciden gelen değer kullanılmaz.
+  if (body.kosulOnayi === true) {
+    patch.kosulOnayi = Date.now();
+  }
 
   try {
     const user = await saveSettings(email, patch);

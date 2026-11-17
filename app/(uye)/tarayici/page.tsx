@@ -5,7 +5,7 @@ import ScannerClient from "./ScannerClient";
 
 // Üye alanı: içerik kişiye özel, arama sonuçlarında yeri yok.
 export const metadata = {
-  title: "Sinyal tarayıcı",
+  title: "Teknik tarayıcı",
   robots: { index: false, follow: false },
 };
 

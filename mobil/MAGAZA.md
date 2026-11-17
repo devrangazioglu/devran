@@ -11,7 +11,7 @@ metinler. `SITE` yazan yerlere alan adınızı koyun (şimdilik
 | Alan | Değer |
 |---|---|
 | Uygulama adı (30) | **Fibonex360** |
-| Alt başlık (30) | **Borsa ve kripto AL/SAT sinyali** |
+| Alt başlık (30) | **Borsa ve kripto teknik analiz** |
 | Birincil kategori | Finans |
 | İkincil kategori | İş |
 | Paket kimliği | com.fibonex360.app |
@@ -24,13 +24,13 @@ metinler. `SITE` yazan yerlere alan adınızı koyun (şimdilik
 **Anahtar kelimeler (100 karakter, virgülle, boşluksuz):**
 
 ```
-teknik analiz,borsa,bist,kripto,bitcoin,hisse,sinyal,rsi,macd,döviz,altın,nasdaq,grafik,endeks
+teknik analiz,borsa,bist,kripto,bitcoin,hisse,grafik,rsi,macd,döviz,altın,nasdaq,endeks,trend
 ```
 
 **Promosyon metni (170):**
 
 ```
-Yeni üyelere 7 gün Premium ücretsiz! Kripto, ABD, Borsa İstanbul ve 11 dünya borsası için 20+ göstergeyle AL/SAT/BEKLE sinyali ve 360° bakış.
+Yeni üyelere 7 gün Premium ücretsiz! Kripto, ABD, Borsa İstanbul ve 11 dünya borsası için 20+ göstergeyle teknik analiz ve 360° bakış.
 ```
 
 ## Açıklama (Türkçe)
@@ -39,15 +39,15 @@ Yeni üyelere 7 gün Premium ücretsiz! Kripto, ABD, Borsa İstanbul ve 11 düny
 Fibonex360, piyasaya 360 derece bakmanızı sağlayan teknik analiz uygulamasıdır. Kripto paralar, Amerikan borsası, Borsa İstanbul, 11 büyük dünya borsası, döviz ve emtia için 20'den fazla teknik göstergeyi tek bir skorda birleştirir ve sonucu herkesin anlayacağı sade bir dille anlatır.
 
 NELER VAR
-• AL / SAT / BEKLE sinyali ve −100…+100 arası tek skor
+• Yükseliş / düşüş / nötr teknik görünüm ve −100…+100 arası tek skor
 • 360° Bakış: trend, momentum, yapı, hacim, oynaklık, zaman dilimleri, göreli güç ve temel analiz tek halkada
 • "Kısaca" özeti: teknik analiz bilmeyenler için tek paragrafta ne olduğu
-• Destek ve direnç seviyeleri, hedefler ve formasyonlar
+• Destek ve direnç seviyeleri, teknik seviyeler ve formasyonlar
 • RSI, MACD, Bollinger, ADX, Stokastik, Ichimoku, OBV ve daha fazlası
 • 1 dakikadan haftalığa 8 zaman dilimi (canlı piyasalarda)
-• Sinyal tarayıcı: piyasanın en güçlü AL ve SAT sinyalleri tek ekranda
+• Teknik tarayıcı: bir piyasanın teknik görünümü tek ekranda
 • Takip listesi ve tek dokunuşla toplu analiz
-• Doğruluk sayfası: geçmiş sinyallerin gerçek sonuçları herkese açık
+• Doğruluk sayfası: geçmiş analizlerin gerçek sonuçları herkese açık
 
 PİYASALAR
 Kripto (canlı) · ABD hisseleri (canlı) · Borsa İstanbul · Almanya · İngiltere · Fransa · Japonya · Çin · Hong Kong · Hindistan · Kanada · Güney Kore · Tayvan · Suudi Arabistan · Döviz (canlı) · Altın, gümüş, petrol ve diğer emtialar
@@ -59,7 +59,7 @@ GİZLİLİK
 Borsa hesabınıza bağlanmayız, emir göndermeyiz, verinizi satmayız. Hesabınızı uygulamanın içinden tek dokunuşla silebilirsiniz.
 
 ÖNEMLİ
-Fibonex360 bir teknik analiz aracıdır; yatırım danışmanlığı değildir. Sinyaller geçmiş fiyatlardan otomatik hesaplanır ve kâr garantisi vermez. Bazı borsaların fiyatları borsa kuralı gereği 15–20 dakika gecikmelidir.
+Fibonex360 bir teknik analiz aracıdır; burada yer alan bilgi, yorum ve görünümler yatırım danışmanlığı kapsamında değildir. Analizler geçmiş fiyatlardan otomatik hesaplanır, herkese aynı gösterilir ve kâr garantisi vermez. Bazı borsaların fiyatları borsa kuralı gereği 15–20 dakika gecikmelidir.
 
 Kullanım koşulları: SITE/kosullar
 Gizlilik: SITE/gizlilik
@@ -71,15 +71,15 @@ Gizlilik: SITE/gizlilik
 Fibonex360 gives you a 360° view of the market. It combines 20+ technical indicators into a single score for crypto, US stocks, Borsa Istanbul, 11 major world exchanges, FX and commodities, and explains the result in plain language.
 
 FEATURES
-• BUY / SELL / HOLD signal and a single −100…+100 score
+• Bullish / bearish / neutral technical outlook and a single −100…+100 score
 • 360° View: trend, momentum, structure, volume, volatility, timeframes, relative strength and fundamentals in one ring
 • Plain-language summary for people new to technical analysis
-• Support and resistance levels, targets and chart patterns
+• Support and resistance levels, technical levels and chart patterns
 • RSI, MACD, Bollinger Bands, ADX, Stochastic, Ichimoku, OBV and more
 • 8 timeframes from 1 minute to weekly (on live markets)
-• Signal scanner: the strongest BUY and SELL signals of a market on one screen
+• Technical scanner: a whole market's technical outlook on one screen
 • Watchlist with one-tap batch analysis
-• Accuracy page: the real outcome of past signals, published openly
+• Accuracy page: the real outcome of past analyses, published openly
 
 START FREE
 90 analyses a month on the free plan. New members get 7 days of Premium free, no card required.
@@ -88,7 +88,7 @@ PRIVACY
 We never connect to your brokerage account, never place orders and never sell your data. Delete your account from inside the app at any time.
 
 IMPORTANT
-Fibonex360 is a technical analysis tool, not investment advice. Signals are calculated automatically from past prices and do not guarantee profit. Some exchanges are delayed by 15–20 minutes under exchange rules.
+Fibonex360 is a technical analysis tool, not investment advice. Analyses are calculated automatically from past prices, are identical for every user and do not guarantee profit. Some exchanges are delayed by 15–20 minutes under exchange rules.
 
 Terms: SITE/kosullar
 Privacy: SITE/gizlilik
@@ -133,14 +133,14 @@ Aynı hesabı GitHub Secrets'a `MAGAZA_EPOSTA` / `MAGAZA_PAROLA` olarak eklersen
 **Not metni (İngilizce yazın):**
 
 ```
-Fibonex360 is a technical analysis app. It does not provide personalised investment advice, does not connect to brokerage accounts and does not execute trades. Signals are generated algorithmically from public market data and are identical for all users.
+Fibonex360 is a technical analysis app. It does not provide personalised investment advice or buy/sell recommendations, does not connect to brokerage accounts and does not execute trades. Technical outlooks (bullish / bearish / neutral) are generated algorithmically from public market data and are identical for all users.
 
 Demo account: (email) / (password)
 
 How to test:
 1. Sign in with the demo account.
 2. Panel shows market overview; tap any asset for the full analysis (360° View, indicators, levels).
-3. "Signal scanner" tab scans a whole market.
+3. "Technical scanner" tab scans a whole market.
 4. Settings → Account → "Delete account" permanently deletes the account (guideline 5.1.1(v)).
 
 Paid plans are not sold in the iOS app in this version; the free plan and a free 7-day trial (no payment) are available. In-app purchase will be added in a later version.

@@ -66,6 +66,7 @@ export default async function AssetPage({
       inWatchlist={(user?.watchlist ?? []).includes(instrumentId(marketParam, symbol))}
       planPeriyotlar={user ? kullanicidanDurum(user).plan.periyotlar : null}
       davetKodu={user ? davetKodu(user.id) : null}
+      kosulOnayli={!user || Boolean(user.settings.kosulOnayi)}
     />
   );
 }
