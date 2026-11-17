@@ -1,0 +1,51 @@
+# Alan adının DNS'ini ve sitenin açılıp açılmadığını dışarıdan kontrol eder.
+name: Alan adı kontrolü
+
+on:
+  workflow_dispatch:
+    inputs:
+      alan:
+        description: "Alan adı"
+        required: false
+        default: "fibonex360.com"
+
+jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ALAN: ${{ inputs.alan || 'fibonex360.com' }}
+    steps:
+      - name: Araçlar
+        run: sudo apt-get install -y -qq dnsutils whois >/dev/null 2>&1 || true
+
+      - name: Kayıt merkezi (.com) hangi ad sunucularını gösteriyor
+        run: |
+          dig +norecurse @a.gtld-servers.net "$ALAN" NS | sed -n '/AUTHORITY SECTION/,/^$/p'
+
+      - name: Whois
+        run: whois "$ALAN" | grep -iE "Name Server|Registrar:|Creation Date|Domain Status" | head -20 || true
+
+      - name: Vercel ad sunucusu ne cevap veriyor
+        run: |
+          for ad in "$ALAN" "www.$ALAN"; do
+            echo "== $ad (ns1.vercel-dns.com)"
+            dig +short @ns1.vercel-dns.com "$ad" A
+            dig +short @ns1.vercel-dns.com "$ad" CNAME
+          done
+
+      - name: Genel DNS sunucuları ne görüyor
+        run: |
+          for r in 8.8.8.8 1.1.1.1 9.9.9.9; do
+            echo "== $r"
+            echo "NS:    $(dig +short @$r "$ALAN" NS | tr '\n' ' ')"
+            echo "A:     $(dig +short @$r "$ALAN" A | tr '\n' ' ')"
+            echo "www:   $(dig +short @$r "www.$ALAN" | tr '\n' ' ')"
+          done
+
+      - name: Site açılıyor mu
+        run: |
+          for u in "https://www.$ALAN/" "https://$ALAN/" "http://$ALAN/"; do
+            echo "== $u"
+            curl -sS -o /dev/null --max-time 20 -w "durum=%{http_code} yonlendirme=%{redirect_url} ip=%{remote_ip}\n" "$u" || echo "açılmadı"
+          done
