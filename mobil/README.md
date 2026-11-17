@@ -46,8 +46,6 @@ yükler. Sertifika ya da profil dosyası tutmak gerekmez.
 
    | Ad | Değer |
    |---|---|
-   | `ASC_KEY_ID` | Key ID |
-   | `ASC_ISSUER_ID` | Issuer ID |
    | `ASC_KEY_P8` | `.p8` dosyasının tüm içeriği (BEGIN/END satırları dahil) |
 
 4. İş akışını bir kez çalıştırın: paket kimliğini kaydeder ve App Store Connect'te uygulama

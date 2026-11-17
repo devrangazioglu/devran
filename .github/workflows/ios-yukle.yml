@@ -6,8 +6,7 @@
 #
 # Gerekli GitHub Secrets (Settings → Secrets and variables → Actions):
 #   APPLE_TEAM_ID  — (isteğe bağlı) varsayılanı aşağıda; başka ekip için girin
-#   ASC_KEY_ID     — App Store Connect API anahtarının Key ID'si
-#   ASC_ISSUER_ID  — aynı sayfadaki Issuer ID
+#   ASC_KEY_ID / ASC_ISSUER_ID — (isteğe bağlı) varsayılanları aşağıda; anahtar değişirse girin
 #   ASC_KEY_P8     — indirilen AuthKey_XXXX.p8 dosyasının tüm içeriği
 #
 # Ayrıntılı adımlar: mobil/README.md → "Mac olmadan iOS".
@@ -32,8 +31,8 @@ jobs:
     timeout-minutes: 45
     env:
       PAKET_KIMLIGI: com.devrangaziolu.fibonex
-      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID || 'KX32BW9969' }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID || 'cb244197-4203-43ce-8de6-a5a1a9805eae' }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID || 'NM3HFXD52H' }}
       DERLEME: ${{ github.run_number }}
