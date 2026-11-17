@@ -30,13 +30,38 @@ npm install
 npm run esitle      # ayarları ve ikonları iOS/Android projelerine kopyalar
 ```
 
-## iOS'u derleyip göndermek (Mac + Xcode gerekir)
+## Mac olmadan iOS (GitHub Actions)
+
+`.github/workflows/ios-yukle.yml`, uygulamayı GitHub'ın bulut Mac'inde derler,
+Apple'ın bulut sertifikasıyla imzalar ve App Store Connect'e (TestFlight)
+yükler. Sertifika ya da profil dosyası tutmak gerekmez.
+
+**Bir kerelik hazırlık**
+
+1. **Team ID:** developer.apple.com → Account → Membership details → *Team ID* (10 karakter).
+2. **API anahtarı:** appstoreconnect.apple.com → Kullanıcılar ve Erişim → Entegrasyonlar →
+   App Store Connect API → Ekip Anahtarları → **+**. Ad: `GitHub`, Erişim: **Admin**.
+   *Issuer ID* ve *Key ID*'yi not edin, `.p8` dosyasını indirin (yalnızca bir kez indirilebilir).
+3. **GitHub Secrets** (depo → Settings → Secrets and variables → Actions → New repository secret):
+
+   | Ad | Değer |
+   |---|---|
+   | `APPLE_TEAM_ID` | Team ID |
+   | `ASC_KEY_ID` | Key ID |
+   | `ASC_ISSUER_ID` | Issuer ID |
+   | `ASC_KEY_P8` | `.p8` dosyasının tüm içeriği (BEGIN/END satırları dahil) |
+
+4. İş akışını bir kez çalıştırın: paket kimliğini kaydeder ve App Store Connect'te uygulama
+   yoksa durup nasıl oluşturulacağını yazar. Uygulamayı oluşturduktan sonra yeniden çalıştırın.
+
+**Her yüklemede:** Actions → *iOS — App Store'a yükle* → Run workflow → sürüm numarası.
+Derleme numarası otomatik artar. 10–30 dakika sonra derleme TestFlight'ta görünür.
+
+## iOS'u Mac'te derlemek (isteğe bağlı)
 
 1. `npm run ios` → Xcode açılır.
 2. *Signing & Capabilities* → Team: Apple Developer hesabınız. Bundle ID `com.fibonex360.app`.
-3. (Apple ile giriş açılacaksa) *+ Capability* → **Sign in with Apple**.
-4. Üst menü: *Product → Archive* → *Distribute App → App Store Connect → Upload*.
-5. App Store Connect'te uygulamayı oluşturun ve `MAGAZA.md`'deki metinleri yapıştırın.
+3. Üst menü: *Product → Archive* → *Distribute App → App Store Connect → Upload*.
 
 ## Android'i derleyip göndermek (Android Studio)
 
