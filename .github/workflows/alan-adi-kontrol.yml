@@ -50,6 +50,18 @@ jobs:
             curl -sS -o /dev/null --max-time 20 -w "durum=%{http_code} yonlendirme=%{redirect_url} ip=%{remote_ip}\n" "$u" || echo "açılmadı"
           done
 
+      - name: E-posta kayıtları (MX, SPF)
+        run: |
+          for r in 8.8.8.8 1.1.1.1; do
+            echo "== $r"
+            echo "MX:  $(dig +short @$r "$ALAN" MX | tr '\n' ' ')"
+            echo "TXT: $(dig +short @$r "$ALAN" TXT | tr '\n' ' ')"
+          done
+
+      - name: Gizlilik metnindeki veri sorumlusu ve destek adresi
+        run: |
+          curl -s --max-time 20 "https://www.$ALAN/gizlilik" | grep -o "veri sorumlusu[^<]\{0,80\}\|support@[a-z0-9.]*" | sort -u || echo "bulunamadı"
+
       - name: Giriş sağlayıcıları
         run: |
           curl -s --max-time 20 "https://www.$ALAN/api/auth/providers" | python3 -c "import sys,json; d=json.load(sys.stdin); print('sağlayıcılar:', ', '.join(d.keys()))" || echo "okunamadı"
