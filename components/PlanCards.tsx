@@ -16,6 +16,7 @@ import { useI18n } from "./I18nProvider";
 import {
   PLAN_IDS,
   PLANS,
+  paraBirimi,
   planUcreti,
   YILLIK_BEDAVA_AY,
   yillikAylikKarsiligi,
@@ -37,19 +38,21 @@ export default function PlanCards({
   uyeModu?: boolean;
   kayitHref?: string;
 }) {
-  const { t, intl } = useI18n();
+  const { t, intl, locale } = useI18n();
+  const birim = paraBirimi(locale);
   const router = useRouter();
   const [faturalama, setFaturalama] = useState<Faturalama>(mevcutFaturalama ?? "aylik");
   const [bekleyen, setBekleyen] = useState<PlanId | null>(null);
   const [mesaj, setMesaj] = useState<{ tur: "ok" | "hata"; metin: string } | null>(null);
 
-  // Fiyatlar tam sayı: küsurat okumayı zorlaştırıyor, indirimi de gizliyor.
-  const para = (tutar: number, kesir = 0) =>
+  // Türkçede Türk lirası (App Store'daki Türkiye fiyatı), diğer dillerde dolar.
+  // Ücretsiz plan "0" olarak küsuratsız yazılır.
+  const para = (tutar: number) =>
     new Intl.NumberFormat(intl, {
       style: "currency",
-      currency: "USD",
-      minimumFractionDigits: kesir,
-      maximumFractionDigits: kesir,
+      currency: birim,
+      minimumFractionDigits: tutar === 0 ? 0 : 2,
+      maximumFractionDigits: 2,
     }).format(tutar);
 
   async function planSec(id: PlanId) {
@@ -110,7 +113,7 @@ export default function PlanCards({
           // geçmek isteyen kullanıcı düğmeyi kapalı bulmamalı.
           const secili = mevcut === id && (mevcutFaturalama ?? "aylik") === faturalama;
           const oneCikan = id === "premium";
-          const ucret = planUcreti(plan, faturalama);
+          const ucret = planUcreti(plan, faturalama, birim);
 
           return (
             <div key={id} className={`plan-card${oneCikan ? " plan-card-featured" : ""}`}>
@@ -125,7 +128,7 @@ export default function PlanCards({
                   yaptırmak yerine yazıyoruz. */}
               <p className="plan-price-note">
                 {faturalama === "yillik" && ucret > 0
-                  ? t("plans.perMonthEquivalent", { amount: para(yillikAylikKarsiligi(plan), 2) })
+                  ? t("plans.perMonthEquivalent", { amount: para(yillikAylikKarsiligi(plan, birim)) })
                   : " "}
               </p>
 

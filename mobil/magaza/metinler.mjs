@@ -24,7 +24,7 @@ export const DILLER = {
   tr: {
     altBaslik: "Borsa ve kripto teknik analiz",
     promosyon:
-      "Yeni üyelere 7 gün Premium ücretsiz. Kripto, ABD, Borsa İstanbul ve 11 dünya borsası için 20+ göstergeyle teknik analiz ve 360° bakış.",
+      "Yeni üyelere 30 analiz kredisi hediye. Kripto, ABD, Borsa İstanbul ve 11 dünya borsası için 20+ göstergeyle teknik analiz ve 360° bakış.",
     anahtarKelimeler:
       "teknik analiz,borsa,bist,kripto,bitcoin,hisse,grafik,rsi,macd,döviz,altın,nasdaq,endeks,trend",
     aciklama: `Fibonex360, piyasaya 360 derece bakmanızı sağlayan teknik analiz uygulamasıdır. Kripto paralar, Amerikan borsası, Borsa İstanbul, 11 büyük dünya borsası, döviz ve emtia için 20'den fazla teknik göstergeyi tek bir skorda birleştirir ve sonucu herkesin anlayacağı sade bir dille anlatır.
@@ -44,7 +44,7 @@ PİYASALAR
 Kripto (canlı) · ABD hisseleri (canlı) · Borsa İstanbul · Almanya · İngiltere · Fransa · Japonya · Çin · Hong Kong · Hindistan · Kanada · Güney Kore · Tayvan · Suudi Arabistan · Döviz (canlı) · Altın, gümüş, petrol ve diğer emtialar
 
 ÜCRETSİZ BAŞLAYIN
-Ücretsiz planda her ay 90 analiz. Yeni üyelere 7 gün Premium ücretsiz, kart gerekmez. Arkadaşınızı davet edin, ikiniz de ek kredi kazanın.
+Yeni üyelere 30 analiz kredisi hediye, kart gerekmez. Ücretsiz planda ayrıca her ay 10 analiz. Arkadaşınızı davet edin, ikiniz de ek kredi kazanın.
 
 GİZLİLİK
 Borsa hesabınıza bağlanmayız, emir göndermeyiz, verinizi satmayız. Hesabınızı uygulamanın içinden tek dokunuşla silebilirsiniz.
@@ -58,7 +58,7 @@ Gizlilik: ${SITE}/gizlilik`,
   "en-US": {
     altBaslik: "Stock & crypto chart analysis",
     promosyon:
-      "New members get 7 days of Premium free. Technical analysis with 20+ indicators and a 360° view for crypto, US stocks, Borsa Istanbul and 11 world exchanges.",
+      "New members get 30 free analysis credits. Technical analysis with 20+ indicators and a 360° view for crypto, US stocks, Borsa Istanbul and 11 world exchanges.",
     anahtarKelimeler:
       "technical analysis,stocks,crypto,bitcoin,chart,rsi,macd,forex,gold,nasdaq,indicator,trend,market",
     aciklama: `Fibonex360 gives you a 360° view of the market. It combines 20+ technical indicators into a single score for crypto, US stocks, Borsa Istanbul, 11 major world exchanges, FX and commodities, and explains the result in plain language.
@@ -75,7 +75,7 @@ FEATURES
 • Accuracy page: the real outcome of past analyses, published openly
 
 START FREE
-90 analyses a month on the free plan. New members get 7 days of Premium free, no card required.
+New members get 30 free analysis credits, no card required, plus 10 analyses every month on the free plan.
 
 PRIVACY
 We never connect to your brokerage account, never place orders and never sell your data. Delete your account from inside the app at any time.
@@ -91,7 +91,7 @@ Privacy: ${SITE}/gizlilik`,
 /** App Review ekibine not (İngilizce). Demo hesap bilgisi ayrı alanlara yazılır. */
 export const INCELEME_NOTU = `Fibonex360 is a technical analysis app for stocks, crypto, FX and commodities. It does not provide personalised investment advice, does not connect to brokerage accounts and does not execute trades. Technical outlooks (bullish / bearish / neutral) are calculated algorithmically from public market data, are identical for all users and are shown with a standard investment-advice disclaimer (Turkish Capital Markets Board wording).
 
-The demo account in the Sign-In Information fields is a regular member account with the free 7-day Premium trial active, so every feature can be reviewed.
+The demo account in the Sign-In Information fields is a regular member account with enough analysis credits to review every feature.
 
 How to test:
 1. Sign in with the demo account (email + password; the Google button is hidden inside the app).

@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { yoneticiMi } from "@/lib/admin";
-import { denemeBaslat, planDegistir } from "@/lib/credits";
+import { planDegistir } from "@/lib/credits";
 import { isFaturalama, isPlanId } from "@/lib/plans";
 import { UserStoreError } from "@/lib/users";
-import { bonusVer, denemeSifirla, yonetimVerisi } from "@/lib/yonetim";
+import { bonusVer, yonetimVerisi } from "@/lib/yonetim";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,8 +33,6 @@ export async function GET() {
  * Yönetici işlemleri:
  *   { islem: "plan", email, plan, faturalama? }   — planı değiştir (ödemesiz)
  *   { islem: "bonus", email, miktar }              — ek kredi ver / geri al
- *   { islem: "deneme", email }                     — 7 gün Premium denemesi başlat
- *   { islem: "deneme-sifirla", email }             — deneme hakkını geri ver
  */
 export async function POST(request: Request) {
   if (!(await yonetici())) return NextResponse.json({ error: "Bulunamadı." }, { status: 404 });
@@ -56,19 +54,6 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "Geçersiz miktar." }, { status: 400 });
         }
         if (!(await bonusVer(email, miktar))) {
-          return NextResponse.json({ error: "Üye bulunamadı." }, { status: 404 });
-        }
-        break;
-      }
-      case "deneme": {
-        const sonuc = await denemeBaslat(email);
-        if (!sonuc.ok) {
-          return NextResponse.json({ error: `Deneme başlatılamadı (${sonuc.sebep}).` }, { status: 409 });
-        }
-        break;
-      }
-      case "deneme-sifirla": {
-        if (!(await denemeSifirla(email))) {
           return NextResponse.json({ error: "Üye bulunamadı." }, { status: 404 });
         }
         break;

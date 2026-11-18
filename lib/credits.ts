@@ -22,6 +22,7 @@
 import {
   ANALIZ_KREDISI,
   DONEM_MS,
+  EN_UST_PLAN,
   plan,
   planUcreti,
   TEKRAR_UCRETSIZ_MS,
@@ -43,14 +44,10 @@ import {
 const EN_FAZLA_ANAHTAR = 120;
 
 export type KrediDurumu = {
-  /** Etkin plan: deneme sürüyorsa Premium, değilse ödenen plan. */
+  /** Etkin plan (yöneticide en üst plan). */
   plan: Plan;
-  /** Ödenen (kayıtlı) plan; deneme sırasında "ucretsiz" kalır. */
+  /** Ödenen (kayıtlı) plan. */
   kayitliPlan: PlanId;
-  /** Süren Premium denemesinin bitişi; deneme yoksa null. */
-  denemeBitis: number | null;
-  /** Bu hesap ücretsiz denemeyi başlatabilir mi (hiç kullanmamış ve ücretsiz planda). */
-  denemeHakki: boolean;
   /** Devreden ek kredi (kalan'ın içinde). */
   bonus: number;
   /** Yönetici hesabı: kredi harcamaz, en üst planın sınırlarına sahiptir. */
@@ -77,8 +74,6 @@ export type KrediOzeti = {
   toplam: number;
   /** Kredinin yenileneceği an (ms). */
   donemSonu: number;
-  /** Süren Premium denemesinin bitişi (ms) ya da null. */
-  denemeBitis: number | null;
   /** Yönetici: kalan kredi sınırsız gösterilir. */
   yonetici: boolean;
 };
@@ -93,7 +88,6 @@ export function krediOzeti(durum: KrediDurumu | null): KrediOzeti | null {
     kalan: durum.kalan,
     toplam: durum.toplam,
     donemSonu: durum.donemSonu,
-    denemeBitis: durum.denemeBitis,
     yonetici: durum.yonetici,
   };
 }
@@ -107,35 +101,16 @@ export type HarcamaSonucu =
   | { ok: true; ucretsiz: boolean; durum: KrediDurumu | null }
   | { ok: false; sebep: "yetersiz"; durum: KrediDurumu };
 
-/* ────────────────────── Deneme ve davet ────────────────────── */
+/* ────────────────────── Davet ────────────────────── */
 
 /** Davet kodunu kayıt anına kadar taşıyan çerez (bkz. middleware.ts). */
 export const DAVET_CEREZI = "davet";
 
-/** Ücretsiz Premium denemesinin süresi. */
-export const DENEME_MS = 7 * 24 * 60 * 60_000;
-/** Deneme sırasında geçerli plan. */
-export const DENEME_PLANI: PlanId = "premium";
 /** Davet eden ve davet edilenin kazandığı ek kredi. */
 export const DAVET_ODULU = 50;
 export const DAVETLI_ODULU = 25;
 /** Bir hesabın davetle ödül kazanabileceği en fazla kişi (sahte hesap sınırı). */
 export const DAVET_SINIRI = 20;
-
-/** Deneme şu anda sürüyor mu? Yalnızca ücretsiz planda anlamlı. */
-function denemeSuruyor(abonelik: Subscription, now: number): boolean {
-  return (
-    abonelik.plan === "ucretsiz" &&
-    abonelik.deneme !== undefined &&
-    !abonelik.deneme.kapandi &&
-    now < abonelik.deneme.bitis
-  );
-}
-
-/** Etkin plan: deneme sürüyorsa Premium, değilse kayıtlı plan. */
-export function etkinPlanId(abonelik: Subscription, now = Date.now()): PlanId {
-  return denemeSuruyor(abonelik, now) ? DENEME_PLANI : abonelik.plan;
-}
 
 /* ────────────────────── Dönem ────────────────────── */
 
@@ -148,17 +123,6 @@ export function etkinPlanId(abonelik: Subscription, now = Date.now()): PlanId {
  * 7'sinde yenilenir.
  */
 export function donemiTazele(abonelik: Subscription, now = Date.now()): Subscription {
-  // Deneme bitti: ücretsiz plana dönülür ve dönem bitiş anından baştan
-  // başlar. Denemede harcanan Premium kredisi ücretsiz hakkı yemesin.
-  if (abonelik.deneme && !abonelik.deneme.kapandi && now >= abonelik.deneme.bitis) {
-    abonelik = {
-      ...abonelik,
-      deneme: { ...abonelik.deneme, kapandi: true },
-      ...(abonelik.plan === "ucretsiz"
-        ? { donemBasi: abonelik.deneme.bitis, harcanan: 0, sonAnalizler: {} }
-        : {}),
-    };
-  }
   const gecen = Math.floor((now - abonelik.donemBasi) / DONEM_MS);
   if (gecen <= 0) return budaAnahtarlar(abonelik, now);
 
@@ -190,12 +154,10 @@ export function durumOlustur(
   yonetici = false,
 ): KrediDurumu {
   if (yonetici) {
-    const ust = plan("ultimate");
+    const ust = plan(EN_UST_PLAN);
     return {
       plan: ust,
       kayitliPlan: abonelik.plan,
-      denemeBitis: null,
-      denemeHakki: false,
       bonus: abonelik.bonus,
       yonetici: true,
       faturalama: abonelik.faturalama,
@@ -206,13 +168,11 @@ export function durumOlustur(
       donemSonu: abonelik.donemBasi + DONEM_MS,
     };
   }
-  const secili = plan(etkinPlanId(abonelik, now));
+  const secili = plan(abonelik.plan);
   return {
     yonetici: false,
     plan: secili,
     kayitliPlan: abonelik.plan,
-    denemeBitis: denemeSuruyor(abonelik, now) ? abonelik.deneme!.bitis : null,
-    denemeHakki: abonelik.plan === "ucretsiz" && abonelik.deneme === undefined,
     bonus: abonelik.bonus,
     faturalama: abonelik.faturalama,
     toplam: secili.aylikKredi + abonelik.bonus,
@@ -286,7 +246,7 @@ export async function krediHarca(
       const ucretsiz = oncekiOdeme !== undefined && now - oncekiOdeme < TEKRAR_UCRETSIZ_MS;
 
       if (!ucretsiz) {
-        const hak = plan(etkinPlanId(abonelik, now)).aylikKredi;
+        const hak = plan(abonelik.plan).aylikKredi;
         if (abonelik.harcanan + maliyet <= hak) {
           abonelik.harcanan += maliyet;
         } else if (abonelik.bonus >= maliyet) {
@@ -333,7 +293,7 @@ export async function krediIade(
       // Aylık hak doluysa harcama büyük olasılıkla ek krediden yapılmıştı;
       // iade oraya döner. (Son aylık kredi harcanmışsa da ek krediye dönmesi
       // kullanıcı lehine: ek kredi ay sonunda silinmez.)
-      const hak = plan(etkinPlanId(abonelik)).aylikKredi;
+      const hak = plan(abonelik.plan).aylikKredi;
       const sayactan = abonelik.harcanan >= maliyet && abonelik.harcanan < hak;
       user.abonelik = {
         ...abonelik,
@@ -365,7 +325,7 @@ export async function planDegistir(
   await store().update(email, (user) => {
     const onceki = normalizeSubscription(user.abonelik);
     user.abonelik = {
-      // Ek kredi, deneme ve davet geçmişi plan değişiminde korunur.
+      // Ek kredi ve davet geçmişi plan değişiminde korunur.
       ...onceki,
       plan: yeni,
       faturalama,
@@ -381,34 +341,7 @@ export async function planDegistir(
   return durum;
 }
 
-/* ────────────────────── Deneme başlatma ve davet ödülü ────────────────────── */
-
-export type DenemeSonucu =
-  | { ok: true; durum: KrediDurumu }
-  | { ok: false; sebep: "kullanildi" | "ucretli" | "kayit-yok" };
-
-/**
- * 7 günlük ücretsiz Premium denemesini başlatır. Her hesap bir kez dener;
- * ücretli plandaki hesapta anlamı yok.
- */
-export async function denemeBaslat(email: string, now = Date.now()): Promise<DenemeSonucu> {
-  let sonuc: DenemeSonucu = { ok: false, sebep: "kayit-yok" };
-  await store().update(email, (user) => {
-    const abonelik = donemiTazele(normalizeSubscription(user.abonelik, now), now);
-    if (abonelik.deneme) {
-      sonuc = { ok: false, sebep: "kullanildi" };
-      return;
-    }
-    if (abonelik.plan !== "ucretsiz") {
-      sonuc = { ok: false, sebep: "ucretli" };
-      return;
-    }
-    abonelik.deneme = { bitis: now + DENEME_MS, kapandi: false };
-    user.abonelik = abonelik;
-    sonuc = { ok: true, durum: durumOlustur(abonelik, now) };
-  });
-  return sonuc;
-}
+/* ────────────────────── Davet ödülü ────────────────────── */
 
 /**
  * Davetle gelen yeni hesabı ödüllendirir: davet edene ve davetliye ek kredi.
@@ -445,15 +378,11 @@ export async function davetOdulu(yeniEmail: string, kod: string): Promise<boolea
 }
 
 /**
- * Yeni hesaba hoş geldin: Premium denemesi ve (varsa) davet ödülü.
+ * Yeni hesaba hoş geldin: (varsa) davet ödülü. Hoş geldin kredisi ayrıca
+ * gerekmez; kaydın ilk okunuşunda verilir (bkz. normalizeSubscription).
  * Kayıt (e-posta) ve ilk Google/Apple girişinde çağrılır.
  */
 export async function yeniHesapKarsila(email: string, davet?: string | null): Promise<void> {
-  try {
-    await denemeBaslat(email);
-  } catch (error) {
-    console.error("Deneme başlatılamadı:", error);
-  }
   if (davet) await davetOdulu(email, davet);
 }
 

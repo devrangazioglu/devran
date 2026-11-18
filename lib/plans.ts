@@ -15,17 +15,19 @@
  *     kredi değil, aynı anda taranabilen varlık sayısıyla verilir.
  *   • Krediler her ay yenilenir, devretmez.
  *
- * Fiyatlar aylık ve ABD doları.
+ * Fiyatlar ABD doları; Türkiye'de ayrıca Türk lirası fiyatı gösterilir
+ * (App Store'daki ülke fiyatıyla aynı). Fiyatlar mağaza alışkanlığına uygun
+ * olarak ",99" ile biter.
  */
 
 import type { Interval } from "./markets/types";
 
-export type PlanId = "ucretsiz" | "basic" | "premium" | "ultimate";
+export type PlanId = "ucretsiz" | "basic" | "premium";
 
 /**
  * Faturalama dönemi.
  *
- * Yıllık ödeyene iki ay bedava: hem yuvarlak bir rakam çıkıyor (10 → 100)
+ * Yıllık ödeyene iki ay bedava: hem yuvarlak bir rakam çıkıyor (9,99 → 99,99)
  * hem de anlatması kolay. Kredi hakkı ikisinde de aynı ve **her ay** yenilenir;
  * yıllık ödemek bir yıllık krediyi peşin vermek değil, aylık hakkı ucuza almak.
  */
@@ -48,6 +50,8 @@ export type Plan = {
   ucret: number;
   /** Yıllık ödemede tek seferde ödenen ücret (USD). */
   yillikUcret: number;
+  /** Türkiye fiyatları (TRY): aylık ve yıllık. */
+  tl: { aylik: number; yillik: number };
   /** Her ay yenilenen analiz kredisi. */
   aylikKredi: number;
   /** Tarayıcının tek çalıştırmada bakabileceği en fazla varlık. */
@@ -82,8 +86,10 @@ export const PLANS: Record<PlanId, Plan> = {
     ad: "Ücretsiz",
     ucret: 0,
     yillikUcret: 0,
-    // Denemeye yetecek kadar: günde üç analiz.
-    aylikKredi: 90,
+    tl: { aylik: 0, yillik: 0 },
+    // Uygulamayı açık tutacak kadar; asıl deneme kayıttaki hoş geldin kredisi
+    // (bkz. credits.ts → HOSGELDIN_KREDISI).
+    aylikKredi: 10,
     taramaSiniri: 10,
     takipSiniri: 10,
     periyotlar: TUM_PERIYOTLAR,
@@ -91,8 +97,9 @@ export const PLANS: Record<PlanId, Plan> = {
   basic: {
     id: "basic",
     ad: "Basic",
-    ucret: 10,
-    yillikUcret: 100,
+    ucret: 9.99,
+    yillikUcret: 99.99,
+    tl: { aylik: 199.99, yillik: 1999.99 },
     aylikKredi: 600,
     taramaSiniri: 30,
     takipSiniri: 50,
@@ -101,19 +108,10 @@ export const PLANS: Record<PlanId, Plan> = {
   premium: {
     id: "premium",
     ad: "Premium",
-    ucret: 30,
-    yillikUcret: 300,
+    ucret: 29.99,
+    yillikUcret: 299.99,
+    tl: { aylik: 599.99, yillik: 5999.99 },
     aylikKredi: 2500,
-    taramaSiniri: 60,
-    takipSiniri: 200,
-    periyotlar: TUM_PERIYOTLAR,
-  },
-  ultimate: {
-    id: "ultimate",
-    ad: "Ultimate",
-    ucret: 60,
-    yillikUcret: 600,
-    aylikKredi: 7500,
     taramaSiniri: 100,
     takipSiniri: 500,
     periyotlar: TUM_PERIYOTLAR,
@@ -121,10 +119,13 @@ export const PLANS: Record<PlanId, Plan> = {
   },
 };
 
-export const PLAN_IDS: PlanId[] = ["ucretsiz", "basic", "premium", "ultimate"];
+/** En üst plan: yönetici hesapları bunun sınırlarıyla çalışır. */
+export const EN_UST_PLAN: PlanId = "premium";
+
+export const PLAN_IDS: PlanId[] = ["ucretsiz", "basic", "premium"];
 
 /** Satın alınabilir planlar (ücretsiz olan kartlarda ayrı gösterilir). */
-export const UCRETLI_PLAN_IDS: PlanId[] = ["basic", "premium", "ultimate"];
+export const UCRETLI_PLAN_IDS: PlanId[] = ["basic", "premium"];
 
 export function isPlanId(value: unknown): value is PlanId {
   return typeof value === "string" && (PLAN_IDS as string[]).includes(value);
@@ -134,15 +135,32 @@ export function plan(id: PlanId | string | undefined): Plan {
   return isPlanId(id) ? PLANS[id] : PLANS.ucretsiz;
 }
 
+export type ParaBirimi = "USD" | "TRY";
+
+/** Türkçe arayüzde Türk lirası, diğer dillerde dolar gösterilir. */
+export function paraBirimi(locale: string): ParaBirimi {
+  return locale === "tr" ? "TRY" : "USD";
+}
+
 /** Seçilen faturalama dönemine göre ödenecek tutar. */
-export function planUcreti(secilen: Plan, faturalama: Faturalama): number {
+export function planUcreti(secilen: Plan, faturalama: Faturalama, para: ParaBirimi = "USD"): number {
+  if (para === "TRY") return faturalama === "yillik" ? secilen.tl.yillik : secilen.tl.aylik;
   return faturalama === "yillik" ? secilen.yillikUcret : secilen.ucret;
 }
 
 /** Yıllık ödemede aya düşen tutar (karttaki "ayda ~X" satırı için). */
-export function yillikAylikKarsiligi(secilen: Plan): number {
-  return secilen.yillikUcret / 12;
+export function yillikAylikKarsiligi(secilen: Plan, para: ParaBirimi = "USD"): number {
+  return planUcreti(secilen, "yillik", para) / 12;
 }
+
+/**
+ * Yeni üyeye bir kez verilen ek kredi.
+ *
+ * Ek kredi ay sonunda silinmez; aylık hak bittiğinde buradan düşülür. Eski
+ * 7 günlük Premium denemesinin yerini aldı: kart ya da süre yok, kullanıcı
+ * uygulamayı kendi hızında dener.
+ */
+export const HOSGELDIN_KREDISI = 30;
 
 /** Bir analizin maliyeti. Şimdilik sabit; ileride varlık türüne göre değişebilir. */
 export const ANALIZ_KREDISI = 1;

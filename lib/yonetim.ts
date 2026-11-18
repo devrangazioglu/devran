@@ -22,8 +22,6 @@ export type UyeSatiri = {
   kalan: number;
   harcanan: number;
   bonus: number;
-  denemeBitis: number | null;
-  denemeKullanildi: boolean;
   davetSayisi: number;
   davetle: boolean;
   takip: number;
@@ -36,7 +34,6 @@ export type YonetimOzeti = {
   son7Gun: number;
   son30Gun: number;
   planlar: Record<PlanId, number>;
-  aktifDeneme: number;
   davetleGelen: number;
   toplamBonus: number;
   listeSiniri: number;
@@ -58,8 +55,6 @@ function satir(user: User): UyeSatiri {
     kalan: durum.kalan,
     harcanan: durum.harcanan,
     bonus: ab.bonus,
-    denemeBitis: durum.denemeBitis,
-    denemeKullanildi: ab.deneme !== undefined,
     davetSayisi: ab.davetSayisi,
     davetle: Boolean(ab.davetEden),
     takip: user.watchlist.length,
@@ -73,7 +68,7 @@ export async function yonetimVerisi(): Promise<{ ozet: YonetimOzeti; uyeler: Uye
   const uyeler = kullanicilar.map(satir);
   const simdi = Date.now();
   const gun = 86_400_000;
-  const planlar: Record<PlanId, number> = { ucretsiz: 0, basic: 0, premium: 0, ultimate: 0 };
+  const planlar: Record<PlanId, number> = { ucretsiz: 0, basic: 0, premium: 0 };
   for (const u of uyeler) planlar[u.plan] += 1;
 
   return {
@@ -82,7 +77,6 @@ export async function yonetimVerisi(): Promise<{ ozet: YonetimOzeti; uyeler: Uye
       son7Gun: uyeler.filter((u) => simdi - u.kayit < 7 * gun).length,
       son30Gun: uyeler.filter((u) => simdi - u.kayit < 30 * gun).length,
       planlar,
-      aktifDeneme: uyeler.filter((u) => u.denemeBitis !== null).length,
       davetleGelen: uyeler.filter((u) => u.davetle).length,
       toplamBonus: uyeler.reduce((t, u) => t + u.bonus, 0),
       listeSiniri: LISTE_SINIRI,
@@ -96,15 +90,6 @@ export async function bonusVer(email: string, miktar: number): Promise<boolean> 
   const sonuc = await store().update(email, (user) => {
     const ab = normalizeSubscription(user.abonelik);
     user.abonelik = { ...ab, bonus: Math.max(ab.bonus + Math.trunc(miktar), 0) };
-  });
-  return sonuc !== null;
-}
-
-/** Üyenin deneme hakkını sıfırlar: yeniden 7 gün Premium deneyebilir. */
-export async function denemeSifirla(email: string): Promise<boolean> {
-  const sonuc = await store().update(email, (user) => {
-    const { deneme: _eski, ...ab } = normalizeSubscription(user.abonelik);
-    user.abonelik = ab;
   });
   return sonuc !== null;
 }

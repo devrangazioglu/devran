@@ -13,7 +13,7 @@ const tarih = (ms: number) =>
 export default function YonetimClient({ ilk, kendiEpostam }: { ilk: Veri; kendiEpostam: string }) {
   const [veri, setVeri] = useState<Veri>(ilk);
   const [ara, setAra] = useState("");
-  const [filtre, setFiltre] = useState<"hepsi" | PlanId | "deneme">("hepsi");
+  const [filtre, setFiltre] = useState<"hepsi" | PlanId>("hepsi");
   const [secili, setSecili] = useState<string | null>(null);
   const [mesaj, setMesaj] = useState<{ ok: boolean; metin: string } | null>(null);
   const [bekliyor, setBekliyor] = useState(false);
@@ -23,7 +23,7 @@ export default function YonetimClient({ ilk, kendiEpostam }: { ilk: Veri; kendiE
     return veri.uyeler.filter(
       (u) =>
         (!q || u.email.includes(q) || u.ad.toLowerCase().includes(q)) &&
-        (filtre === "hepsi" || (filtre === "deneme" ? u.denemeBitis !== null : u.plan === filtre)),
+        (filtre === "hepsi" || u.plan === filtre),
     );
   }, [veri, ara, filtre]);
 
@@ -61,7 +61,6 @@ export default function YonetimClient({ ilk, kendiEpostam }: { ilk: Veri; kendiE
         <Kutu etiket="Toplam üye" deger={o.toplam} />
         <Kutu etiket="Son 7 gün" deger={o.son7Gun} />
         <Kutu etiket="Son 30 gün" deger={o.son30Gun} />
-        <Kutu etiket="Süren deneme" deger={o.aktifDeneme} />
         <Kutu etiket="Davetle gelen" deger={o.davetleGelen} />
         {PLAN_IDS.map((id) => (
           <Kutu key={id} etiket={PLANS[id].ad} deger={o.planlar[id]} />
@@ -127,30 +126,6 @@ export default function YonetimClient({ ilk, kendiEpostam }: { ilk: Veri; kendiE
             </div>
           </div>
 
-          <div className="yonetim-satir">
-            <span>
-              Deneme{" "}
-              {uye.denemeBitis ? `(bitiş ${tarih(uye.denemeBitis)})` : uye.denemeKullanildi ? "(kullanıldı)" : "(kullanılmadı)"}
-            </span>
-            <div className="hesap-islemleri">
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                disabled={bekliyor || uye.denemeKullanildi || uye.plan !== "ucretsiz"}
-                onClick={() => islem({ islem: "deneme", email: uye.email }, "7 gün Premium denemesi başlatıldı.")}
-              >
-                Denemeyi başlat
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                disabled={bekliyor || !uye.denemeKullanildi}
-                onClick={() => islem({ islem: "deneme-sifirla", email: uye.email }, "Deneme hakkı geri verildi.")}
-              >
-                Hakkı geri ver
-              </button>
-            </div>
-          </div>
           <p className="dim" style={{ fontSize: 12, marginBottom: 0 }}>
             Plan değişikliği ödeme almadan yapılır (hediye, test, destek için).
           </p>
@@ -172,7 +147,6 @@ export default function YonetimClient({ ilk, kendiEpostam }: { ilk: Veri; kendiE
                 {PLANS[id].ad}
               </option>
             ))}
-            <option value="deneme">Denemedekiler</option>
           </select>
         </div>
         <p className="dim" style={{ fontSize: 12 }}>
@@ -207,7 +181,6 @@ export default function YonetimClient({ ilk, kendiEpostam }: { ilk: Veri; kendiE
                   <td>{tarih(u.kayit)}</td>
                   <td>
                     {PLANS[u.plan].ad}
-                    {u.denemeBitis && <span className="dim"> · deneme</span>}
                   </td>
                   <td className="mono">{u.yonetici ? "∞" : u.kalan}</td>
                   <td className="mono">{u.bonus || "—"}</td>

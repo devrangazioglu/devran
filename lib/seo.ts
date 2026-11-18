@@ -119,6 +119,7 @@ export function planJsonLd(
   aciklama: string,
   planlar: { ad: string; ucret: number }[],
   locale: Locale,
+  paraBirimi: "USD" | "TRY" = "USD",
 ) {
   return {
     "@context": "https://schema.org",
@@ -131,7 +132,7 @@ export function planJsonLd(
       "@type": "Offer",
       name: p.ad,
       price: p.ucret.toFixed(2),
-      priceCurrency: "USD",
+      priceCurrency: paraBirimi,
       availability: "https://schema.org/InStock",
     })),
   };

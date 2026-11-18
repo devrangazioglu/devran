@@ -142,7 +142,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
                 </a>
               </div>
               <p className="deneme-rozeti">
-                <Ikon ad="parilti" boyut={14} /> {t("trial.badge")}
+                <Ikon ad="parilti" boyut={14} /> {t("welcome.badge")}
               </p>
             </Reveal>
           </div>

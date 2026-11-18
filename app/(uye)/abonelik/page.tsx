@@ -1,8 +1,7 @@
 import { auth } from "@/auth";
 import DavetKarti from "@/components/DavetKarti";
-import DenemeDugmesi from "@/components/DenemeDugmesi";
 import PlanCards from "@/components/PlanCards";
-import { abonelikDurumu, davetBilgisi, DENEME_MS } from "@/lib/credits";
+import { abonelikDurumu, davetBilgisi } from "@/lib/credits";
 import { intlTag } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n/server";
 import { odemeAcik, odemeTestModu } from "@/lib/odeme";
@@ -21,9 +20,6 @@ export default async function AbonelikSayfasi() {
   const durum = email ? await abonelikDurumu(email) : null;
   const kullanici = email ? await findUserByEmail(email) : null;
   const davet = kullanici ? davetBilgisi(kullanici) : null;
-  const kalanGun = durum?.denemeBitis
-    ? Math.max(Math.ceil((durum.denemeBitis - Date.now()) / 86_400_000), 1)
-    : 0;
 
   const tarih = (ms: number) =>
     new Intl.DateTimeFormat(intlTag(locale), { dateStyle: "long" }).format(new Date(ms));
@@ -48,29 +44,6 @@ export default async function AbonelikSayfasi() {
         </div>
       )}
 
-      {durum?.denemeBitis && (
-        <div className="notice deneme-notu" style={{ marginBottom: 18 }}>
-          <strong className="ikonlu-baslik">
-            <Ikon ad="parilti" boyut={16} /> {t("trial.active", { gun: kalanGun })}
-          </strong>{" "}
-          {t("trial.activeText", { date: tarih(durum.denemeBitis) })}
-        </div>
-      )}
-
-      {durum?.denemeHakki && (
-        <div className="card deneme-karti" style={{ marginBottom: 18 }}>
-          <div>
-            <div className="card-title" style={{ marginBottom: 6 }}>
-              {t("trial.offerTitle", { gun: DENEME_MS / 86_400_000 })}
-            </div>
-            <p className="muted" style={{ fontSize: 14, margin: 0 }}>
-              {t("trial.offerText")}
-            </p>
-          </div>
-          <DenemeDugmesi />
-        </div>
-      )}
-
       {durum ? (
         <div className="card credit-card">
           <div className="credit-head">
@@ -78,11 +51,7 @@ export default async function AbonelikSayfasi() {
               <span className="card-label">{t("sub.currentPlan")}</span>
               <strong className="credit-plan">{t(`plan.${durum.plan.id}` as "plan.basic")}</strong>
               <span className="muted" style={{ fontSize: 13 }}>
-                {durum.denemeBitis
-                  ? t("trial.label")
-                  : durum.faturalama === "yillik"
-                    ? t("plans.yearly")
-                    : t("plans.monthly")}
+                {durum.faturalama === "yillik" ? t("plans.yearly") : t("plans.monthly")}
               </span>
             </div>
             <div className="credit-numbers">

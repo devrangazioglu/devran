@@ -19,8 +19,6 @@ import {
   DAVET_SINIRI,
   DAVETLI_ODULU,
   davetOdulu,
-  DENEME_MS,
-  denemeBaslat,
   donemiTazele,
   durumOlustur,
   krediHarca,
@@ -29,6 +27,7 @@ import {
 } from "../lib/credits";
 import {
   DONEM_MS,
+  HOSGELDIN_KREDISI,
   PLANS,
   planUcreti,
   TEKRAR_UCRETSIZ_MS,
@@ -48,21 +47,38 @@ after(async () => {
   if (directory) await rm(directory, { recursive: true, force: true });
 });
 
-async function yeniKullanici(): Promise<string> {
+/**
+ * Test kullanıcısı. Varsayılan olarak hoş geldin kredisi verilmiş sayılır ki
+ * aylık hak kuralları tek başına ölçülebilsin; `hosgeldin: false` gerçek yeni
+ * hesabı taklit eder.
+ */
+async function yeniKullanici({ hosgeldin = true } = {}): Promise<string> {
   const user = buildUser({
     email: `kredi-${Date.now()}-${Math.random().toString(36).slice(2)}@ornek.com`,
     passwordHash: null,
   });
+  if (hosgeldin) user.abonelik = { ...user.abonelik, hosgeldin: true };
   await fileStore.insert(user);
   return user.email;
 }
 
-test("yeni hesap ücretsiz planla ve dolu krediyle başlar", async () => {
-  const durum = await abonelikDurumu(await yeniKullanici());
+test("yeni hesap ücretsiz planla, aylık hak ve hoş geldin kredisiyle başlar", async () => {
+  const email = await yeniKullanici({ hosgeldin: false });
+  const durum = await abonelikDurumu(email);
   assert.ok(durum);
   assert.equal(durum.plan.id, "ucretsiz");
-  assert.equal(durum.toplam, PLANS.ucretsiz.aylikKredi);
-  assert.equal(durum.kalan, PLANS.ucretsiz.aylikKredi);
+  assert.equal(durum.bonus, HOSGELDIN_KREDISI);
+  assert.equal(durum.kalan, PLANS.ucretsiz.aylikKredi + HOSGELDIN_KREDISI);
+
+  // İkinci okuma krediyi yeniden vermez.
+  assert.equal((await abonelikDurumu(email))?.bonus, HOSGELDIN_KREDISI);
+});
+
+test("hoş geldin kredisi eski kayıtlara bir kez verilir, Ultimate Premium olur", () => {
+  const eski = normalizeSubscription({ plan: "ultimate", bonus: 5 });
+  assert.equal(eski.plan, "premium");
+  assert.equal(eski.bonus, 5 + HOSGELDIN_KREDISI);
+  assert.equal(normalizeSubscription(eski).bonus, 5 + HOSGELDIN_KREDISI, "tekrar normalleştirmek eklemez");
 });
 
 test("analiz kredi düşer, kısa süre içindeki tekrar düşmez", async () => {
@@ -174,16 +190,21 @@ test("yıllık faturalama kredi hakkını değiştirmez, fiyatı değiştirir", 
   assert.equal(durum.toplam, PLANS.basic.aylikKredi, "kredi aylık hak; yıllık ödemek çoğaltmaz");
   assert.equal(planUcreti(durum.plan, "yillik"), PLANS.basic.yillikUcret);
 
-  // Yıllık fiyat, aylığın on katı olmalı: iki ay bedava sözü buradan geliyor.
-  for (const id of ["basic", "premium", "ultimate"] as const) {
-    assert.equal(
-      PLANS[id].yillikUcret,
-      PLANS[id].ucret * (12 - YILLIK_BEDAVA_AY),
-      `${id} yıllık fiyatı ${YILLIK_BEDAVA_AY} ay bedava ile uyuşmuyor`,
-    );
-    assert.equal(PLANS[id].ucret % 1, 0, "aylık fiyat tam sayı olmalı");
-    assert.equal(PLANS[id].yillikUcret % 1, 0, "yıllık fiyat tam sayı olmalı");
+  // Yıllık fiyat aylığın yaklaşık on katı: iki ay bedava sözü buradan geliyor.
+  // Fiyatlar ",99" ile bittiği için kuruş farkına izin verilir.
+  for (const id of ["basic", "premium"] as const) {
+    for (const [aylik, yillik] of [
+      [PLANS[id].ucret, PLANS[id].yillikUcret],
+      [PLANS[id].tl.aylik, PLANS[id].tl.yillik],
+    ]) {
+      assert.ok(
+        Math.abs(yillik - aylik * (12 - YILLIK_BEDAVA_AY)) < 0.2,
+        `${id} yıllık fiyatı ${YILLIK_BEDAVA_AY} ay bedava ile uyuşmuyor`,
+      );
+      assert.equal(Math.round(aylik * 100) % 100, 99, "fiyat ,99 ile bitmeli");
+    }
   }
+  assert.equal(planUcreti(PLANS.basic, "aylik", "TRY"), PLANS.basic.tl.aylik);
 });
 
 test("kullanıcı kaydı yoksa defter tutulmaz ama istek engellenmez", async () => {
@@ -192,43 +213,7 @@ test("kullanıcı kaydı yoksa defter tutulmaz ama istek engellenmez", async () 
   assert.equal(sonuc.ok && sonuc.durum, null);
 });
 
-/* ────────────────────── Deneme, ek kredi, davet ────────────────────── */
-
-test("Premium deneme bir kez başlar, süresince Premium hakkı verir", async () => {
-  const email = await yeniKullanici();
-  const ilk = await denemeBaslat(email);
-  assert.equal(ilk.ok, true);
-  const durum = await abonelikDurumu(email);
-  assert.equal(durum?.plan.id, "premium");
-  assert.equal(durum?.kayitliPlan, "ucretsiz");
-  assert.ok(durum?.denemeBitis);
-  assert.equal(durum?.denemeHakki, false);
-  assert.equal(durum?.toplam, PLANS.premium.aylikKredi);
-
-  const ikinci = await denemeBaslat(email);
-  assert.deepEqual(ikinci, { ok: false, sebep: "kullanildi" });
-});
-
-test("deneme bitince ücretsiz plana dönülür ve dönem baştan başlar", () => {
-  const basi = Date.UTC(2026, 0, 1);
-  const abonelik = {
-    ...normalizeSubscription({}, basi),
-    harcanan: 800,
-    deneme: { bitis: basi + DENEME_MS, kapandi: false },
-  };
-  const surerken = donemiTazele(abonelik, basi + DENEME_MS - 1);
-  assert.equal(durumOlustur(surerken, basi + DENEME_MS - 1).plan.id, "premium");
-
-  const sonra = basi + DENEME_MS + 1000;
-  const bitti = donemiTazele(abonelik, sonra);
-  assert.equal(bitti.deneme?.kapandi, true);
-  assert.equal(bitti.harcanan, 0, "denemede harcanan ücretsiz hakkı yemez");
-  assert.equal(bitti.donemBasi, basi + DENEME_MS);
-  const durum = durumOlustur(bitti, sonra);
-  assert.equal(durum.plan.id, "ucretsiz");
-  assert.equal(durum.kalan, PLANS.ucretsiz.aylikKredi);
-  assert.equal(durum.denemeHakki, false);
-});
+/* ────────────────────── Ek kredi, davet ────────────────────── */
 
 test("aylık kredi bitince ek kredi harcanır, iade ek krediye döner", async () => {
   const email = await yeniKullanici();
@@ -280,9 +265,8 @@ test("davet ödülü sınırı aşınca verilmez", async () => {
   assert.equal(await davetOdulu(await yeniKullanici(), kod), false);
 });
 
-test("plan değişimi ek krediyi ve deneme geçmişini korur", async () => {
+test("plan değişimi ek krediyi korur", async () => {
   const email = await yeniKullanici();
-  await denemeBaslat(email);
   await fileStore.update(email, (u) => {
     u.abonelik = { ...normalizeSubscription(u.abonelik), bonus: 30 };
   });
@@ -290,19 +274,18 @@ test("plan değişimi ek krediyi ve deneme geçmişini korur", async () => {
   const durum = await abonelikDurumu(email);
   assert.equal(durum?.plan.id, "basic");
   assert.equal(durum?.bonus, 30);
-  assert.equal(durum?.denemeHakki, false);
 });
 
 /* ────────────────────── Yönetici ────────────────────── */
 
-test("yönetici kredi harcamaz ve Ultimate sınırlarına sahiptir", async () => {
+test("yönetici kredi harcamaz ve en üst planın sınırlarına sahiptir", async () => {
   const email = await yeniKullanici();
   const onceki = process.env.ADMIN_EPOSTALAR;
   process.env.ADMIN_EPOSTALAR = `baska@ornek.com, ${email.toUpperCase()}`;
   try {
     const durum = await abonelikDurumu(email);
     assert.equal(durum?.yonetici, true);
-    assert.equal(durum?.plan.id, "ultimate");
+    assert.equal(durum?.plan.id, "premium");
     for (let i = 0; i < 5; i++) {
       const sonuc = await krediHarca(email, `kripto:Y${i}:1h`);
       assert.equal(sonuc.ok, true);
@@ -318,18 +301,13 @@ test("yönetici kredi harcamaz ve Ultimate sınırlarına sahiptir", async () =>
   assert.equal(normal?.plan.id, "ucretsiz");
 });
 
-test("yönetim: ek kredi verilir, geri alınır, deneme hakkı sıfırlanır", async () => {
-  const { bonusVer, denemeSifirla, yonetimVerisi } = await import("../lib/yonetim");
+test("yönetim: ek kredi verilir ve geri alınır", async () => {
+  const { bonusVer, yonetimVerisi } = await import("../lib/yonetim");
   const email = await yeniKullanici();
   assert.equal(await bonusVer(email, 100), true);
   assert.equal((await abonelikDurumu(email))?.bonus, 100);
   assert.equal(await bonusVer(email, -500), true);
   assert.equal((await abonelikDurumu(email))?.bonus, 0, "sıfırın altına inmez");
-
-  await denemeBaslat(email);
-  assert.equal((await abonelikDurumu(email))?.denemeHakki, false);
-  assert.equal(await denemeSifirla(email), true);
-  assert.equal((await abonelikDurumu(email))?.denemeHakki, true);
 
   const veri = await yonetimVerisi();
   const satir = veri.uyeler.find((u) => u.email === email);

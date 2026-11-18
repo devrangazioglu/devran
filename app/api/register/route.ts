@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error }, { status: 409 });
     }
 
-    // 7 gün Premium denemesi ve davet bağlantısıyla geldiyse ödül.
+    // Davet bağlantısıyla geldiyse ödül (hoş geldin kredisi kayıtla birlikte verilir).
     await saveSettings(result.user.email, { kosulOnayi: Date.now() }).catch(() => null);
     const davet = (await cookies()).get(DAVET_CEREZI)?.value;
     await yeniHesapKarsila(result.user.email, gecerliDavetKodu(davet) ? davet : null);

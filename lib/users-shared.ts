@@ -8,7 +8,7 @@
 import { randomUUID, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
-import { isFaturalama, isPlanId, type Faturalama, type PlanId } from "./plans";
+import { HOSGELDIN_KREDISI, isFaturalama, isPlanId, type Faturalama, type PlanId } from "./plans";
 
 const scrypt = promisify(scryptCallback) as (
   password: string,
@@ -53,11 +53,10 @@ export type Subscription = {
    */
   sonAnalizler: Record<string, number>;
   /**
-   * Ücretsiz Premium deneme. Hiç yoksa hesap denemeyi henüz kullanmamış
-   * demektir; her hesap bir kez dener. `kapandi`: bitişten sonraki ilk
-   * dokunuşta dönem baştan başlatıldı mı (bkz. credits.ts → donemiTazele).
+   * Hoş geldin kredisi verildi mi. Bir kez verilir; eski kayıtlarda alan
+   * yoksa ilk okumada verilir (bkz. normalizeSubscription).
    */
-  deneme?: { bitis: number; kapandi: boolean };
+  hosgeldin: boolean;
   /**
    * Devreden ek kredi (davet ödülü). Aylık kredi bitince buradan harcanır,
    * dönem yenilenince sıfırlanmaz.
@@ -203,6 +202,8 @@ export function yeniAbonelik(now = Date.now()): Subscription {
     sonAnalizler: {},
     bonus: 0,
     davetSayisi: 0,
+    // İlk okumada hoş geldin kredisi eklenir (bkz. normalizeSubscription).
+    hosgeldin: false,
   };
 }
 
@@ -221,7 +222,8 @@ export function normalizeSubscription(raw: unknown, now = Date.now()): Subscript
     }
   }
   return {
-    plan: isPlanId(value.plan) ? value.plan : "ucretsiz",
+    // Kaldırılan Ultimate planındaki eski kayıtlar en üst plana taşınır.
+    plan: isPlanId(value.plan) ? value.plan : (value.plan as unknown) === "ultimate" ? "premium" : "ucretsiz",
     faturalama: isFaturalama(value.faturalama) ? value.faturalama : "aylik",
     donemBasi:
       typeof value.donemBasi === "number" && Number.isFinite(value.donemBasi)
@@ -232,13 +234,10 @@ export function normalizeSubscription(raw: unknown, now = Date.now()): Subscript
         ? Math.floor(value.harcanan)
         : 0,
     sonAnalizler,
-    ...(value.deneme &&
-    typeof value.deneme === "object" &&
-    typeof value.deneme.bitis === "number" &&
-    Number.isFinite(value.deneme.bitis)
-      ? { deneme: { bitis: value.deneme.bitis, kapandi: value.deneme.kapandi === true } }
-      : {}),
-    bonus: sayiyaTamamla(value.bonus),
+    // Hoş geldin kredisi devreden ek krediye eklenir; bayrakla birlikte
+    // yazıldığı için ikinci kez verilmez. Eski denemenin (`deneme`) yerini aldı.
+    bonus: sayiyaTamamla(value.bonus) + (value.hosgeldin === true ? 0 : HOSGELDIN_KREDISI),
+    hosgeldin: true,
     davetSayisi: sayiyaTamamla(value.davetSayisi),
     ...(typeof value.davetEden === "string" && value.davetEden ? { davetEden: value.davetEden } : {}),
   };

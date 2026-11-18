@@ -9,7 +9,7 @@ import { auth } from "@/auth";
 import { getI18n } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n";
 import { localeHref } from "@/lib/i18n/routing";
-import { PLAN_IDS, PLANS } from "@/lib/plans";
+import { PLAN_IDS, PLANS, paraBirimi, planUcreti } from "@/lib/plans";
 import { breadcrumbJsonLd, faqJsonLd, planJsonLd } from "@/lib/seo";
 import Ikon from "@/components/Ikon";
 
@@ -36,10 +36,11 @@ export default async function Plans({ locale: istenen }: { locale?: Locale } = {
       // Hem aylık hem yıllık fiyat bildirilir; arama sonucundaki aralık
       // sayfadakiyle birebir aynı olsun.
       PLAN_IDS.flatMap((id) => [
-        { ad: `${PLANS[id].ad} — ${t("plans.monthly")}`, ucret: PLANS[id].ucret },
-        { ad: `${PLANS[id].ad} — ${t("plans.yearly")}`, ucret: PLANS[id].yillikUcret },
+        { ad: `${PLANS[id].ad} — ${t("plans.monthly")}`, ucret: planUcreti(PLANS[id], "aylik", paraBirimi(locale)) },
+        { ad: `${PLANS[id].ad} — ${t("plans.yearly")}`, ucret: planUcreti(PLANS[id], "yillik", paraBirimi(locale)) },
       ]),
       locale,
+      paraBirimi(locale),
     ),
     faqJsonLd(sss),
     breadcrumbJsonLd(
@@ -71,7 +72,7 @@ export default async function Plans({ locale: istenen }: { locale?: Locale } = {
               <p className="lead">{t("plans.sub")}</p>
               {!girisli && (
                 <p className="deneme-rozeti">
-                  <Ikon ad="parilti" boyut={14} /> {t("trial.badge")}
+                  <Ikon ad="parilti" boyut={14} /> {t("welcome.badge")}
                 </p>
               )}
             </div>

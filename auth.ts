@@ -8,7 +8,7 @@ import { cookies } from "next/headers";
 
 import { DAVET_CEREZI, yeniHesapKarsila } from "@/lib/credits";
 import { authenticate, upsertOAuthUser } from "@/lib/users";
-import { gecerliDavetKodu, normalizeSubscription } from "@/lib/users-shared";
+import { gecerliDavetKodu } from "@/lib/users-shared";
 
 const providers: Provider[] = [
   Credentials({
@@ -87,10 +87,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if ((account?.provider === "google" || account?.provider === "apple") && user.email) {
         try {
           const kayit = await upsertOAuthUser(user.email, user.name);
-          // İlk giriş = yeni hesap: deneme ve davet ödülü bir kez verilir.
-          const yeni =
-            Date.now() - kayit.createdAt < 5 * 60_000 &&
-            normalizeSubscription(kayit.abonelik).deneme === undefined;
+          // İlk giriş = yeni hesap: davet ödülü. Tekrar girişte ikinci kez
+          // verilmez (davetOdulu, davet edileni kaydına işler).
+          const yeni = Date.now() - kayit.createdAt < 5 * 60_000;
           if (yeni) {
             const davet = (await cookies()).get(DAVET_CEREZI)?.value;
             await yeniHesapKarsila(user.email, gecerliDavetKodu(davet) ? davet : null);
