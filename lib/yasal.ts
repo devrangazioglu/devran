@@ -9,8 +9,8 @@
  * Türkçe ve İngilizce yazıldı; diğer diller İngilizceye düşer (sözlükteki
  * yedek zinciriyle aynı kural).
  *
- * Kimlik bilgileri ortam değişkeninden gelir, çünkü alan adı ve şirket
- * bilgisi henüz kesinleşmedi:
+ * Kimlik bilgilerinin varsayılanı aşağıdadır; ortam değişkeni verilirse o
+ * kullanılır (ör. ileride şirket kurulursa yalnızca Vercel'den değiştirmek için):
  *   YASAL_UNVAN      — veri sorumlusunun adı/unvanı (şahıs ya da şirket)
  *   YASAL_ADRES      — tebligat adresi (isteğe bağlı)
  *   DESTEK_EPOSTA    — destek ve KVKK başvuruları için e-posta
@@ -32,14 +32,14 @@ export type YasalBelge = {
 };
 
 /** Metinlerin son güncellendiği tarih (ISO). Metin değişince güncelleyin. */
-export const YASAL_GUNCELLEME = "2026-11-17";
+export const YASAL_GUNCELLEME = "2026-11-18";
 
 export type YasalKimlik = { unvan: string; eposta: string | null; adres: string | null };
 
 export function yasalKimlik(): YasalKimlik {
   return {
-    unvan: process.env.YASAL_UNVAN?.trim() || "Fibonex360",
-    eposta: process.env.DESTEK_EPOSTA?.trim() || null,
+    unvan: process.env.YASAL_UNVAN?.trim() || "Devran Gazioğlu",
+    eposta: process.env.DESTEK_EPOSTA?.trim() || "support@fibonex360.com",
     adres: process.env.YASAL_ADRES?.trim() || null,
   };
 }
@@ -74,7 +74,7 @@ export function gizlilikPolitikasi(locale: Locale, k = yasalKimlik()): YasalBelg
         {
           baslik: "1. Veri sorumlusu",
           paragraflar: [
-            `6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında veri sorumlusu ${k.unvan}'dir.${adres} ${iletisim(k, d)}`,
+            `6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında veri sorumlusu: ${k.unvan}.${adres} ${iletisim(k, d)}`,
           ],
         },
         {
