@@ -49,3 +49,7 @@ jobs:
             echo "== $u"
             curl -sS -o /dev/null --max-time 20 -w "durum=%{http_code} yonlendirme=%{redirect_url} ip=%{remote_ip}\n" "$u" || echo "açılmadı"
           done
+
+      - name: Giriş sağlayıcıları
+        run: |
+          curl -s --max-time 20 "https://www.$ALAN/api/auth/providers" | python3 -c "import sys,json; d=json.load(sys.stdin); print('sağlayıcılar:', ', '.join(d.keys()))" || echo "okunamadı"
