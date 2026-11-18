@@ -74,8 +74,8 @@ test("yeni hesap ücretsiz planla, aylık hak ve hoş geldin kredisiyle başlar"
   assert.equal((await abonelikDurumu(email))?.bonus, HOSGELDIN_KREDISI);
 });
 
-test("hoş geldin kredisi eski kayıtlara bir kez verilir, Ultimate Premium olur", () => {
-  const eski = normalizeSubscription({ plan: "ultimate", bonus: 5 });
+test("hoş geldin kredisi eski kayıtlara bir kez verilir", () => {
+  const eski = normalizeSubscription({ plan: "premium", bonus: 5 });
   assert.equal(eski.plan, "premium");
   assert.equal(eski.bonus, 5 + HOSGELDIN_KREDISI);
   assert.equal(normalizeSubscription(eski).bonus, 5 + HOSGELDIN_KREDISI, "tekrar normalleştirmek eklemez");
@@ -192,7 +192,7 @@ test("yıllık faturalama kredi hakkını değiştirmez, fiyatı değiştirir", 
 
   // Yıllık fiyat aylığın yaklaşık on katı: iki ay bedava sözü buradan geliyor.
   // Fiyatlar ",99" ile bittiği için kuruş farkına izin verilir.
-  for (const id of ["basic", "premium"] as const) {
+  for (const id of ["basic", "premium", "ultimate"] as const) {
     for (const [aylik, yillik] of [
       [PLANS[id].ucret, PLANS[id].yillikUcret],
       [PLANS[id].tl.aylik, PLANS[id].tl.yillik],
@@ -285,7 +285,7 @@ test("yönetici kredi harcamaz ve en üst planın sınırlarına sahiptir", asyn
   try {
     const durum = await abonelikDurumu(email);
     assert.equal(durum?.yonetici, true);
-    assert.equal(durum?.plan.id, "premium");
+    assert.equal(durum?.plan.id, "ultimate");
     for (let i = 0; i < 5; i++) {
       const sonuc = await krediHarca(email, `kripto:Y${i}:1h`);
       assert.equal(sonuc.ok, true);

@@ -22,7 +22,7 @@
 
 import type { Interval } from "./markets/types";
 
-export type PlanId = "ucretsiz" | "basic" | "premium";
+export type PlanId = "ucretsiz" | "basic" | "premium" | "ultimate";
 
 /**
  * Faturalama dönemi.
@@ -99,7 +99,7 @@ export const PLANS: Record<PlanId, Plan> = {
     ad: "Basic",
     ucret: 9.99,
     yillikUcret: 99.99,
-    tl: { aylik: 199.99, yillik: 1999.99 },
+    tl: { aylik: 249.99, yillik: 2499.99 },
     aylikKredi: 600,
     taramaSiniri: 30,
     takipSiniri: 50,
@@ -110,8 +110,19 @@ export const PLANS: Record<PlanId, Plan> = {
     ad: "Premium",
     ucret: 29.99,
     yillikUcret: 299.99,
-    tl: { aylik: 599.99, yillik: 5999.99 },
+    tl: { aylik: 749.99, yillik: 7499.99 },
     aylikKredi: 2500,
+    taramaSiniri: 60,
+    takipSiniri: 200,
+    periyotlar: TUM_PERIYOTLAR,
+  },
+  ultimate: {
+    id: "ultimate",
+    ad: "Ultimate",
+    ucret: 59.99,
+    yillikUcret: 599.99,
+    tl: { aylik: 1499.99, yillik: 14999.99 },
+    aylikKredi: 7500,
     taramaSiniri: 100,
     takipSiniri: 500,
     periyotlar: TUM_PERIYOTLAR,
@@ -120,12 +131,12 @@ export const PLANS: Record<PlanId, Plan> = {
 };
 
 /** En üst plan: yönetici hesapları bunun sınırlarıyla çalışır. */
-export const EN_UST_PLAN: PlanId = "premium";
+export const EN_UST_PLAN: PlanId = "ultimate";
 
-export const PLAN_IDS: PlanId[] = ["ucretsiz", "basic", "premium"];
+export const PLAN_IDS: PlanId[] = ["ucretsiz", "basic", "premium", "ultimate"];
 
 /** Satın alınabilir planlar (ücretsiz olan kartlarda ayrı gösterilir). */
-export const UCRETLI_PLAN_IDS: PlanId[] = ["basic", "premium"];
+export const UCRETLI_PLAN_IDS: PlanId[] = ["basic", "premium", "ultimate"];
 
 export function isPlanId(value: unknown): value is PlanId {
   return typeof value === "string" && (PLAN_IDS as string[]).includes(value);

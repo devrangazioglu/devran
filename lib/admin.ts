@@ -7,7 +7,7 @@
  *
  *   ADMIN_EPOSTALAR=ornek@alanadi.com,ikinci@alanadi.com
  *
- * Yönetici: kredi harcamaz, en üst planın (Premium) bütün sınırlarına
+ * Yönetici: kredi harcamaz, en üst planın (Ultimate) bütün sınırlarına
  * sahiptir ve /yonetim sayfasını görür.
  */
 

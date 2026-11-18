@@ -222,8 +222,7 @@ export function normalizeSubscription(raw: unknown, now = Date.now()): Subscript
     }
   }
   return {
-    // Kaldırılan Ultimate planındaki eski kayıtlar en üst plana taşınır.
-    plan: isPlanId(value.plan) ? value.plan : (value.plan as unknown) === "ultimate" ? "premium" : "ucretsiz",
+    plan: isPlanId(value.plan) ? value.plan : "ucretsiz",
     faturalama: isFaturalama(value.faturalama) ? value.faturalama : "aylik",
     donemBasi:
       typeof value.donemBasi === "number" && Number.isFinite(value.donemBasi)

@@ -936,6 +936,7 @@ export const tr = {
   "plan.ucretsiz": "Ücretsiz",
   "plan.basic": "Basic",
   "plan.premium": "Premium",
+  "plan.ultimate": "Ultimate",
   "plan.vurgu.dakikalik": "1 ve 5 dakikalık periyotlar açık",
   "plan.vurgu.oncelik": "Öncelikli e-posta desteği",
 

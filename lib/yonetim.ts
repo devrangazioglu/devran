@@ -68,7 +68,7 @@ export async function yonetimVerisi(): Promise<{ ozet: YonetimOzeti; uyeler: Uye
   const uyeler = kullanicilar.map(satir);
   const simdi = Date.now();
   const gun = 86_400_000;
-  const planlar: Record<PlanId, number> = { ucretsiz: 0, basic: 0, premium: 0 };
+  const planlar: Record<PlanId, number> = { ucretsiz: 0, basic: 0, premium: 0, ultimate: 0 };
   for (const u of uyeler) planlar[u.plan] += 1;
 
   return {

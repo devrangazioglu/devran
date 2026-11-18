@@ -912,6 +912,7 @@ export const en: Dictionary = {
   "plan.ucretsiz": "Free",
   "plan.basic": "Basic",
   "plan.premium": "Premium",
+  "plan.ultimate": "Ultimate",
   "plan.vurgu.dakikalik": "1-minute and 5-minute timeframes unlocked",
   "plan.vurgu.oncelik": "Priority email support",
 

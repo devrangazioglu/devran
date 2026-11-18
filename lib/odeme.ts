@@ -8,7 +8,7 @@
  * olmadığını açıkça söyler.
  *
  * Bağlarken yapılacaklar:
- *   1. Sağlayıcıda iki planın (Basic/Premium) aylık ve yıllık fiyatlarını tanımlayın.
+ *   1. Sağlayıcıda üç planın (Basic/Premium/Ultimate) aylık ve yıllık fiyatlarını tanımlayın.
  *   2. `ODEME_SAGLAYICI_ANAHTARI` ve fiyat kimliklerini ortam değişkeni yapın.
  *   3. Ödeme başlatan uç noktayı yazın (kullanıcıyı sağlayıcının sayfasına
  *      gönderir).
@@ -25,7 +25,7 @@ export function odemeAcik(): boolean {
  * Ödemesiz plan değişimine izin veren sınama kipi.
  *
  * Yalnızca kendi ortamınızda planları denemek için; üretimde **kapalı**
- * olmalı, yoksa herkes kendini Premium yapar.
+ * olmalı, yoksa herkes kendini Ultimate yapar.
  */
 export function odemeTestModu(): boolean {
   return process.env.ODEME_TEST_MODU === "1";
