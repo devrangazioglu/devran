@@ -1,0 +1,42 @@
+# Mağaza ekran görüntüleri.
+#
+# Yayındaki siteden App Store'un istediği 6.9" iPhone ölçüsünde (1320×2868)
+# ekran görüntüleri alır ve iş çıktısı (artifact) olarak yükler.
+# Üye sayfaları için deneme hesabını Secrets'a ekleyin:
+#   MAGAZA_EPOSTA, MAGAZA_PAROLA
+#
+# Actions → Mağaza görselleri → Run workflow
+
+name: Mağaza görselleri
+
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: "Site adresi"
+        required: false
+        default: "https://analiz-brown.vercel.app"
+
+jobs:
+  cek:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Playwright
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Ekran görüntüleri
+        env:
+          SITE: ${{ inputs.site }}
+          MAGAZA_EPOSTA: ${{ secrets.MAGAZA_EPOSTA }}
+          MAGAZA_PAROLA: ${{ secrets.MAGAZA_PAROLA }}
+        run: node scripts/magaza-gorselleri.mjs magaza-gorselleri
+      - uses: actions/upload-artifact@v4
+        with:
+          name: magaza-gorselleri
+          path: magaza-gorselleri/

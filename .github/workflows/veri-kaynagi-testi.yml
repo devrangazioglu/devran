@@ -1,0 +1,150 @@
+# Veri kaynağı ölçümü.
+#
+# Tek bir soruyu yanıtlar: bu makineden piyasa verisi alınabiliyor mu?
+# Veritabanı gerekmez, secret gerekmez, hiçbir yere yazmaz — yalnızca birkaç
+# sembol çekip sonucu basar. Beslemenin "veri alma" ve "veritabanına yazma"
+# ayaklarını birbirinden ayırmak için var: biri çalışmayınca diğeri hakkında
+# hüküm vermek kolay ama yanlış oluyor.
+#
+# Actions → Veri kaynağı testi → Run workflow ile çalıştırın.
+
+name: Veri kaynağı testi
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fiyat listelerindeki hacimler: paneldeki "toplam hacim" bir satırın
+      # bozuk hacmiyle anlamsız büyüyebiliyor. En büyük hacimli satırlar basılır.
+      - name: Fiyat listesi hacimleri
+        continue-on-error: true
+        env:
+          SITE: https://analiz-brown.vercel.app
+        run: |
+          for p in abd bist emtia dovizler kripto japonya almanya ingiltere; do
+            curl -sS -m 60 "$SITE/api/markets?market=$p&limit=40" -o liste.json || true
+            node -e 'const d=JSON.parse(require("fs").readFileSync("liste.json","utf8"));const q=(d.quotes||[]).slice().sort((a,b)=>b.volume-a.volume);const top=q.reduce((s,x)=>s+x.volume,0);console.log(process.argv[1],d.source||d.error,"toplam",top);for(const x of q.slice(0,4))console.log("   ",x.symbol,x.kind,x.price,x.volume,x.anlik)' "$p" || true
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # Hangi semboller gecikmesiz geliyor (update_mode = streaming), gün içi
+      # mumlar (15 dk / 1 sa / 4 sa) geliyor mu?
+      - name: Anlık veri ve gün içi mumlar
+        run: npm run anlik-tara
+        continue-on-error: true
+
+      # Mum geçmişinin asıl kaynağı (grafik akışı) Vercel'de de çalışıyor mu,
+      # yeni ülke sayfaları canlı veriyle açılıyor mu?
+      - name: Yayında grafik akışı ve ülke sayfaları
+        continue-on-error: true
+        env:
+          SITE: https://analiz-brown.vercel.app
+        run: |
+          echo "── /api/tani (grafik akışı) ──"
+          curl -sS -m 60 "$SITE/api/tani" | head -c 600; echo
+          for ulke in cin japonya hong-kong hindistan ingiltere almanya fransa kanada kore tayvan suudi-arabistan; do
+            sayfa="$(curl -sS -m 60 "$SITE/piyasa/$ulke-borsasi" || true)"
+            semboller="$(printf %s "$sayfa" | grep -o '/varlik/[a-z]*/[A-Za-z0-9.%^=-]*' | sort -u)"
+            demo="$(printf %s "$sayfa" | grep -c 'demo veri gösteriliyor' || true)"
+            echo "$ulke → $(printf %s "$semboller" | grep -c . ) varlık satırı, demo: $demo"
+            echo "   $(printf %s "$semboller" | sed 's#.*/##' | tr '\n' ' ')"
+          done
+          # Anlık gelen satırlar "● canlı" işaretiyle basılıyor: kaç tane?
+          for yol in abd-borsasi dovizler almanya-borsasi turkiye-borsasi; do
+            sayfa="$(curl -sS -m 60 "$SITE/piyasa/$yol" || true)"
+            echo "$yol → canlı işaretli satır: $(printf %s "$sayfa" | grep -o 'canli-isaret' | wc -l)"
+          done
+          for v in "japonya&symbol=7203.T" "almanya&symbol=SAP.DE" "bist&symbol=THYAO.IS" "abd&symbol=AAPL"; do
+            kod="$(curl -sS -m 60 -o yanit.json -w '%{http_code}' "$SITE/api/analyze?market=$v&interval=1d" || true)"
+            echo "analyze $v → HTTP $kod $(head -c 300 yanit.json)"
+          done
+
+      # Yeni ülke borsaları: tarayıcıda var mı, Yahoo mum geçmişi veriyor mu,
+      # sembol eşlemesi doğru mu (iki kaynağın fiyatı tutuyor mu).
+      - name: Ülke borsalarını ölç
+        run: npm run ulke-tara
+        continue-on-error: true
+
+      # Bu adım bir dönem hata veriyordu (kaynak bu makineyi de engelliyordu)
+      # ve hatayı yutmak zorundaydık. Artık aktarıcı üzerinden 6/6 geçiyor, bu
+      # yüzden hata yutulmuyor: bozulursa görünsün.
+      - name: Kaynaktan birkaç sembol çek
+        run: npm run besle -- --dene
+
+      # Aday kaynakların tamamını dener: hangisi bu makineden cevap veriyor,
+      # gün içi veri var mı, veri kaç dakika gecikmeli.
+      - name: Ücretsiz kaynakları tara
+        run: npm run kaynak-tara
+
+      # Eski ve yeni sinyal motorunu aynı gerçek veride yarıştırır: kapsam,
+      # isabet, taban oran ve sinyalin ne sıklıkla döndüğü. "Daha tutarlı"
+      # iddiası buradaki sayılarla ölçülür.
+      - name: Sinyal motorlarını karşılaştır
+        run: npm run motor-karsilastir
+        env:
+          # Mumlar kütüğe de yazılır; ayar denemeleri aynı veriyle yerelde
+          # yeniden ölçülebilsin diye.
+          MUM_DOK: "1"
+        continue-on-error: true
+
+      # Asıl soru burada yanıtlanıyor: kaynak **Vercel'in** IP aralığından da
+      # cevap veriyor mu? Yahoo vermiyordu ve bu, bütün tasarımı belirleyen
+      # kısıttı. Bu adım yayındaki sayfayı çekip tabloda gerçek fiyat var mı,
+      # yoksa demo/hata notu mu çıkmış diye bakar. Ölçüm yerine varsayım
+      # yürütmek, kullanıcıya boş tablo göstermek demek olurdu.
+      - name: Yayındaki sayfada canlı veri var mı?
+        env:
+          ONIZLEME: https://analiz-brown.vercel.app/piyasa/turkiye-borsasi
+        run: |
+          sayfa="$(curl -sS -m 45 "$ONIZLEME" || true)"
+          if [ -z "$sayfa" ]; then
+            echo "::warning::Sayfa alınamadı; dağıtım sürüyor olabilir."
+            exit 0
+          fi
+          echo "Sayfa boyutu: $(printf %s "$sayfa" | wc -c) bayt"
+          if printf %s "$sayfa" | grep -q "demo veri gösteriliyor"; then
+            echo "::error::Yayındaki sayfa DEMO veri gösteriyor — kaynak Vercel'den cevap vermiyor."
+            exit 1
+          fi
+          if printf %s "$sayfa" | grep -q "notice-error"; then
+            echo "::error::Yayındaki sayfada hata notu var."
+            printf %s "$sayfa" | grep -o 'notice notice-error[^<]*<[^>]*>[^<]*' | head -3
+            exit 1
+          fi
+          # Tabloda gerçek satır var mı? Sembol adını aramak yetmez: arama
+          # kutusunun örnek metninde de "THYAO" geçiyor, yani veri gelmese
+          # bile eşleşirdi. Satır bağlantısı yalnızca fiyat geldiğinde basılır.
+          satir="$(printf %s "$sayfa" | grep -o '/varlik/bist/[A-Z0-9.]*' | sort -u | wc -l)"
+          echo "Tabloda $satir varlık satırı var."
+          if [ "$satir" -lt 5 ]; then
+            echo "::error::Tablo boş ya da yarım: kaynak Vercel'den cevap vermiyor olabilir."
+            exit 1
+          fi
+          echo "✓ Canlı veri geldi."
+
+      # Canlı doğruluk ölçümünün yayında çalıştığını doğrular. Uç idempotent:
+      # yalnızca kapanmış mumları ve henüz yazılmamış günleri kaydeder, bu
+      # yüzden elle çalıştırmak kayıtları bozmaz (en fazla günlük görevi öne
+      # alır). Veritabanı yoksa yanıtta hata görünür.
+      - name: Sinyal günlüğü yayında çalışıyor mu?
+        continue-on-error: true
+        env:
+          UC: https://analiz-brown.vercel.app/api/sinyal-gunlugu
+        run: |
+          kod="$(curl -sS -m 70 -o yanit.json -w '%{http_code}' "$UC" || true)"
+          echo "HTTP $kod"
+          cat yanit.json || true
+          echo

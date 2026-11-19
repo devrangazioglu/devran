@@ -1,0 +1,75 @@
+# Günlük piyasa verisi beslemesi.
+#
+# Neden burada çalışıyor: uygulamanın çalıştığı bulut sağlayıcısının IP aralığı
+# anahtarsız veri kaynakları tarafından engelleniyor (ölçüldü: 429). GitHub'ın
+# çalıştırıcıları bu aralıkta değil, dolayısıyla veri buradan alınıp doğrudan
+# veritabanına yazılıyor. Site zaten önce veritabanına baktığı için hiçbir
+# sağlayıcıya gitmiyor ve kota kavramı ortadan kalkıyor.
+#
+# Kurulum: depo ayarlarında `DATABASE_URL` adında bir secret tanımlayın
+# (Vercel'deki Postgres bağlantı dizesinin aynısı).
+#
+# `DATABASE_URL` secret'ı tanımlı değilse iş yazmayı atlar ve yeşil biter.
+# Bunun nedeni gizlemek değil tersi: zamanlama kapalıyken kimse durumu
+# görmüyordu. Artık her gece çalışıyor ve kütükte tam olarak neyin eksik
+# olduğu yazıyor — secret eklenince aynı iş veriyi yazmaya başlar, başka
+# hiçbir değişiklik gerekmez.
+
+name: Piyasa verisi
+
+on:
+  schedule:
+    # 22:20 UTC — ABD seansı kapandıktan sonra, BIST çoktan kapalı.
+    # Dakika 0 seçilmedi: o dakikada tüm dünyanın işleri aynı anda kuyruğa girer.
+    - cron: "20 22 * * 1-6"
+  # Elle çalıştırma: ilk kurulumda ve bir şey bozulduğunda.
+  workflow_dispatch:
+
+# Aynı anda iki besleme çalışmasın; ikisi de aynı satırlara yazar.
+concurrency:
+  group: piyasa-verisi
+  cancel-in-progress: false
+
+jobs:
+  besle:
+    runs-on: ubuntu-latest
+    # Mumlar önce TradingView grafik akışından (sembol başına ~1 sn) geliyor;
+    # yalnızca o düşerse aktarıcıya, hız sınırının altında sırayla gidiliyor.
+    # 15 piyasa × ~26 sembol × 2 periyot: akışla ~15 dk, aktarıcıyla çok daha uzun.
+    timeout-minutes: 75
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # Secret eksikse hata, veri kaynağıyla ilgiliymiş gibi görünmesin.
+      - name: DATABASE_URL secret'ı tanımlı mı?
+        id: secret
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "var=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::DATABASE_URL secret'ı tanımlı değil; veri yazılmadı. Settings → Secrets and variables → Actions yolundan Vercel'deki Postgres bağlantı dizesini ekleyin."
+          else
+            echo "var=true" >> "$GITHUB_OUTPUT"
+            echo "DATABASE_URL tanımlı (${#DATABASE_URL} karakter)."
+          fi
+
+      # Secret yokken bile kaynağın çalıştığı doğrulanır: böylece secret
+      # eklendiği gün "veri mi gelmiyor, yazma mı çalışmıyor" sorusu sorulmaz.
+      - name: Kaynağı doğrula (secret yokken)
+        if: steps.secret.outputs.var == 'false'
+        run: npm run besle -- --dene
+
+      - name: Veriyi çek ve veritabanına yaz
+        if: steps.secret.outputs.var == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run besle

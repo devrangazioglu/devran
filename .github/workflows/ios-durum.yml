@@ -1,0 +1,22 @@
+# App Store inceleme durumunu okur (hiçbir şeyi değiştirmez).
+name: iOS — İnceleme durumu
+
+on:
+  workflow_dispatch:
+
+jobs:
+  durum:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PAKET_KIMLIGI: com.devrangaziolu.fibonex
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID || 'KX32BW9969' }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID || 'cb244197-4203-43ce-8de6-a5a1a9805eae' }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Durum
+        run: node mobil/scripts/inceleme-durumu.mjs

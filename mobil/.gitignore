@@ -1,0 +1,12 @@
+node_modules/
+# Capacitor'ın her eşitlemede ürettiği kopyalar
+ios/App/App/public/
+android/app/src/main/assets/public/
+ios/App/Pods/
+ios/App/output/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.keystore
+*.jks
