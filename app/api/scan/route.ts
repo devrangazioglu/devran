@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { enYakinPeriyot, varlikPeriyotlari } from "@/lib/markets/anlik";
 
 import { auth } from "@/auth";
+import { uygulamaIstegi, yukseltmeNotu } from "@/lib/uygulama";
 import { analyze } from "@/lib/analysis";
 import type { ScanRow } from "@/lib/api-types";
 import { krediHarca, krediIade, krediOzeti, kullanicidanDurum } from "@/lib/credits";
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
   if (durum && !durum.plan.periyotlar.includes(interval)) {
     return NextResponse.json(
       {
-        error: `${interval} periyodu ${durum.plan.ad} planında kapalı. Planlar sayfasından yükseltebilirsiniz.`,
+        error: `${interval} periyodu ${durum.plan.ad} planında kapalı.${yukseltmeNotu(request)}`,
         kod: "plan-periyot",
       },
       { status: 403 },
@@ -91,8 +92,10 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Bu dönemki analiz krediniz bitti. Planlar sayfasından yükseltebilir ya da dönemin " +
-          "yenilenmesini bekleyebilirsiniz.",
+          uygulamaIstegi(request)
+            ? "Bu dönemki analiz krediniz bitti. Krediniz dönem yenilendiğinde yeniden dolar."
+            : "Bu dönemki analiz krediniz bitti. Planlar sayfasından yükseltebilir ya da dönemin " +
+              "yenilenmesini bekleyebilirsiniz.",
         kod: "kredi-yetersiz",
         kredi: krediOzeti(harcama.durum),
       },

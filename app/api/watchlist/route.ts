@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { yukseltmeNotu } from "@/lib/uygulama";
 import { kullanicidanDurum } from "@/lib/credits";
 import { normalizeSymbol } from "@/lib/markets/provider";
 import { marketAktif, parseInstrumentId } from "@/lib/markets/types";
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
     if (result.limitAsildi) {
       return NextResponse.json(
         {
-          error: `${durum?.plan.ad} planında takip listesi ${durum?.plan.takipSiniri} varlıkla sınırlı. Planlar sayfasından yükseltebilirsiniz.`,
+          error: `${durum?.plan.ad} planında takip listesi ${durum?.plan.takipSiniri} varlıkla sınırlı.${yukseltmeNotu(request)}`,
           kod: "plan-takip",
         },
         { status: 403 },

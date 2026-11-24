@@ -3308,6 +3308,18 @@ canvas {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+/* Uygulama kabuğu (App Store 3.1.1): ücretli planlar, fiyatlar ve "yükselt"
+   yönlendirmeleri uygulamada gösterilmez. Sınıf sunucuda eklenir (app/layout.tsx). */
+.yalniz-uygulama {
+  display: none !important;
+}
+.uygulama .yalniz-uygulama {
+  display: revert !important;
+}
+.uygulama .yalniz-web {
+  display: none !important;
+}
+
 /* iOS uygulamasında harici ödeme yönlendirmesi yasak (App Store 3.1.1):
    uygulama içi satın alma bağlanana kadar ücretli plan düğmeleri gizli. */
 .ios-satin-al-notu {

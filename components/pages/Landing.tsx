@@ -354,7 +354,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
       </section>
 
       {/* ── Planlar ──────────────────────────────────────── */}
-      <section className="section" id="planlar">
+      <section className="section yalniz-web" id="planlar">
         <div className="container">
           <Reveal>
             <p className="eyebrow">
@@ -433,7 +433,9 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
                 </Link>
               ))}
               <a href="#dunya">{t("market.dunya")}</a>
-              <Link href={yol("/planlar")}>{t("nav.plans")}</Link>
+              <Link href={yol("/planlar")} className="yalniz-web">
+                {t("nav.plans")}
+              </Link>
               <a href="#nasil">{t("nav.how")}</a>
               <a href="#sss">{t("nav.faq")}</a>
               <Link href={yol("/giris")}>{t("nav.login")}</Link>

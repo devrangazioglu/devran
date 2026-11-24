@@ -31,8 +31,14 @@ export default async function AbonelikSayfasi() {
     <>
       <div className="page-head">
         <div>
-          <h1>{t("sub.title")}</h1>
-          <p className="sub">{t("sub.sub")}</p>
+          <h1>
+            <span className="yalniz-web">{t("sub.title")}</span>
+            <span className="yalniz-uygulama">{t("nav.credits")}</span>
+          </h1>
+          <p className="sub">
+            <span className="yalniz-web">{t("sub.sub")}</span>
+            <span className="yalniz-uygulama">{t("sub.subApp")}</span>
+          </p>
         </div>
       </div>
 
@@ -47,7 +53,11 @@ export default async function AbonelikSayfasi() {
       {durum ? (
         <div className="card credit-card">
           <div className="credit-head">
-            <div>
+            {/* Uygulamada plan adı ve faturalama gösterilmez (App Store 3.1.1). */}
+            <div className="yalniz-uygulama">
+              <span className="card-label">{t("credit.remaining")}</span>
+            </div>
+            <div className="yalniz-web">
               <span className="card-label">{t("sub.currentPlan")}</span>
               <strong className="credit-plan">{t(`plan.${durum.plan.id}` as "plan.basic")}</strong>
               <span className="muted" style={{ fontSize: 13 }}>
@@ -78,12 +88,12 @@ export default async function AbonelikSayfasi() {
       )}
 
       {!odemeAcik() && !odemeTestModu() && (
-        <div className="notice satin-al" style={{ marginTop: 18 }}>
+        <div className="notice satin-al yalniz-web" style={{ marginTop: 18 }}>
           {t("plans.paymentClosed")}
         </div>
       )}
 
-      <div style={{ marginTop: 22 }}>
+      <div className="yalniz-web" style={{ marginTop: 22 }}>
         <PlanCards
           mevcut={durum?.kayitliPlan ?? null}
           mevcutFaturalama={durum?.faturalama ?? null}

@@ -126,7 +126,9 @@ export default async function Plans({ locale: istenen }: { locale?: Locale } = {
             </div>
             <nav className="footer-links">
               <Link href={yol("/")}>{t("nav.home")}</Link>
-              <Link href={yol("/planlar")}>{t("nav.plans")}</Link>
+              <Link href={yol("/planlar")} className="yalniz-web">
+                {t("nav.plans")}
+              </Link>
               <Link href={yol("/giris")}>{t("nav.login")}</Link>
             </nav>
           </div>

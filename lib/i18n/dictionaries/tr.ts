@@ -932,6 +932,7 @@ export const tr = {
   /* ── Planlar ve kredi ─────────────────────────────────── */
   "nav.plans": "Planlar",
   "nav.subscription": "Aboneliğim",
+  "nav.credits": "Kredilerim",
 
   "plan.ucretsiz": "Ücretsiz",
   "plan.basic": "Basic",
@@ -987,6 +988,7 @@ export const tr = {
   "sub.title": "Aboneliğim",
   "sub.sub": "Planınız, kalan krediniz ve yükseltme seçenekleri.",
   "sub.currentPlan": "Mevcut plan",
+  "sub.subApp": "Kalan analiz krediniz ve yenilenme tarihi.",
   "sub.noLedger":
     "Kredi defteri şu anda okunamıyor. Analizleriniz çalışmaya devam eder; kredi sayacı veritabanı bağlandığında görünür.",
 
@@ -1202,6 +1204,7 @@ export const tr = {
   "nav.short.scanner": "Tarayıcı",
   "nav.short.watchlist": "Takip",
   "nav.short.subscription": "Abonelik",
+  "nav.short.credits": "Krediler",
   "search.popular": "Sık bakılanlar",
   "search.hint": "Hisse kodu, şirket adı ya da kripto yazın: THYAO, Apple, Bitcoin, altın… Kripto, ABD, Borsa İstanbul, 11 dünya borsası, döviz ve emtia birlikte aranır.",
 } as const;

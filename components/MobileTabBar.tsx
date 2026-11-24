@@ -40,7 +40,14 @@ export default function MobileTabBar() {
             <span className="tabbar-ikon">
               <Ikon ad={tab.ikon} boyut={20} dolu={active && tab.ikon === "yildiz"} />
             </span>
-            <span className="tabbar-etiket">{t(tab.key)}</span>
+            {tab.key === "nav.short.subscription" ? (
+              <span className="tabbar-etiket">
+                <span className="yalniz-web">{t(tab.key)}</span>
+                <span className="yalniz-uygulama">{t("nav.short.credits")}</span>
+              </span>
+            ) : (
+              <span className="tabbar-etiket">{t(tab.key)}</span>
+            )}
           </Link>
         );
       })}

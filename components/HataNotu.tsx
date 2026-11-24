@@ -26,12 +26,13 @@ export default function HataNotu({ hata }: { hata: unknown }) {
     <div className="notice notice-error">
       {metin}
       {kod && PLAN_KODLARI.has(kod) && (
-        <>
+        // Uygulamada ücretli plana yönlendirme yok (App Store 3.1.1).
+        <span className="yalniz-web">
           {" "}
           <Link href="/abonelik" style={{ color: "var(--accent)", whiteSpace: "nowrap" }}>
             {t("credit.upgrade")} →
           </Link>
-        </>
+        </span>
       )}
     </div>
   );

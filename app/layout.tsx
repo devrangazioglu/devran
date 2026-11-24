@@ -6,6 +6,7 @@ import { DEFAULT_LOCALE, localeMeta } from "@/lib/i18n";
 import { splitLocale } from "@/lib/i18n/routing";
 import { getLocale } from "@/lib/i18n/server";
 import { siteUrl, SITE_NAME } from "@/lib/seo";
+import { uygulamaUa } from "@/lib/uygulama";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -53,7 +54,11 @@ export default async function RootLayout({
   //   • adreste dil öneki varsa (/en/…) o dil,
   //   • önek yoksa ve sayfa herkese açıksa varsayılan dil (Türkçe),
   //   • üye alanı gibi dilsiz adreslerde kullanıcının çerezdeki tercihi.
-  const yol = ((await headers()).get("x-yol") ?? "/").split("?")[0];
+  const basliklar = await headers();
+  const yol = (basliklar.get("x-yol") ?? "/").split("?")[0];
+  // Uygulama kabuğu: sınıf sunucuda eklenir ki ücretli plan içeriği ilk
+  // karede bile görünmesin (App Store 3.1.1, bkz. lib/uygulama.ts).
+  const uygulama = uygulamaUa(basliklar.get("user-agent"));
   const { locale: adrestekiDil } = splitLocale(yol);
   const herkeseAcik = yol === "/" || yol.startsWith("/piyasa");
 
@@ -66,7 +71,7 @@ export default async function RootLayout({
   const meta = localeMeta(locale);
 
   return (
-    <html lang={locale} dir={meta.dir}>
+    <html lang={locale} dir={meta.dir} className={uygulama ? "uygulama" : undefined}>
       <body>
         <Providers locale={locale}>
           <Aurora />

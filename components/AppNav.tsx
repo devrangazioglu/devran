@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 
 import { LogoAd, LogoMark } from "./Logo";
@@ -12,12 +13,14 @@ import { kullanicidanDurum } from "@/lib/credits";
 import { getI18n } from "@/lib/i18n/server";
 import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS } from "@/lib/markets/types";
 import { findUserByEmail } from "@/lib/users";
+import { uygulamaUa } from "@/lib/uygulama";
 import Ikon from "./Ikon";
 import MobilArama from "./MobilArama";
 
 /** Üye alanının üst menüsü. */
 export default async function AppNav() {
-  const [session, { t }] = await Promise.all([auth(), getI18n()]);
+  const [session, { t }, basliklar] = await Promise.all([auth(), getI18n(), headers()]);
+  const uygulama = uygulamaUa(basliklar.get("user-agent"));
 
   // Kalan kredi menüde durur: kullanıcı analiz etmeden önce ne kadar hakkı
   // kaldığını görsün, bitince şaşırmasın. Depo okunamıyorsa rozet gizlenir.
@@ -31,7 +34,8 @@ export default async function AppNav() {
     { href: "/tarayici", label: t("nav.scanner") },
     { href: "/takip", label: t("nav.watchlist") },
     { href: "/dogruluk", label: t("nav.accuracy") },
-    { href: "/abonelik", label: t("nav.subscription") },
+    // Uygulamada "abonelik" yerine kredi bakiyesi (App Store 3.1.1).
+    { href: "/abonelik", label: uygulama ? t("nav.credits") : t("nav.subscription") },
     { href: "/ayarlar", label: t("nav.settings") },
     // Yönetim bağlantısı yalnızca yöneticide görünür.
     ...(yoneticiMi(session?.user?.email) ? [{ href: "/yonetim", label: t("nav.admin") }] : []),

@@ -908,6 +908,7 @@ export const en: Dictionary = {
   /* ── Plans and credits ── */
   "nav.plans": "Pricing",
   "nav.subscription": "My plan",
+  "nav.credits": "My credits",
 
   "plan.ucretsiz": "Free",
   "plan.basic": "Basic",
@@ -964,6 +965,7 @@ export const en: Dictionary = {
   "sub.title": "My plan",
   "sub.sub": "Your plan, remaining credits and upgrade options.",
   "sub.currentPlan": "Current plan",
+  "sub.subApp": "Your remaining analysis credits and renewal date.",
   "sub.noLedger":
     "The credit ledger cannot be read right now. Your analyses keep working; the counter appears once the database is connected.",
 
@@ -1178,6 +1180,7 @@ export const en: Dictionary = {
   "nav.short.scanner": "Scanner",
   "nav.short.watchlist": "Watchlist",
   "nav.short.subscription": "Plan",
+  "nav.short.credits": "Credits",
   "search.popular": "Popular",
   "search.hint": "Type a ticker, company name or crypto: THYAO, Apple, Bitcoin, gold… Crypto, US stocks, Borsa Istanbul, 11 world exchanges, FX and commodities are searched together.",
 };

@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 
 import { auth } from "@/auth";
@@ -9,6 +10,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { localeHref } from "@/lib/i18n/routing";
 import type { Locale } from "@/lib/i18n";
 import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS } from "@/lib/markets/types";
+import { uygulamaUa } from "@/lib/uygulama";
 
 /**
  * Herkese açık sayfaların üst menüsü.
@@ -18,7 +20,9 @@ import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS } from "@/lib/markets/types";
  * sürümleri arasında kopuk bir bağlantı ağı görür.
  */
 export default async function SiteNav({ locale: istenen }: { locale?: Locale } = {}) {
-  const [session, { t, locale }] = await Promise.all([auth(), getI18n(istenen)]);
+  const [session, { t, locale }, basliklar] = await Promise.all([auth(), getI18n(istenen), headers()]);
+  // Uygulamada planlar bağlantısı yok (App Store 3.1.1, bkz. lib/uygulama.ts).
+  const uygulama = uygulamaUa(basliklar.get("user-agent"));
   const yol = (path: string) => localeHref(locale, path);
 
   // Menüde ana dört piyasa ve tek bir "Dünya borsaları" bağlantısı: on bir
@@ -34,7 +38,7 @@ export default async function SiteNav({ locale: istenen }: { locale?: Locale } =
 
   const menuLinks = [
     ...marketLinks,
-    { href: yol("/planlar"), label: t("nav.plans") },
+    ...(uygulama ? [] : [{ href: yol("/planlar"), label: t("nav.plans") }]),
     { href: `${yol("/")}#nasil`, label: t("nav.how") },
     { href: `${yol("/")}#sss`, label: t("nav.faq") },
     ...(session?.user
@@ -58,7 +62,7 @@ export default async function SiteNav({ locale: istenen }: { locale?: Locale } =
               {link.label}
             </Link>
           ))}
-          <Link href={yol("/planlar")}>{t("nav.plans")}</Link>
+          {!uygulama && <Link href={yol("/planlar")}>{t("nav.plans")}</Link>}
           <a href={`${yol("/")}#nasil`}>{t("nav.how")}</a>
           <a href={`${yol("/")}#sss`}>{t("nav.faq")}</a>
         </nav>

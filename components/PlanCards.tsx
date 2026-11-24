@@ -176,7 +176,6 @@ export default function PlanCards({
           );
         })}
       </div>
-      {uyeModu && <p className="notice ios-satin-al-notu">{t("plans.iosSoon")}</p>}
     </>
   );
 }

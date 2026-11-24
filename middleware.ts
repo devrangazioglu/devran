@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isLocale, LOCALE_COOKIE } from "@/lib/i18n/config";
+import { uygulamaUa } from "@/lib/uygulama";
 
 /**
  * Dilsiz sayfalar: yalnızca öneksiz adreste var, dili çerezden okur.
@@ -23,6 +24,14 @@ const DILSIZ = /^\/([a-z]{2})(\/(?:giris|kayit|gizlilik|kosullar|destek)(?:\/.*)
  * kullanıcı deposu (pg, scrypt) kenar (edge) çalışma zamanına taşınmaz.
  */
 export function middleware(request: NextRequest) {
+  // Uygulama kabuğunda planlar sayfası yok (App Store 3.1.1): kredi sayfasına gider.
+  if (uygulamaUa(request.headers.get("user-agent")) && /^(\/[a-z]{2})?\/planlar\/?$/.test(request.nextUrl.pathname)) {
+    const hedef = request.nextUrl.clone();
+    hedef.pathname = "/abonelik";
+    hedef.search = "";
+    return NextResponse.redirect(hedef);
+  }
+
   const eslesme = DILSIZ.exec(request.nextUrl.pathname);
   if (eslesme && isLocale(eslesme[1])) {
     const hedef = request.nextUrl.clone();
