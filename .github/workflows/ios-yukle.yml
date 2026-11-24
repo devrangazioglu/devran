@@ -1,0 +1,168 @@
+# iOS uygulamasını Mac olmadan derleyip App Store Connect'e (TestFlight) yükler.
+#
+# GitHub'ın bulut Mac'inde çalışır. İmzalama Apple'ın bulut sertifikalarıyla,
+# App Store Connect API anahtarı üzerinden otomatik yapılır; sertifika ya da
+# profil dosyası tutmak gerekmez.
+#
+# Gerekli GitHub Secrets (Settings → Secrets and variables → Actions):
+#   APPLE_TEAM_ID  — (isteğe bağlı) varsayılanı aşağıda; başka ekip için girin
+#   ASC_KEY_ID / ASC_ISSUER_ID — (isteğe bağlı) varsayılanları aşağıda; anahtar değişirse girin
+#   ASC_KEY_P8     — indirilen AuthKey_XXXX.p8 dosyasının tüm içeriği
+#
+# Ayrıntılı adımlar: mobil/README.md → "Mac olmadan iOS".
+
+name: iOS — App Store'a yükle
+
+on:
+  workflow_dispatch:
+    inputs:
+      surum:
+        description: "Sürüm numarası (mağazada görünen, ör. 1.0.0)"
+        required: true
+        default: "1.0.0"
+
+concurrency:
+  group: ios-yukle
+  cancel-in-progress: false
+
+jobs:
+  yukle:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      PAKET_KIMLIGI: com.devrangaziolu.fibonex
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID || 'KX32BW9969' }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID || 'cb244197-4203-43ce-8de6-a5a1a9805eae' }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID || 'NM3HFXD52H' }}
+      DERLEME: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apple hesabını hazırla
+        run: node mobil/scripts/app-store-connect.mjs
+
+      - name: Team ID kontrolü
+        run: |
+          if ! [[ "${APPLE_TEAM_ID// /}" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "### Durdu" >> "$GITHUB_STEP_SUMMARY"
+            echo "APPLE_TEAM_ID eksik ya da hatalı. developer.apple.com → Account → Membership details → Team ID (10 karakter)." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Capacitor projesini eşitle
+        working-directory: mobil
+        run: |
+          npm ci
+          npx cap sync ios
+
+      - name: API anahtarını yerleştir
+        run: |
+          mkdir -p "$RUNNER_TEMP/anahtar"
+          ANAHTAR="$RUNNER_TEMP/anahtar/AuthKey_${ASC_KEY_ID}.p8"
+          node -e '
+            const ham = process.env.ASC_KEY_P8.replace(/\\n/g, "\n");
+            const govde = ham.replace(/-----(BEGIN|END) PRIVATE KEY-----/g, "").replace(/\s+/g, "");
+            const pem = "-----BEGIN PRIVATE KEY-----\n" + govde.match(/.{1,64}/g).join("\n") + "\n-----END PRIVATE KEY-----\n";
+            require("fs").writeFileSync(process.argv[1], pem, { mode: 0o600 });
+          ' "$ANAHTAR"
+          echo "ANAHTAR=$ANAHTAR" >> "$GITHUB_ENV"
+
+      - name: Arşivle, imzala ve App Store Connect'e yükle
+        working-directory: mobil/ios/App
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          PLIST
+
+          YETKI=(-allowProvisioningUpdates
+            -authenticationKeyPath "$ANAHTAR"
+            -authenticationKeyID "$ASC_KEY_ID"
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          ARSIV="$RUNNER_TEMP/Fibonex360.xcarchive"
+
+          arsivle() {  # $1: günlük adı, sonrası: ek derleme ayarları
+            local gunluk="$RUNNER_TEMP/$1.log"; shift
+            rm -rf "$ARSIV"
+            xcodebuild archive \
+              -project App.xcodeproj -scheme App -configuration Release \
+              -destination "generic/platform=iOS" -archivePath "$ARSIV" \
+              "${YETKI[@]}" \
+              DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+              MARKETING_VERSION="${{ inputs.surum }}" CURRENT_PROJECT_VERSION="$DERLEME" \
+              "$@" > "$gunluk" 2>&1
+            local kod=$?
+            grep -E "error:|ARCHIVE (SUCCEEDED|FAILED)" "$gunluk" | tail -30
+            [ $kod -eq 0 ] && [ -d "$ARSIV" ]
+          }
+
+          yukle() {  # $1: günlük adı
+            local gunluk="$RUNNER_TEMP/$1.log"
+            xcodebuild -exportArchive \
+              -archivePath "$ARSIV" \
+              -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+              -exportPath "$RUNNER_TEMP/cikti" \
+              "${YETKI[@]}" > "$gunluk" 2>&1
+            local kod=$?
+            grep -E "error|Error|EXPORT (SUCCEEDED|FAILED)|Upload|upload" "$gunluk" | tail -30
+            [ $kod -eq 0 ]
+          }
+
+          # 1. yol: imzasız arşiv, imzayı dışa aktarma Apple'ın bulut dağıtım
+          #    sertifikasıyla atar. Her çalışmada yeni geliştirme sertifikası
+          #    üretilmez, hesabın sertifika sınırı dolmaz.
+          echo "::group::İmzasız arşiv"
+          if arsivle arsiv-imzasiz CODE_SIGNING_ALLOWED=NO && yukle yukleme-imzasiz; then
+            echo "::endgroup::"; exit 0
+          fi
+          echo "::endgroup::"
+
+          # 2. yol: Xcode'un otomatik imzasıyla arşivle, sonra yükle.
+          echo "::group::İmzalı arşiv"
+          arsivle arsiv-imzali || { echo "::endgroup::"; tail -60 "$RUNNER_TEMP/arsiv-imzali.log"; exit 1; }
+          yukle yukleme-imzali || { echo "::endgroup::"; tail -60 "$RUNNER_TEMP/yukleme-imzali.log"; exit 1; }
+          echo "::endgroup::"
+
+      - name: Özet
+        if: success()
+        run: |
+          {
+            echo "### Yüklendi"
+            echo ""
+            echo "Sürüm **${{ inputs.surum }}** (derleme **$DERLEME**) App Store Connect'e gönderildi."
+            echo ""
+            echo "Apple'ın işlemesi 10–30 dakika sürer. Sonra App Store Connect → Fibonex360 → **TestFlight** sekmesinde görünür;"
+            echo "oradan iPhone'unuza TestFlight uygulamasıyla kurup deneyebilir, **Dağıtım** sekmesinde bu derlemeyi seçip incelemeye gönderebilirsiniz."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Günlükleri sakla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-gunlukleri
+          path: |
+            ${{ runner.temp }}/*.log
+          if-no-files-found: ignore
+
+      - name: Anahtarı sil
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/anahtar"

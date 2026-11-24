@@ -1,0 +1,68 @@
+# App Store sayfasını doldurur: metinler, kategori, yaş derecesi, fiyat,
+# ülkeler, demo hesap, ekran görüntüleri ve derleme. İsteğe bağlı olarak
+# incelemeye gönderir. Ayrıntılar: mobil/scripts/magaza-sayfasi.mjs
+#
+# Metinleri değiştirmek için: mobil/magaza/metinler.mjs
+# Gerekli secret: ASC_KEY_P8 (iOS iş akışıyla aynı).
+# İsteğe bağlı secret'lar (inceleme iletişim bilgisi):
+#   INCELEME_AD, INCELEME_SOYAD, INCELEME_TELEFON, INCELEME_EPOSTA
+
+name: iOS — Mağaza sayfası
+
+on:
+  workflow_dispatch:
+    inputs:
+      surum:
+        description: "Sürüm numarası (yüklenen derlemeyle aynı)"
+        required: true
+        default: "1.0.0"
+      gonder:
+        description: "Bittiğinde incelemeye gönderilsin mi?"
+        type: choice
+        options: ["hayir", "evet"]
+        default: "hayir"
+
+concurrency:
+  group: magaza-sayfasi
+  cancel-in-progress: false
+
+jobs:
+  doldur:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PAKET_KIMLIGI: com.devrangaziolu.fibonex
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID || 'KX32BW9969' }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID || 'cb244197-4203-43ce-8de6-a5a1a9805eae' }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      INCELEME_AD: ${{ secrets.INCELEME_AD }}
+      INCELEME_SOYAD: ${{ secrets.INCELEME_SOYAD }}
+      INCELEME_TELEFON: ${{ secrets.INCELEME_TELEFON }}
+      INCELEME_EPOSTA: ${{ secrets.INCELEME_EPOSTA }}
+      SURUM: ${{ inputs.surum }}
+      GONDER: ${{ inputs.gonder }}
+      GORSEL_KLASORU: ${{ github.workspace }}/magaza-gorselleri
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Playwright
+        working-directory: mobil
+        run: |
+          npm ci --silent
+          npm install --no-save --silent playwright@1.49.1
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Mağaza sayfasını doldur
+        run: node mobil/scripts/magaza-sayfasi.mjs
+
+      - name: Görselleri sakla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: magaza-gorselleri
+          path: magaza-gorselleri/*.jpg
+          if-no-files-found: ignore
