@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 
 import AssetSearch from "@/components/AssetSearch";
@@ -15,6 +16,7 @@ import { localeHref } from "@/lib/i18n/routing";
 import { faqJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { getQuotes } from "@/lib/markets/provider";
 import { MARKETS, AKTIF_MARKET_IDS, ANA_MARKET_IDS, DUNYA_MARKET_IDS, type MarketId, type Quote } from "@/lib/markets/types";
+import { uygulamaUa } from "@/lib/uygulama";
 import Ikon, { UlkeRozeti, type IkonAdi } from "@/components/Ikon";
 
 // Tanıtım sayfası dakikada bir yeniden üretilir.
@@ -56,7 +58,9 @@ async function highlights(): Promise<Quote[]> {
 }
 
 export default async function Landing({ locale: istenen }: { locale?: Locale } = {}) {
-  const [{ t, locale }, quotes] = await Promise.all([getI18n(istenen), highlights()]);
+  const [{ t, locale }, quotes, basliklar] = await Promise.all([getI18n(istenen), highlights(), headers()]);
+  // Uygulama kabuğunda plan ve fiyat bölümü hiç gönderilmez (App Store 3.1.1).
+  const uygulama = uygulamaUa(basliklar.get("user-agent"));
   const intl = intlTag(locale);
   const yol = (path: string) => localeHref(locale, path);
 
@@ -353,8 +357,9 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
         </div>
       </section>
 
-      {/* ── Planlar ──────────────────────────────────────── */}
-      <section className="section yalniz-web" id="planlar">
+      {/* ── Planlar (uygulamada yok) ─────────────────────── */}
+      {!uygulama && (
+      <section className="section" id="planlar">
         <div className="container">
           <Reveal>
             <p className="eyebrow">
@@ -377,6 +382,7 @@ export default async function Landing({ locale: istenen }: { locale?: Locale } =
           </Reveal>
         </div>
       </section>
+      )}
 
       {/* ── SSS ──────────────────────────────────────────── */}
       <section className="section" id="sss">
