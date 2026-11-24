@@ -66,6 +66,12 @@ jobs:
         run: |
           curl -s --max-time 20 "https://www.$ALAN/planlar" | grep -o "₺[0-9.,]*\|30 analiz kredisi[^<]\{0,30\}" | sort -u | head || echo "bulunamadı"
 
+      - name: Uygulama kabuğu planlar sayfasını görmüyor mu
+        run: |
+          curl -s -o /dev/null --max-time 20 -A "Mozilla/5.0 (iPad) Fibonex360App" -w "uygulama /planlar -> durum=%{http_code} yonlendirme=%{redirect_url}\n" "https://www.$ALAN/planlar"
+          echo "uygulama anasayfa fiyat sayısı: $(curl -s --max-time 20 -A "Mozilla/5.0 (iPad) Fibonex360App" "https://www.$ALAN/" | grep -o "₺[0-9]" | wc -l)"
+          echo "web anasayfa fiyat sayısı: $(curl -s --max-time 20 "https://www.$ALAN/" | grep -o "₺[0-9]" | wc -l)"
+
       - name: Giriş sağlayıcıları
         run: |
           curl -s --max-time 20 "https://www.$ALAN/api/auth/providers" | python3 -c "import sys,json; d=json.load(sys.stdin); print('sağlayıcılar:', ', '.join(d.keys()))" || echo "okunamadı"
